@@ -1,65 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Send,
-  Phone,
-  Video,
-  MoreVertical,
-  Mic,
-  Image as ImageIcon,
-  CheckCheck,
-  User,
-  Bot,
-  Play,
-  Pause,
-  Upload,
-  Sparkles,
-  HelpCircle,
-  MessageCircle,
-  Trash2,
-  ChevronRight,
-  FileAudio,
-  Zap
+  Send, Phone, Video, MoreVertical, Mic, Image as ImageIcon,
+  CheckCheck, Bot, Play, Pause, Upload, Sparkles,
+  Trash2, Zap, Square, StopCircle,
 } from "lucide-react";
 import { ChatMessage, AgentConfig, AgentAction } from "../types";
-
-// High-quality sample products for image analysis
-const MOCK_IMAGES = [
-  {
-    name: "Zapas Running Rojas",
-    url: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop&q=80",
-    description: "Zapatillas deportivas de running de alta performance."
-  },
-  {
-    name: "Campera de Cuero Negra",
-    url: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&auto=format&fit=crop&q=80",
-    description: "Campera de abrigo de cuero genuino, talle L."
-  },
-  {
-    name: "Smartwatch Elegante",
-    url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop&q=80",
-    description: "Reloj inteligente blanco con sensor cardíaco."
-  }
-];
-
-// Pre-configured LATAM audio inquiries to simulate the voice note transcription feature
-const VOICE_SCENARIOS = [
-  {
-    text: "¿Hola qué tal? Quería consultar si tienen talle 42 de las zapas Nike rojas y cuánto sale el envío a Almagro.",
-    duration: "0:09",
-    label: "Consulta de Stock y Envío"
-  },
-  {
-    text: "Hola che, me interesa la campera de cuero. ¿Me pasás las medidas del talle L y qué colores les quedan?",
-    duration: "0:07",
-    label: "Medidas y Colores Campera"
-  },
-  {
-    text: "Buenas, quería saber qué formas de pago aceptan. ¿Tienen cuotas sin interés con Mercado Pago?",
-    duration: "0:08",
-    label: "Métodos de Pago y Cuotas"
-  }
-];
 
 interface ChatSimulatorProps {
   config: AgentConfig;
@@ -69,107 +15,75 @@ interface ChatSimulatorProps {
 
 export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActions }: ChatSimulatorProps) {
   const [platform, setPlatform] = useState<"whatsapp" | "instagram">("whatsapp");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [showImagePanel, setShowImagePanel] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [micError, setMicError] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Greeting message from config
+  useEffect(() => {
+    const greeting: ChatMessage = {
       id: "initial-1",
       role: "model",
       text: config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      status: "read"
-    }
-  ]);
-  const [inputText, setInputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
-  const [showVoiceScenarios, setShowVoiceScenarios] = useState(false);
-  const [showImageOptions, setShowImageOptions] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+      status: "read",
+    };
+    setMessages([greeting]);
+  }, [config.customGreeting, config.businessName]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const mediaRecorderRef = useRef<any>(null);
-  const audioChunksRef = useRef<any[]>([]);
-  const timerRef = useRef<any>(null);
-
-  // Auto-scroll on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Sync greeting when agent config changes
-  useEffect(() => {
-    setMessages([
-      {
-        id: "initial-1",
-        role: "model",
-        text: config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        status: "read"
-      }
-    ]);
-  }, [config.customGreeting, config.businessName]);
-
   const addMessage = (role: "user" | "model", text: string, extra?: Partial<ChatMessage>) => {
-    const newMsg: ChatMessage = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const msg: ChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       role,
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       status: role === "user" ? "sending" : "read",
-      ...extra
+      ...extra,
     };
-
-    setMessages((prev) => [...prev, newMsg]);
-    if (onLeadMessageAdded) {
-      onLeadMessageAdded(text, role);
-    }
-    return newMsg;
+    setMessages((prev) => [...prev, msg]);
+    if (onLeadMessageAdded) onLeadMessageAdded(text, role);
+    return msg;
   };
 
-  const updateMessageStatus = (id: string, status: "sent" | "read") => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status } : m))
-    );
+  const updateStatus = (id: string, status: "sent" | "read") => {
+    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, status } : m));
   };
 
-  // Main controller to interact with the backend Gemini model
-  const sendMessageToAgent = async (
+  const callChatAPI = async (
     userText: string,
     historyList: ChatMessage[],
-    attachmentPayload?: { type: "audio" | "image"; data: string; mimeType: string }
+    attachment?: { data: string; mimeType: string }
   ) => {
     setIsLoading(true);
     try {
-      // Map ChatMessage structure to server historical structure
-      const formattedHistory = historyList.map((m) => ({
-        role: m.role,
-        text: m.text
-      }));
-
-      const response = await fetch("/api/chat", {
+      const history = historyList.map((m) => ({ role: m.role, text: m.text }));
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userText,
-          history: formattedHistory,
-          agentConfig: config,
-          attachment: attachmentPayload
-        })
+        body: JSON.stringify({ message: userText, history, agentConfig: config, attachment }),
       });
-
-      if (!response.ok) {
-        throw new Error("Error en la respuesta del servidor");
-      }
-
-      const data = await response.json();
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
       const actions: AgentAction[] = Array.isArray(data.actions) ? data.actions : [];
       addMessage("model", data.text, actions.length ? { actions } : undefined);
-      if (actions.length && onAgentActions) {
-        onAgentActions(actions);
-      }
-    } catch (error) {
-      console.error(error);
-      addMessage("model", "Che, disculpame pero se me complicó la conexión temporalmente. ¿Me podrías repetir la pregunta?");
+      if (actions.length && onAgentActions) onAgentActions(actions);
+    } catch (err) {
+      addMessage("model", "Se cortó la conexión por un momento. ¿Me repetís la consulta?");
     } finally {
       setIsLoading(false);
     }
@@ -178,217 +92,130 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   const handleSendText = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim()) return;
-
-    const textToSend = inputText;
+    const text = inputText;
     setInputText("");
-
-    const userMsg = addMessage("user", textToSend);
-    setTimeout(() => updateMessageStatus(userMsg.id, "sent"), 300);
-    setTimeout(() => updateMessageStatus(userMsg.id, "read"), 800);
-
-    // Save previous history
-    const historySnapshot = [...messages];
-    await sendMessageToAgent(textToSend, historySnapshot);
+    const msg = addMessage("user", text);
+    setTimeout(() => updateStatus(msg.id, "sent"), 300);
+    setTimeout(() => updateStatus(msg.id, "read"), 800);
+    await callChatAPI(text, [...messages]);
   };
 
-  // Handles simulated voice notes from scenarios
-  const handleSelectVoiceScenario = async (scenario: typeof VOICE_SCENARIOS[0]) => {
-    setShowVoiceScenarios(false);
-    
-    // Add voice note bubble to chat
-    const userMsg = addMessage("user", scenario.text, {
-      isAudio: true,
-      audioDuration: scenario.duration
-    });
-
-    setTimeout(() => updateMessageStatus(userMsg.id, "sent"), 300);
-    setTimeout(() => updateMessageStatus(userMsg.id, "read"), 800);
-
-    // Prompt context: translate audio context
-    const transcriptText = `[Nota de voz transcrita]: ${scenario.text}`;
-    await sendMessageToAgent(transcriptText, [...messages]);
-  };
-
-  // Handles uploading images or selecting mock ones
-  const handleSelectMockImage = async (img: typeof MOCK_IMAGES[0]) => {
-    setShowImageOptions(false);
-
-    // Convert URL to Base64 to simulate real image analysis
-    try {
-      setIsLoading(true);
-      const res = await fetch(img.url);
-      const blob = await res.blob();
-      const reader = new FileReader();
-      
-      reader.onloadend = async () => {
-        const base64data = (reader.result as string).split(",")[1];
-        
-        setIsLoading(false);
-        const userMsg = addMessage("user", `Me interesa este artículo: ${img.name}`, {
-          isImage: true,
-          imageUrl: img.url
-        });
-
-        setTimeout(() => updateMessageStatus(userMsg.id, "sent"), 300);
-        setTimeout(() => updateMessageStatus(userMsg.id, "read"), 800);
-
-        await sendMessageToAgent(
-          `Me interesa este artículo: ${img.name}. Decime si tenés stock, precio y detalles de este producto por favor.`,
-          [...messages],
-          {
-            type: "image",
-            data: base64data,
-            mimeType: "image/jpeg"
-          }
-        );
-      };
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      console.error("Error converting image:", err);
-      setIsLoading(false);
-    }
-  };
-
-  // Handle uploading real user file
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Real image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const base64data = (reader.result as string).split(",")[1];
+      const base64 = (reader.result as string).split(",")[1];
       const objectUrl = URL.createObjectURL(file);
-
-      setShowImageOptions(false);
-      const userMsg = addMessage("user", `Te mando la foto del producto`, {
-        isImage: true,
-        imageUrl: objectUrl
-      });
-
-      setTimeout(() => updateMessageStatus(userMsg.id, "sent"), 300);
-      setTimeout(() => updateMessageStatus(userMsg.id, "read"), 800);
-
-      await sendMessageToAgent(
-        `Te mando esta imagen. Decime el precio o decime si me podés asesorar con esto que ves acá, por favor.`,
+      setShowImagePanel(false);
+      const msg = addMessage("user", "Te mando una imagen para que me asesores.", { isImage: true, imageUrl: objectUrl });
+      setTimeout(() => updateStatus(msg.id, "sent"), 300);
+      setTimeout(() => updateStatus(msg.id, "read"), 800);
+      await callChatAPI(
+        "Te mando esta imagen. Decime si tenés algo parecido, el precio o cómo me podés ayudar.",
         [...messages],
-        {
-          type: "image",
-          data: base64data,
-          mimeType: file.type
-        }
+        { data: base64, mimeType: file.type }
       );
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  // Simulated recording (failsafe for iframes/permissions)
-  const startSimulatedRecording = () => {
-    setIsRecording(true);
-    setRecordingSeconds(0);
-    timerRef.current = setInterval(() => {
-      setRecordingSeconds((prev) => prev + 1);
-    }, 1000);
+  // Real microphone recording with MediaRecorder
+  const startRecording = async () => {
+    setMicError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const durationStr = `${Math.floor(recordingSeconds / 60)}:${String(recordingSeconds % 60).padStart(2, "0")}`;
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = (reader.result as string).split(",")[1];
+          const url = URL.createObjectURL(blob);
+          const msg = addMessage("user", "[Nota de voz]", { isAudio: true, audioDuration: durationStr });
+          // Store url for local playback
+          audioRef.current = new Audio(url);
+          setTimeout(() => updateStatus(msg.id, "sent"), 300);
+          setTimeout(() => updateStatus(msg.id, "read"), 800);
+          await callChatAPI(
+            "[Nota de voz del cliente. Procesa el audio adjunto y responde naturalmente.]",
+            [...messages],
+            { data: base64, mimeType: "audio/webm" }
+          );
+        };
+        reader.readAsDataURL(blob);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      timerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    } catch (err: any) {
+      setMicError("No se pudo acceder al micrófono. Verificá los permisos del navegador.");
+    }
   };
 
-  const stopSimulatedRecording = async () => {
-    clearInterval(timerRef.current);
+  const stopRecording = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
     setIsRecording(false);
-    
-    const minutes = Math.floor(recordingSeconds / 60);
-    const secs = recordingSeconds % 60;
-    const durationStr = `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
-
-    // A fun mock recording transcription
-    const mockTranscripts = [
-      "Hola buenas, quería preguntar si tienen la campera negra disponible en talle M y si hacen envíos a domicilio.",
-      "Buenas, vi su catálogo de productos y quería consultar el precio de las zapatillas deportivas rojas.",
-      "Hola, quería saber si tienen stock de los productos que publicaron y si puedo pagar en efectivo al recibir."
-    ];
-    const transcriptText = mockTranscripts[Math.floor(Math.random() * mockTranscripts.length)];
-
-    const userMsg = addMessage("user", transcriptText, {
-      isAudio: true,
-      audioDuration: durationStr
-    });
-
-    setTimeout(() => updateMessageStatus(userMsg.id, "sent"), 300);
-    setTimeout(() => updateMessageStatus(userMsg.id, "read"), 800);
-
-    await sendMessageToAgent(`[Nota de voz grabada de ${durationStr}]: ${transcriptText}`, [...messages]);
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
   };
 
   const clearChat = () => {
-    setMessages([
-      {
-        id: "initial-1",
-        role: "model",
-        text: config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        status: "read"
-      }
-    ]);
+    setMessages([{
+      id: "initial-1",
+      role: "model",
+      text: config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "read",
+    }]);
   };
 
   return (
     <div className="flex flex-col h-full bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm max-w-sm mx-auto w-full relative">
-      {/* Platform Selector & Header */}
+
+      {/* Platform selector */}
       <div className="bg-slate-50 p-3 border-b border-slate-200 flex items-center justify-between z-10">
         <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-          <button
-            onClick={() => setPlatform("whatsapp")}
-            className={`px-3 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
-              platform === "whatsapp"
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900"
-            }`}
-          >
-            WhatsApp
-          </button>
-          <button
-            onClick={() => setPlatform("instagram")}
-            className={`px-3 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
-              platform === "instagram"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900"
-            }`}
-          >
-            Instagram
-          </button>
+          {(["whatsapp","instagram"] as const).map((p) => (
+            <button key={p} onClick={() => setPlatform(p)}
+              className={`px-3 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
+                platform === p ? (p === "whatsapp" ? "bg-emerald-600 text-white shadow-sm" : "bg-blue-600 text-white shadow-sm") : "text-slate-500 hover:text-slate-900"
+              }`}>
+              {p === "whatsapp" ? "WhatsApp" : "Instagram"}
+            </button>
+          ))}
         </div>
-        
-        <button
-          onClick={clearChat}
-          title="Reiniciar Conversación"
-          className="p-1 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100 cursor-pointer"
-        >
+        <button onClick={clearChat} title="Reiniciar chat"
+          className="p-1 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100 cursor-pointer">
           <Trash2 size={16} />
         </button>
       </div>
 
-      {/* Simulated Device Frame Header */}
-      <div
-        className={`px-4 py-3 flex items-center justify-between text-slate-800 shadow-sm border-b border-slate-200 z-10 bg-white`}
-      >
+      {/* Chat header */}
+      <div className="px-4 py-3 flex items-center justify-between text-slate-800 shadow-sm border-b border-slate-200 z-10 bg-white">
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-inner ${
-              platform === "whatsapp" ? "bg-emerald-600" : "bg-blue-600"
-            }`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-inner ${platform === "whatsapp" ? "bg-emerald-600" : "bg-blue-600"}`}>
               {config.businessName.substring(0, 2).toUpperCase()}
             </div>
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
           </div>
           <div>
             <h4 className="font-semibold text-sm leading-tight text-slate-900">{config.businessName}</h4>
             <div className="flex items-center space-x-1">
-              <Sparkles size={10} className="text-blue-600 animate-pulse-slow" />
-              <span className="text-[10px] text-slate-500 font-medium tracking-wide">
-                Respondo AI 24/7
-              </span>
+              <Sparkles size={10} className="text-blue-600 animate-pulse" />
+              <span className="text-[10px] text-slate-500 font-medium tracking-wide">Respondo AI · Gemini</span>
             </div>
           </div>
         </div>
-
         <div className="flex items-center space-x-3.5 text-slate-400">
           <Phone size={16} className="cursor-pointer hover:text-slate-700" />
           <Video size={17} className="cursor-pointer hover:text-slate-700" />
@@ -396,384 +223,202 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
         </div>
       </div>
 
-      {/* Chat History Canvas */}
-      <div
-        className="flex-1 overflow-y-auto p-4 space-y-3.5 relative"
+      {/* Chat messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 relative"
         style={{
-          backgroundImage:
-            platform === "whatsapp"
-              ? "radial-gradient(#cbd5e1 0.5px, transparent 0.5px), radial-gradient(#cbd5e1 0.5px, #f8fafc 0.5px)"
-              : "none",
+          backgroundImage: platform === "whatsapp"
+            ? "radial-gradient(#cbd5e1 0.5px, transparent 0.5px), radial-gradient(#cbd5e1 0.5px, #f8fafc 0.5px)"
+            : "none",
           backgroundSize: "20px 20px",
           backgroundPosition: "0 0, 10px 10px",
-          backgroundColor: platform === "whatsapp" ? "#f8fafc" : "#ffffff"
-        }}
-      >
-        <div className="mx-auto max-w-[85%] bg-white/95 backdrop-blur-md rounded-xl p-2.5 text-center text-[11px] text-slate-500 border border-slate-200 mb-4 shadow-sm">
-          💡 <span className="font-semibold text-slate-700">Demostración interactiva:</span> Podés escribir libremente, subir imágenes o enviar notas de voz simuladas. El agente responderá basándose en el catálogo y reglas de negocio configurados a la izquierda.
-        </div>
+          backgroundColor: platform === "whatsapp" ? "#f8fafc" : "#ffffff",
+        }}>
 
         <AnimatePresence initial={false}>
           {messages.map((msg) => {
             const isUser = msg.role === "user";
             return (
-              <motion.div
-                key={msg.id}
+              <motion.div key={msg.id}
                 initial={{ opacity: 0, y: 12, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.2 }}
-                className={`flex ${isUser ? "justify-end" : "justify-start"} items-end space-x-2`}
-              >
+                className={`flex ${isUser ? "justify-end" : "justify-start"} items-end space-x-2`}>
+
                 {!isUser && (
                   <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
                     <Bot size={12} className="text-blue-600" />
                   </div>
                 )}
 
-                <div
-                  className={`max-w-[80%] rounded-2xl p-3 shadow-sm relative group ${
-                    isUser
-                      ? platform === "whatsapp"
-                        ? "bg-[#DCF8C6] text-slate-800 rounded-tr-none border border-[#c2e7af]"
-                        : "bg-blue-600 text-white rounded-tr-none"
-                      : platform === "whatsapp"
-                      ? "bg-white text-slate-800 border border-slate-200 rounded-tl-none"
-                      : "bg-slate-100 text-slate-800 rounded-tl-none"
-                  }`}
-                >
-                  {/* Image Attachment inside Bubble */}
+                <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm relative ${
+                  isUser
+                    ? platform === "whatsapp" ? "bg-[#DCF8C6] text-slate-800 rounded-tr-none border border-[#c2e7af]" : "bg-blue-600 text-white rounded-tr-none"
+                    : platform === "whatsapp" ? "bg-white text-slate-800 border border-slate-200 rounded-tl-none" : "bg-slate-100 text-slate-800 rounded-tl-none"
+                }`}>
+
+                  {/* Image */}
                   {msg.isImage && msg.imageUrl && (
-                    <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 max-h-48 bg-slate-50 flex items-center justify-center">
-                      <img
-                        referrerPolicy="no-referrer"
-                        src={msg.imageUrl}
-                        alt="Enviado por cliente"
-                        className="object-cover w-full h-full max-h-40"
-                      />
+                    <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 max-h-48 bg-slate-50">
+                      <img src={msg.imageUrl} alt="Imagen enviada" className="object-cover w-full h-full max-h-40" />
                     </div>
                   )}
 
-                  {/* Audio/Voice Note Bubble inside Chat */}
+                  {/* Audio bubble */}
                   {msg.isAudio ? (
                     <div className="flex items-center space-x-3 py-1 px-0.5">
                       <button
-                        onClick={() =>
-                          setPlayingAudioId(playingAudioId === msg.id ? null : msg.id)
-                        }
+                        onClick={() => {
+                          if (playingAudioId === msg.id) {
+                            audioRef.current?.pause();
+                            setPlayingAudioId(null);
+                          } else {
+                            audioRef.current?.play().catch(() => {});
+                            setPlayingAudioId(msg.id);
+                          }
+                        }}
                         className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm cursor-pointer ${
                           isUser ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-700"
-                        }`}
-                      >
-                        {playingAudioId === msg.id ? (
-                          <Pause size={14} fill="currentColor" />
-                        ) : (
-                          <Play size={14} fill="currentColor" className="ml-0.5" />
-                        )}
+                        }`}>
+                        {playingAudioId === msg.id ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
                       </button>
                       <div className="flex-1 min-w-[120px]">
-                        {/* Fake animated audio waveform */}
                         <div className="flex items-end space-x-0.5 h-6 mb-1">
                           {[...Array(14)].map((_, i) => (
-                            <span
-                              key={i}
-                              style={{
-                                height: playingAudioId === msg.id 
-                                  ? `${Math.max(15, Math.floor(Math.random() * 95))}%` 
-                                  : "20%"
-                              }}
-                              className={`w-0.5 rounded-full transition-all duration-300 ${
-                                isUser ? "bg-slate-700" : "bg-blue-600"
-                              }`}
-                            />
+                            <span key={i}
+                              style={{ height: playingAudioId === msg.id ? `${20 + ((i * 7) % 80)}%` : "20%" }}
+                              className={`w-0.5 rounded-full transition-all duration-300 ${isUser ? "bg-slate-700" : "bg-blue-600"}`} />
                           ))}
                         </div>
                         <div className="flex justify-between items-center text-[9px] opacity-75">
-                          <span className="flex items-center space-x-0.5">
-                            <Mic size={9} />
-                            <span>Mensaje de voz</span>
-                          </span>
-                          <span>{msg.audioDuration || "0:05"}</span>
+                          <span className="flex items-center gap-0.5"><Mic size={9} /> Nota de voz</span>
+                          <span>{msg.audioDuration || "0:00"}</span>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs font-normal leading-relaxed whitespace-pre-wrap">
-                      {msg.text}
-                    </p>
+                    <p className="text-xs font-normal leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                   )}
 
-                  {/* Tool-use action chips: shows what the agent did in the CRM */}
+                  {/* Agent actions chips */}
                   {!isUser && msg.actions && msg.actions.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
-                      {msg.actions.map((action, ai) => (
-                        <div
-                          key={ai}
-                          className="flex items-start gap-1 px-1.5 py-1 bg-blue-50 border border-blue-100 rounded-lg text-[9px] text-blue-700 leading-snug"
-                        >
+                      {msg.actions.map((a, i) => (
+                        <div key={i} className="flex items-start gap-1 px-1.5 py-1 bg-blue-50 border border-blue-100 rounded-lg text-[9px] text-blue-700 leading-snug">
                           <Zap size={9} className="shrink-0 mt-0.5" />
-                          <span className="font-medium">{action.label}</span>
+                          <span className="font-medium">{a.label}</span>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Bubble Footer Info */}
-                  <div className="flex items-center justify-end space-x-1 mt-1 opacity-70 text-[9px] text-right select-none">
+                  {/* Bubble footer */}
+                  <div className="flex items-center justify-end space-x-1 mt-1 opacity-70 text-[9px] select-none">
                     <span>{msg.timestamp}</span>
                     {isUser && (
-                      <span>
-                        {msg.status === "sending" && <span className="text-slate-400">...</span>}
+                      <>
+                        {msg.status === "sending" && <span className="text-slate-400">···</span>}
                         {msg.status === "sent" && <CheckCheck size={11} className="text-slate-400" />}
                         {msg.status === "read" && <CheckCheck size={11} className="text-blue-500" />}
-                      </span>
+                      </>
                     )}
                   </div>
-
-                  {/* Special capability pill */}
-                  {msg.isAudio && !isUser && (
-                    <span className="absolute -bottom-2 -left-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[8px] font-mono tracking-wide scale-90 flex items-center gap-0.5 shadow-sm">
-                      <FileAudio size={8} /> Voz Interpretada
-                    </span>
-                  )}
-                  {msg.isImage && !isUser && (
-                    <span className="absolute -bottom-2 -left-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[8px] font-mono tracking-wide scale-90 flex items-center gap-0.5 shadow-sm">
-                      <ImageIcon size={8} /> Imagen Analizada
-                    </span>
-                  )}
                 </div>
               </motion.div>
             );
           })}
         </AnimatePresence>
 
-        {/* Typing indicator */}
         {isLoading && (
           <div className="flex justify-start items-end space-x-2">
             <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
               <Bot size={12} className="text-blue-600 animate-bounce" />
             </div>
-            <div className="bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none p-3.5 shadow-sm flex items-center space-x-1.5">
-              <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-              <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-              <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-none p-3.5 shadow-sm flex items-center space-x-1.5">
+              <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
-
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Floating Panel: Image Selectors */}
+      {/* Image upload panel */}
       <AnimatePresence>
-        {showImageOptions && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            className="absolute bottom-16 left-4 right-4 bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xl z-20 space-y-3"
-          >
+        {showImagePanel && (
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 30 }}
+            className="absolute bottom-16 left-4 right-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-xl z-20 space-y-3">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-800">
-                Simular envío de imagen
-              </span>
-              <button
-                onClick={() => setShowImageOptions(false)}
-                className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                Cerrar
-              </button>
+              <span className="text-xs font-semibold text-slate-800">Enviar imagen</span>
+              <button onClick={() => setShowImagePanel(false)} className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer">Cerrar</button>
             </div>
-            
-            {/* Custom file uploader */}
-            <label className="flex flex-col items-center justify-center h-20 border border-dashed border-slate-200 hover:border-blue-400 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition-all text-center">
-              <Upload size={18} className="text-slate-400 mb-1" />
-              <span className="text-[10px] font-medium text-slate-600">Subir foto desde tu dispositivo</span>
-              <span className="text-[8px] text-slate-400 mt-0.5">Soporta PNG, JPG, WEBP</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
+            <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl cursor-pointer bg-slate-50 hover:bg-blue-50/30 transition-all text-center">
+              <Upload size={20} className="text-slate-400 mb-1.5" />
+              <span className="text-xs font-medium text-slate-600">Seleccionar imagen</span>
+              <span className="text-[9px] text-slate-400 mt-0.5">PNG, JPG, WEBP — la IA la analizará</span>
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
-
-            <div className="space-y-2">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-                O elegir un producto muestra
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {MOCK_IMAGES.map((img) => (
-                  <button
-                    key={img.name}
-                    onClick={() => handleSelectMockImage(img)}
-                    className="p-1 rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-400 text-left transition-all overflow-hidden relative group cursor-pointer"
-                  >
-                    <div className="w-full h-10 rounded overflow-hidden mb-1 relative bg-black">
-                      <img
-                        referrerPolicy="no-referrer"
-                        src={img.url}
-                        alt={img.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                      />
-                    </div>
-                    <span className="text-[9px] font-medium text-slate-600 truncate block leading-tight">
-                      {img.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating Panel: Voice Scenarios */}
-      <AnimatePresence>
-        {showVoiceScenarios && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            className="absolute bottom-16 left-4 right-4 bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xl z-20 space-y-3.5"
-          >
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-800">
-                Simular envío de nota de voz
-              </span>
-              <button
-                onClick={() => setShowVoiceScenarios(false)}
-                className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
+      {/* Mic error */}
+      {micError && (
+        <div className="mx-3 mb-1 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl text-[10px] text-red-700">
+          {micError}
+        </div>
+      )}
 
-            {/* Quick Record simulated button */}
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full bg-red-500 shrink-0 ${isRecording ? "animate-ping" : ""}`} />
-                <span className="text-[11px] font-medium text-slate-600">
-                  {isRecording ? `Grabando... ${recordingSeconds}s` : "Micrófono Simulador"}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={isRecording ? stopSimulatedRecording : startSimulatedRecording}
-                className={`px-3 py-1 text-[10px] rounded-lg font-semibold transition-all cursor-pointer ${
-                  isRecording 
-                    ? "bg-red-600 hover:bg-red-700 text-white" 
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-              >
-                {isRecording ? "Detener y Enviar" : "Grabar Audio"}
-              </button>
-            </div>
-
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-                O elegir consulta pre-grabada (LATAM)
-              </span>
-              <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
-                {VOICE_SCENARIOS.map((sc, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSelectVoiceScenario(sc)}
-                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-400 hover:bg-slate-100/80 text-left transition-all flex items-center justify-between group cursor-pointer"
-                  >
-                    <div className="flex-1 min-w-0 pr-2">
-                      <span className="text-[10px] font-semibold text-slate-700 block mb-0.5">
-                        {sc.label}
-                      </span>
-                      <p className="text-[9px] text-slate-500 truncate">
-                        "{sc.text}"
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-1 shrink-0 text-slate-400 group-hover:text-blue-600">
-                      <span className="text-[8px] font-mono">{sc.duration}</span>
-                      <ChevronRight size={12} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Input Form Bottom Bar */}
-      <form
-        onSubmit={handleSendText}
-        className={`p-3 bg-white border-t border-slate-200 flex items-center space-x-2 z-10 ${
-          isRecording ? "bg-red-50/50" : ""
-        }`}
-      >
+      {/* Input bar */}
+      <form onSubmit={handleSendText}
+        className={`p-3 bg-white border-t border-slate-200 flex items-center space-x-2 z-10 ${isRecording ? "bg-red-50/40" : ""}`}>
         <div className="flex items-center space-x-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setShowImageOptions(!showImageOptions);
-              setShowVoiceScenarios(false);
-            }}
-            className={`p-2 rounded-full text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer ${
-              showImageOptions ? "text-blue-600 bg-blue-50" : ""
-            }`}
-            title="Enviar imagen"
-          >
+          <button type="button"
+            onClick={() => { setShowImagePanel((v) => !v); setMicError(null); }}
+            className={`p-2 rounded-full text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer ${showImagePanel ? "text-blue-600 bg-blue-50" : ""}`}
+            title="Enviar imagen">
             <ImageIcon size={17} />
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setShowVoiceScenarios(!showVoiceScenarios);
-              setShowImageOptions(false);
-            }}
-            className={`p-2 rounded-full text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer ${
-              showVoiceScenarios ? "text-emerald-600 bg-emerald-50" : ""
-            }`}
-            title="Enviar nota de voz"
-          >
-            <Mic size={17} />
-          </button>
+          {isRecording ? (
+            <button type="button" onClick={stopRecording}
+              className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 cursor-pointer animate-pulse"
+              title="Detener y enviar">
+              <StopCircle size={17} />
+            </button>
+          ) : (
+            <button type="button" onClick={startRecording}
+              className="p-2 rounded-full text-slate-400 hover:text-emerald-600 transition-colors hover:bg-emerald-50 cursor-pointer"
+              title="Grabar nota de voz">
+              <Mic size={17} />
+            </button>
+          )}
         </div>
 
         {isRecording ? (
           <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs">
-            <span className="flex items-center space-x-1.5 animate-pulse">
-              <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-              <span className="font-semibold text-[11px]">GRABANDO SIMULADOR: {recordingSeconds}s</span>
+            <span className="flex items-center gap-1.5 animate-pulse font-semibold text-[11px]">
+              <span className="w-2 h-2 bg-red-500 rounded-full" />
+              GRABANDO {recordingSeconds}s
             </span>
-            <button
-              type="button"
-              onClick={stopSimulatedRecording}
-              className="text-[10px] font-bold text-red-700 hover:text-red-900 uppercase tracking-wider cursor-pointer"
-            >
-              ENVIAR
+            <button type="button" onClick={stopRecording}
+              className="text-[10px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1">
+              <Square size={10} fill="currentColor" /> Enviar
             </button>
           </div>
         ) : (
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Escribí un mensaje..."
-            className="flex-1 bg-slate-50 border border-slate-200 text-slate-850 text-xs rounded-full py-2 px-4 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder:text-slate-400"
-          />
+          <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)}
+            placeholder="Escribí un mensaje…"
+            className="flex-1 bg-slate-50 border border-slate-200 text-slate-850 text-xs rounded-full py-2 px-4 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder:text-slate-400" />
         )}
 
-        <button
-          type="submit"
-          disabled={!inputText.trim() || isLoading || isRecording}
+        <button type="submit" disabled={!inputText.trim() || isLoading || isRecording}
           className={`p-2.5 rounded-full text-white transition-all shadow-sm cursor-pointer ${
             !inputText.trim() || isLoading
               ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-              : platform === "whatsapp"
-              ? "bg-emerald-600 hover:bg-emerald-700 hover:scale-105 active:scale-95"
-              : "bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95"
-          }`}
-        >
+              : platform === "whatsapp" ? "bg-emerald-600 hover:bg-emerald-700 hover:scale-105 active:scale-95" : "bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95"
+          }`}>
           <Send size={14} />
         </button>
       </form>

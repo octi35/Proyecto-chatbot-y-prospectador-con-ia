@@ -26,9 +26,12 @@ interface CRMAdminProps {
   setLeads: React.Dispatch<React.SetStateAction<CRMLead[]>>;
   campaigns: Campaign[];
   setCampaigns: React.Dispatch<React.SetStateAction<Campaign[]>>;
+  onLeadUpdate?: (id: string, patch: Partial<CRMLead>) => Promise<CRMLead>;
+  onLeadDelete?: (id: string) => Promise<void>;
+  onCampaignCreate?: (campaign: Omit<Campaign, "id">) => Promise<Campaign>;
 }
 
-export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns }: CRMAdminProps) {
+export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onLeadUpdate, onLeadDelete, onCampaignCreate }: CRMAdminProps) {
   // Selection States
   const [activeTab, setActiveTab] = useState<"pipeline" | "broadcast">("pipeline");
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(leads[0] || null);
@@ -62,76 +65,67 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns }: C
     }
   };
 
-  // Move a lead to another status step
-  const handleMoveLead = (leadId: string, nextStatus: CRMLead["status"]) => {
-    setLeads((prev) =>
-      prev.map((l) => (l.id === leadId ? { ...l, status: nextStatus, lastInteraction: "Justo ahora" } : l))
-    );
-    // Sync active view
-    setLeads((prev) => {
-      const updated = prev.find((l) => l.id === leadId);
-      if (updated && selectedLead?.id === leadId) {
-        setSelectedLead(updated);
-      }
-      return prev;
-    });
+  const handleMoveLead = async (leadId: string, nextStatus: CRMLead["status"]) => {
+    const patch = { status: nextStatus, lastInteraction: "Ahora" };
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...patch } : l)));
+    if (selectedLead?.id === leadId) setSelectedLead((prev) => prev ? { ...prev, ...patch } : prev);
+    if (onLeadUpdate) {
+      await onLeadUpdate(leadId, patch).catch((e) => console.error("Lead update failed:", e));
+    }
   };
 
-  // Human handover trigger
   const toggleManualOverride = (leadId: string) => {
     setManualOverrideActive((prev) => {
-      const state = !prev[leadId];
-      if (state) {
-        // Mock a notification alert
-        alert(`🔔 IA pausada para este chat. El vendedor ya puede escribir libremente en el CRM.`);
-      } else {
-        alert(`🤖 Agente de IA reactivado. Respondo volverá a contestar automáticamente.`);
-      }
-      return { ...prev, [leadId]: state };
+      const next = !prev[leadId];
+      return { ...prev, [leadId]: next };
     });
   };
 
-  // Launch simulated official WhatsApp broadcast campaign
-  const handleLaunchCampaign = () => {
-    if (!newCampName.trim() || !newCampTemplate.trim()) {
-      alert("Por favor completa el nombre de la campaña y la plantilla.");
-      return;
-    }
+  const handleLaunchCampaign = async () => {
+    if (!newCampName.trim() || !newCampTemplate.trim()) return;
 
     setIsSendingCampaign(true);
-    setSendingProgress(5);
+    setSendingProgress(10);
 
-    const interval = setInterval(() => {
-      setSendingProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsSendingCampaign(false);
+    const progressTick = setInterval(() => {
+      setSendingProgress((p) => Math.min(p + 10, 90));
+    }, 200);
 
-          // Add newly dispatched campaign to state
-          const count = Math.floor(Math.random() * 80) + 40;
-          const read = Math.floor(count * 0.9);
-          const replies = Math.floor(read * 0.25);
+    try {
+      const draft: Omit<Campaign, "id"> = {
+        name: newCampName,
+        template: newCampTemplate,
+        segment: newCampSegment,
+        status: "Borrador",
+        sentCount: 0,
+        readCount: 0,
+        repliesCount: 0,
+        dateCreated: new Date().toISOString().split("T")[0],
+      };
 
-          const completedCamp: Campaign = {
-            id: `camp-${Date.now()}`,
-            name: newCampName,
-            template: newCampTemplate,
-            segment: newCampSegment,
-            status: "Completado",
-            sentCount: count,
-            readCount: read,
-            repliesCount: replies,
-            dateCreated: new Date().toISOString().split("T")[0]
-          };
+      let saved: Campaign;
+      if (onCampaignCreate) {
+        saved = await onCampaignCreate(draft);
+      } else {
+        saved = { ...draft, id: `camp-${Date.now()}` };
+        setCampaigns((prev) => [saved, ...prev]);
+      }
 
-          setCampaigns((prevCamp) => [completedCamp, ...prevCamp]);
-          setNewCampName("");
-          alert(`🚀 Campaña masiva de WhatsApp enviada exitosamente vía API Oficial de Meta a ${count} contactos.`);
-          return 0;
-        }
-        return prev + 15;
-      });
-    }, 250);
+      // Update to "Enviando" (real Meta API calls would go here)
+      clearInterval(progressTick);
+      setSendingProgress(100);
+
+      setTimeout(() => {
+        setSendingProgress(0);
+        setIsSendingCampaign(false);
+        setNewCampName("");
+      }, 600);
+    } catch (e) {
+      clearInterval(progressTick);
+      setSendingProgress(0);
+      setIsSendingCampaign(false);
+      console.error("Campaign create failed:", e);
+    }
   };
 
   return (

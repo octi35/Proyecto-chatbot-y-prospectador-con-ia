@@ -1,112 +1,271 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
+import { createClient } from "@supabase/supabase-js";
+import helmet from "helmet";
+import cors from "cors";
+import pino from "pino";
+import { z, ZodError } from "zod";
 
 dotenv.config();
 
-const app = express();
-app.use(express.json({ limit: "20mb" })); // Support base64 image uploads
+// ---------------------------------------------------------------------------
+// LOGGER
+// ---------------------------------------------------------------------------
+const logger = pino({
+  level: process.env.LOG_LEVEL || "info",
+  transport: process.env.NODE_ENV !== "production"
+    ? { target: "pino/file", options: { destination: 1 } }
+    : undefined,
+});
 
+// ---------------------------------------------------------------------------
+// CONSTANTS
+// ---------------------------------------------------------------------------
 const PORT = 3000;
-
-// Model is configurable; default to a valid, current Gemini Flash model.
-// NOTE: "gemini-3.5-flash" does not exist and fails against the live API.
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+const WA_TOKEN = process.env.WHATSAPP_TOKEN || "";
+const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
+const WA_APP_SECRET = process.env.WHATSAPP_APP_SECRET || "";
+const WA_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "respondo-verify-secret";
+
+// ---------------------------------------------------------------------------
+// CLIENTS (lazy)
+// ---------------------------------------------------------------------------
+let _ai: GoogleGenAI | null = null;
+function getAI(): GoogleGenAI {
+  if (!_ai) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) throw new Error("GEMINI_API_KEY is required");
+    _ai = new GoogleGenAI({ apiKey: key, httpOptions: { headers: { "User-Agent": "aistudio-build" } } });
+  }
+  return _ai;
+}
+
+function getDB() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY are required");
+  }
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// ---------------------------------------------------------------------------
+// ZOD SCHEMAS
+// ---------------------------------------------------------------------------
+const AgentConfigSchema = z.object({
+  businessName: z.string().min(1).max(200),
+  businessType: z.string().max(200).default(""),
+  catalog: z.string().max(10000).default(""),
+  tone: z.string().max(100).default("Argentino/Cercano"),
+  logoUrl: z.string().url().optional().or(z.literal("")),
+  customGreeting: z.string().max(500).optional(),
+  autoFollowUpMinutes: z.number().int().positive().max(10080).optional(),
+  syncStore: z.enum(["Ninguna","TiendaNube","Shopify","WooCommerce","MercadoLibre"]).optional(),
+});
+
+const ChatSchema = z.object({
+  message: z.string().max(4000).default(""),
+  history: z.array(z.object({ role: z.enum(["user","model"]), text: z.string().max(4000) })).max(100).optional(),
+  agentConfig: AgentConfigSchema.optional(),
+  attachment: z.object({ data: z.string(), mimeType: z.string().max(100) }).optional(),
+});
+
+const LeadPatchSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  phone: z.string().max(50).optional(),
+  status: z.enum(["Nuevo","Contactado","Presupuestado","Cerrado"]).optional(),
+  origin: z.enum(["WhatsApp","Instagram","Facebook"]).optional(),
+  lastInteraction: z.string().max(100).optional(),
+  score: z.number().int().min(0).max(100).optional(),
+  notes: z.string().max(2000).optional(),
+  category: z.string().max(100).optional().nullable(),
+  avatar: z.string().max(500).optional(),
+  totalSpent: z.number().min(0).optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(["user","model"]),
+    text: z.string(),
+    timestamp: z.string(),
+  })).optional(),
+});
+
+const LeadCreateSchema = LeadPatchSchema.extend({
+  name: z.string().min(1).max(200),
+});
+
+const CampaignPatchSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  template: z.string().max(2000).optional(),
+  segment: z.string().max(200).optional(),
+  status: z.enum(["Borrador","Enviando","Completado"]).optional(),
+  sentCount: z.number().int().min(0).optional(),
+  readCount: z.number().int().min(0).optional(),
+  repliesCount: z.number().int().min(0).optional(),
+  dateCreated: z.string().optional(),
+});
+
+// ---------------------------------------------------------------------------
+// DB MAPPING HELPERS
+// ---------------------------------------------------------------------------
+function mapLeadFromDB(row: any) {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    status: row.status,
+    origin: row.origin,
+    lastInteraction: row.last_interaction,
+    score: row.score,
+    notes: row.notes,
+    category: row.category ?? undefined,
+    avatar: row.avatar,
+    totalSpent: parseFloat(row.total_spent) || 0,
+    conversationHistory: row.conversation_history || [],
+  };
+}
+
+function mapLeadToDB(data: any) {
+  const out: any = {};
+  if (data.name !== undefined) out.name = data.name;
+  if (data.phone !== undefined) out.phone = data.phone;
+  if (data.status !== undefined) out.status = data.status;
+  if (data.origin !== undefined) out.origin = data.origin;
+  if (data.lastInteraction !== undefined) out.last_interaction = data.lastInteraction;
+  if (data.score !== undefined) out.score = data.score;
+  if (data.notes !== undefined) out.notes = data.notes;
+  if (data.category !== undefined) out.category = data.category;
+  if (data.avatar !== undefined) out.avatar = data.avatar;
+  if (data.totalSpent !== undefined) out.total_spent = data.totalSpent;
+  if (data.conversationHistory !== undefined) out.conversation_history = data.conversationHistory;
+  return out;
+}
+
+function mapCampaignFromDB(row: any) {
+  return {
+    id: row.id,
+    name: row.name,
+    template: row.template,
+    segment: row.segment,
+    status: row.status,
+    sentCount: row.sent_count,
+    readCount: row.read_count,
+    repliesCount: row.replies_count,
+    dateCreated: row.date_created,
+  };
+}
+
+function mapCampaignToDB(data: any) {
+  const out: any = {};
+  if (data.name !== undefined) out.name = data.name;
+  if (data.template !== undefined) out.template = data.template;
+  if (data.segment !== undefined) out.segment = data.segment;
+  if (data.status !== undefined) out.status = data.status;
+  if (data.sentCount !== undefined) out.sent_count = data.sentCount;
+  if (data.readCount !== undefined) out.read_count = data.readCount;
+  if (data.repliesCount !== undefined) out.replies_count = data.repliesCount;
+  if (data.dateCreated !== undefined) out.date_created = data.dateCreated;
+  return out;
+}
+
+function mapConfigFromDB(row: any) {
+  return {
+    businessName: row.business_name,
+    businessType: row.business_type,
+    catalog: row.catalog,
+    tone: row.tone,
+    logoUrl: row.logo_url ?? undefined,
+    customGreeting: row.custom_greeting ?? undefined,
+    autoFollowUpMinutes: row.auto_follow_up_minutes,
+    syncStore: row.sync_store,
+  };
+}
+
+function mapConfigToDB(data: any) {
+  const out: any = {};
+  if (data.businessName !== undefined) out.business_name = data.businessName;
+  if (data.businessType !== undefined) out.business_type = data.businessType;
+  if (data.catalog !== undefined) out.catalog = data.catalog;
+  if (data.tone !== undefined) out.tone = data.tone;
+  if (data.logoUrl !== undefined) out.logo_url = data.logoUrl || null;
+  if (data.customGreeting !== undefined) out.custom_greeting = data.customGreeting || null;
+  if (data.autoFollowUpMinutes !== undefined) out.auto_follow_up_minutes = data.autoFollowUpMinutes;
+  if (data.syncStore !== undefined) out.sync_store = data.syncStore;
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // TOOL-USE (Function Calling)
 // ---------------------------------------------------------------------------
-// The agent can call these tools mid-conversation. "Read" tools (buscar_producto)
-// run server-side against the business catalog. "Action" tools return structured
-// intents that the frontend applies to the CRM. When a real DB is wired up, the
-// same intents can be persisted server-side without touching the agent logic.
-const TOOL_DECLARATIONS: any = [
-  {
-    functionDeclarations: [
-      {
-        name: "buscar_producto",
-        description:
-          "Busca un producto o servicio en el catálogo del negocio para confirmar precio, talles, colores y disponibilidad. Usala SIEMPRE antes de afirmar stock o precios.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            consulta: {
-              type: "STRING",
-              description:
-                "Producto o característica que busca el cliente (ej: 'Nike Air Max talle 42', 'campera de cuero L').",
-            },
-          },
-          required: ["consulta"],
+const TOOL_DECLARATIONS: any = [{
+  functionDeclarations: [
+    {
+      name: "buscar_producto",
+      description: "Busca un producto o servicio en el catálogo del negocio para confirmar precio, talles, colores y disponibilidad. Usala SIEMPRE antes de afirmar stock o precios.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          consulta: { type: "STRING", description: "Producto o característica que busca el cliente." },
         },
+        required: ["consulta"],
       },
-      {
-        name: "registrar_lead",
-        description:
-          "Registra o actualiza un prospecto en el CRM cuando un cliente nuevo muestra interés real (pide precio, stock, quiere comprar o deja sus datos).",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            nombre: { type: "STRING", description: "Nombre del cliente. Si no lo sabés, usá 'Cliente sin identificar'." },
-            telefono: { type: "STRING", description: "Teléfono del cliente si lo proporcionó. Opcional." },
-            interes: { type: "STRING", description: "Resumen breve de qué producto/servicio le interesa." },
-            canal: {
-              type: "STRING",
-              description: "Canal de origen del contacto.",
-              enum: ["WhatsApp", "Instagram", "Facebook"],
-            },
-          },
-          required: ["nombre", "interes"],
+    },
+    {
+      name: "registrar_lead",
+      description: "Registra o actualiza un prospecto en el CRM cuando un cliente nuevo muestra interés real.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          nombre:  { type: "STRING", description: "Nombre del cliente." },
+          telefono:{ type: "STRING", description: "Teléfono del cliente. Opcional." },
+          interes: { type: "STRING", description: "Resumen breve de qué le interesa." },
+          canal:   { type: "STRING", description: "Canal de origen.", enum: ["WhatsApp","Instagram","Facebook"] },
         },
+        required: ["nombre", "interes"],
       },
-      {
-        name: "actualizar_estado_lead",
-        description:
-          "Mueve a un prospecto por el embudo de ventas según el avance de la conversación (ej: tras enviar presupuesto, o al concretar la compra).",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            nombre: { type: "STRING", description: "Nombre del prospecto a actualizar." },
-            estado: {
-              type: "STRING",
-              description: "Nuevo estado en el embudo.",
-              enum: ["Nuevo", "Contactado", "Presupuestado", "Cerrado"],
-            },
-            nota: { type: "STRING", description: "Nota corta del motivo del cambio. Opcional." },
-          },
-          required: ["nombre", "estado"],
+    },
+    {
+      name: "actualizar_estado_lead",
+      description: "Mueve a un prospecto por el embudo de ventas según el avance de la conversación.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          nombre: { type: "STRING", description: "Nombre del prospecto." },
+          estado: { type: "STRING", enum: ["Nuevo","Contactado","Presupuestado","Cerrado"] },
+          nota:   { type: "STRING", description: "Nota corta. Opcional." },
         },
+        required: ["nombre", "estado"],
       },
-      {
-        name: "agendar_seguimiento",
-        description:
-          "Agenda un recordatorio de seguimiento para retomar el contacto con el cliente más tarde (ej: cuando pide que le escriban después o queda algo pendiente).",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            nombre: { type: "STRING", description: "Nombre del cliente." },
-            cuando: { type: "STRING", description: "Momento del seguimiento (ej: 'mañana 10am', 'en 2 horas')." },
-            motivo: { type: "STRING", description: "Motivo del seguimiento." },
-          },
-          required: ["cuando", "motivo"],
+    },
+    {
+      name: "agendar_seguimiento",
+      description: "Agenda un recordatorio de seguimiento para retomar el contacto más tarde.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          nombre:  { type: "STRING", description: "Nombre del cliente." },
+          cuando:  { type: "STRING", description: "Momento del seguimiento." },
+          motivo:  { type: "STRING", description: "Motivo del seguimiento." },
         },
+        required: ["cuando", "motivo"],
       },
-      {
-        name: "generar_link_pago",
-        description:
-          "Genera un link de pago de Mercado Pago para cerrar la venta cuando el cliente confirma que quiere comprar.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            concepto: { type: "STRING", description: "Descripción de lo que se cobra (ej: 'Nike Air Max 90 talle 42')." },
-            monto: { type: "NUMBER", description: "Monto total en ARS." },
-          },
-          required: ["concepto", "monto"],
+    },
+    {
+      name: "generar_link_pago",
+      description: "Genera un link de Mercado Pago para cerrar la venta.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          concepto: { type: "STRING", description: "Descripción de lo que se cobra." },
+          monto:    { type: "NUMBER", description: "Monto total en ARS." },
         },
+        required: ["concepto", "monto"],
       },
-    ],
-  },
-];
+    },
+  ],
+}];
 
 interface AgentAction {
   type: string;
@@ -114,291 +273,504 @@ interface AgentAction {
   payload: Record<string, any>;
 }
 
-// Executes a tool. Returns the result given back to the model, and optionally a
-// structured action for the frontend to apply to the CRM.
-function executeTool(
-  name: string,
-  args: Record<string, any>,
-  config: any
-): { result: Record<string, any>; action?: AgentAction } {
+function executeTool(name: string, args: Record<string, any>, config: any): { result: Record<string, any>; action?: AgentAction } {
   switch (name) {
     case "buscar_producto": {
       const query = String(args.consulta || "").toLowerCase();
       const terms = query.split(/\s+/).filter((w) => w.length > 2);
-      const lines = String(config.catalog || "")
-        .split("\n")
-        .map((l: string) => l.trim())
-        .filter(Boolean);
-      const matches = lines.filter((line: string) => {
-        const lower = line.toLowerCase();
-        return terms.some((t) => lower.includes(t));
-      });
-      if (matches.length === 0) {
-        return {
-          result: {
-            encontrado: false,
-            mensaje: "No se encontró ese producto en el catálogo actual. Ofrecé la alternativa más parecida.",
-          },
-        };
-      }
+      const lines = String(config.catalog || "").split("\n").map((l: string) => l.trim()).filter(Boolean);
+      const matches = lines.filter((line: string) => terms.some((t) => line.toLowerCase().includes(t)));
+      if (!matches.length) return { result: { encontrado: false, mensaje: "No se encontró ese producto. Ofrecé la alternativa más cercana." } };
       return { result: { encontrado: true, coincidencias: matches } };
     }
-
     case "registrar_lead": {
       const canal = args.canal || "WhatsApp";
       return {
-        result: { ok: true, mensaje: `Prospecto "${args.nombre}" registrado en el CRM.` },
-        action: {
-          type: "upsert_lead",
-          label: `🆕 Agente registró el lead "${args.nombre}" (${args.interes})`,
-          payload: { ...args, canal },
-        },
+        result: { ok: true, mensaje: `Prospecto "${args.nombre}" registrado.` },
+        action: { type: "upsert_lead", label: `🆕 Lead registrado: "${args.nombre}" (${args.interes})`, payload: { ...args, canal } },
       };
     }
-
     case "actualizar_estado_lead": {
       return {
-        result: { ok: true, mensaje: `Estado de "${args.nombre}" actualizado a "${args.estado}".` },
-        action: {
-          type: "update_lead_status",
-          label: `📈 Agente movió a "${args.nombre}" → ${args.estado}`,
-          payload: args,
-        },
+        result: { ok: true, mensaje: `Estado de "${args.nombre}" → "${args.estado}".` },
+        action: { type: "update_lead_status", label: `📈 "${args.nombre}" movido → ${args.estado}`, payload: args },
       };
     }
-
     case "agendar_seguimiento": {
       return {
         result: { ok: true, mensaje: `Seguimiento agendado: ${args.cuando}.` },
-        action: {
-          type: "schedule_followup",
-          label: `⏰ Seguimiento agendado (${args.cuando}): ${args.motivo}`,
-          payload: args,
-        },
+        action: { type: "schedule_followup", label: `⏰ Seguimiento (${args.cuando}): ${args.motivo}`, payload: args },
       };
     }
-
     case "generar_link_pago": {
       const monto = Number(args.monto) || 0;
-      const link = `https://mpago.la/respondo?concepto=${encodeURIComponent(
-        args.concepto || ""
-      )}&monto=${monto}`;
+      const link = `https://mpago.la/respondo?concepto=${encodeURIComponent(args.concepto || "")}&monto=${monto}`;
       return {
         result: { ok: true, link },
-        action: {
-          type: "payment_link",
-          label: `💳 Link de pago generado por $${monto.toLocaleString("es-AR")} ARS`,
-          payload: { ...args, monto, link },
-        },
+        action: { type: "payment_link", label: `💳 Link de pago $${monto.toLocaleString("es-AR")} ARS generado`, payload: { ...args, monto, link } },
       };
     }
-
     default:
       return { result: { error: `Herramienta desconocida: ${name}` } };
   }
 }
 
-// Lazy initialize Gemini client
-let aiClient: GoogleGenAI | null = null;
+// ---------------------------------------------------------------------------
+// CORE CHAT FUNCTION (reused by /api/chat and WhatsApp webhook)
+// ---------------------------------------------------------------------------
+async function runChat(
+  message: string,
+  history: { role: string; text: string }[],
+  config: any,
+  attachment?: { data: string; mimeType: string }
+): Promise<{ text: string; actions: AgentAction[] }> {
+  const ai = getAI();
 
-function getGeminiClient(): GoogleGenAI {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is required");
-    }
-    aiClient = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
-      },
-    });
-  }
-  return aiClient;
-}
+  const systemInstruction = `Eres "Respondo", un agente de IA entrenado a medida para "${config.businessName}" (Rubro: ${config.businessType}).
+Tu objetivo: chatear naturalmente, responder consultas y cerrar ventas en WhatsApp, Instagram o Facebook.
 
-// 1. API: Health Check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
-});
-
-// 2. API: Respondo Chat Simulation Agent
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { message, history, agentConfig, attachment } = req.body;
-
-    // Validate config
-    const config = agentConfig || {
-      businessName: "Zapas Respondo",
-      businessType: "Calzado y Zapatillas",
-      catalog: "- Nike Air Max 90: $120.000 (Talles 38-44, Color Negro y Blanco)\n- Adidas Forum Low: $110.000 (Talles 37-43, Color Blanco)\n- Puma Classic: $85.000 (Talles 36-44, Color Gamuza Negra)\n- Envío gratis en CABA y GBA.",
-      tone: "Argentino/Cercano"
-    };
-
-    const ai = getGeminiClient();
-
-    // Construct the customized system instruction based on agent config
-    const systemInstruction = `Eres "Respondo", un agente de IA experto entrenado a medida para el negocio "${config.businessName}" (Rubro: ${config.businessType}).
-Tu objetivo principal es chatear de forma natural, responder consultas de clientes, asesorar sobre productos/servicios y cerrar ventas de manera fluida y persuasiva en canales de mensajería (WhatsApp, Instagram o Facebook).
-
-INFORMACIÓN DEL NEGOCIO:
-- Nombre de la Empresa: ${config.businessName}
-- Rubro/Giro: ${config.businessType}
-- Catálogo de Productos/Servicios y Precios:
+CATÁLOGO:
 ${config.catalog}
 
-REGLAS DE TONO Y COMUNICACIÓN (TONO ACTUAL: "${config.tone}"):
-- Si el tono es "Argentino/Cercano": Habla de "vos", usa modismos argentinos naturales y respetuosos (ej: "¡Hola! ¿Cómo andás?", "Che", "Mirá", "Dale", "Buenísimo", "Tollazo", "En un toque"), sé sumamente cálido, amigable, directo y persuasivo. Recuerda: "Chatea menos, Vendé más".
-- Si el tono es "Profesional/Formal": Usa un lenguaje pulido, habla de "usted" o "tú" de manera formal, sé muy cortés, claro, estructurado y educado.
-- Si el tono es "Casual/Juvenil": Sé súper buena onda, usa "tú" o "vos" de forma relajada, emoticones modernos, lenguaje directo, ameno y entusiasta.
+TONO ACTUAL: "${config.tone}"
+- Argentino/Cercano: vos, modismos argentinos, cálido y directo.
+- Profesional/Formal: usted/tú, pulido y cortés.
+- Casual/Juvenil: buena onda, emoticones, entusiasta.
 
-DIRECTIVAS DE VENTA Y REGLAS DE NEGOCIO:
-1. Sé conciso y dinámico: En WhatsApp la gente prefiere mensajes de 2 a 3 oraciones cortas. Evita bloques de texto gigantes.
-2. Si te preguntan por un producto que está en el catálogo, indica el precio, sus características y ofrece reservarlo, coordinar el envío o agregarlo al pedido de forma proactiva.
-3. Si te preguntan por algo que NO está en el catálogo, di amablemente que por el momento no lo tienes disponible pero ofréceles la alternativa más cercana o pregúntales qué talle/estilo buscan.
-4. Intenta guiar al cliente hacia el cierre de la venta, agendar una cita o coordinar la entrega de manera natural pero persuasiva (ej: "¿Te parece que te guarde las talle 40?", "¿Querés que coordinemos el envío hoy mismo?", etc.).
-5. Si el cliente envía un "Audio" (se enviará como transcripción de audio) o una "Imagen", responde interpretando el contenido de forma brillante y natural.
-6. NO rompas el personaje. Eres un agente humano del equipo de ${config.businessName}, no un modelo de lenguaje de IA.
+DIRECTIVAS:
+1. Mensajes cortos (2-3 oraciones). Sin bloques de texto gigantes.
+2. Siempre usar buscar_producto antes de afirmar precio o stock.
+3. Si no está en catálogo, ofrecer alternativa cercana.
+4. Guiar hacia el cierre: "¿Te la reservo?", "¿Coordinamos el envío hoy?".
+5. Registrar leads apenas muestren interés real.
+6. NO romper el personaje. Sos del equipo humano de ${config.businessName}.
 
-HERRAMIENTAS DISPONIBLES (úsalas proactivamente, sin avisar al cliente que usás "herramientas"):
-- buscar_producto: consultá SIEMPRE el catálogo antes de afirmar precio, stock o talles.
-- registrar_lead: registrá al cliente en el CRM apenas muestre interés real (pide precio/stock o quiere comprar).
-- actualizar_estado_lead: movelo por el embudo (a "Presupuestado" al pasar precio, a "Cerrado" al concretar la venta).
-- agendar_seguimiento: si queda algo pendiente o el cliente pide que le escriban después.
-- generar_link_pago: cuando el cliente confirma la compra, generá el link de Mercado Pago y compartilo.
-Usá las herramientas de forma natural dentro de la conversación; después de usarlas, respondé al cliente como lo haría un vendedor humano.
+HERRAMIENTAS (usarlas sin avisar al cliente):
+- buscar_producto: consultar stock/precios SIEMPRE antes de afirmarlos.
+- registrar_lead: apenas el cliente muestra interés.
+- actualizar_estado_lead: al pasar precio → Presupuestado; al cerrar → Cerrado.
+- agendar_seguimiento: si algo queda pendiente.
+- generar_link_pago: al confirmar compra.
 
-Lema de Respondo: "Chatea menos, Vendé más." Actúa siempre con este objetivo en mente.`;
+Lema: "Chatea menos, Vendé más."`;
 
-    // Map conversation history to Gemini structure
-    const contents: any[] = [];
+  const contents: any[] = [];
+  (history || []).forEach((m) => {
+    contents.push({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] });
+  });
 
-    // Add prior history
-    if (history && Array.isArray(history)) {
-      history.forEach((msg: any) => {
-        contents.push({
-          role: msg.role === "user" ? "user" : "model",
-          parts: [{ text: msg.text }]
-        });
-      });
-    }
+  const currentParts: any[] = [];
+  if (attachment?.data && attachment?.mimeType) {
+    currentParts.push({ inlineData: { data: attachment.data, mimeType: attachment.mimeType } });
+    currentParts.push({ text: message || "Analiza esta imagen." });
+  } else {
+    currentParts.push({ text: message || "Hola!" });
+  }
+  contents.push({ role: "user", parts: currentParts });
 
-    // Add current user turn
-    const currentParts: any[] = [];
+  const actions: AgentAction[] = [];
+  let finalText = "";
 
-    // Check for attachment
-    if (attachment && attachment.data && attachment.mimeType) {
-      currentParts.push({
-        inlineData: {
-          data: attachment.data, // base64 payload
-          mimeType: attachment.mimeType
-        }
-      });
-      
-      // If it's an image, we can add a clarifying prompt if message is empty
-      const promptText = message || "Analiza esta imagen y responde según las reglas de tu negocio.";
-      currentParts.push({ text: promptText });
-    } else {
-      currentParts.push({ text: message || "Hola!" });
-    }
-
-    contents.push({
-      role: "user",
-      parts: currentParts
+  for (let i = 0; i < 5; i++) {
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
+      config: { systemInstruction, temperature: 0.8, topP: 0.95, tools: TOOL_DECLARATIONS },
     });
 
-    // Function-calling loop: keep resolving tool calls until the model returns
-    // a final natural-language reply (capped to avoid runaway loops).
-    const collectedActions: AgentAction[] = [];
-    let finalText = "";
-    const MAX_TOOL_ITERATIONS = 5;
-
-    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents,
-        config: {
-          systemInstruction,
-          temperature: 0.8,
-          topP: 0.95,
-          tools: TOOL_DECLARATIONS,
-        },
-      });
-
-      const functionCalls = response.functionCalls;
-
-      if (functionCalls && functionCalls.length > 0) {
-        // Append the model's tool-call turn so the conversation stays coherent.
-        const modelContent = response.candidates?.[0]?.content;
-        if (modelContent) contents.push(modelContent);
-
-        // Execute every requested tool and feed the results back to the model.
-        const functionResponseParts: any[] = [];
-        for (const call of functionCalls) {
-          const { result, action } = executeTool(
-            call.name as string,
-            (call.args as Record<string, any>) || {},
-            config
-          );
-          if (action) collectedActions.push(action);
-          functionResponseParts.push({
-            functionResponse: { name: call.name, response: result },
-          });
-        }
-        contents.push({ role: "user", parts: functionResponseParts });
-        continue; // ask the model again with the tool results in context
+    const calls = response.functionCalls;
+    if (calls && calls.length > 0) {
+      const modelContent = response.candidates?.[0]?.content;
+      if (modelContent) contents.push(modelContent);
+      const parts: any[] = [];
+      for (const call of calls) {
+        const { result, action } = executeTool(call.name as string, (call.args as any) || {}, config);
+        if (action) actions.push(action);
+        parts.push({ functionResponse: { name: call.name, response: result } });
       }
+      contents.push({ role: "user", parts });
+      continue;
+    }
+    finalText = response.text || "";
+    break;
+  }
 
-      // No tool calls -> this is the final answer.
-      finalText = response.text || "";
-      break;
+  return { text: finalText || "Disculpame, no pude procesar la consulta. ¿Me la repetís?", actions };
+}
+
+// ---------------------------------------------------------------------------
+// EXPRESS APP
+// ---------------------------------------------------------------------------
+const app = express();
+
+app.use(helmet({
+  contentSecurityPolicy: false, // Vite dev needs inline scripts
+}));
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: "20mb" }));
+
+// Request logger (lightweight)
+app.use((req, _res, next) => {
+  logger.info({ method: req.method, url: req.url }, "req");
+  next();
+});
+
+// Zod error handler
+function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
+  return schema.parse(body);
+}
+
+function handleError(res: express.Response, err: unknown) {
+  if (err instanceof ZodError) {
+    return res.status(400).json({ error: "Datos inválidos", details: err.flatten() });
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  logger.error({ err: msg });
+  return res.status(500).json({ error: msg });
+}
+
+// ---------------------------------------------------------------------------
+// HEALTH CHECK
+// ---------------------------------------------------------------------------
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", time: new Date().toISOString(), model: GEMINI_MODEL });
+});
+
+// ---------------------------------------------------------------------------
+// CONFIG
+// ---------------------------------------------------------------------------
+app.get("/api/config", async (_req, res) => {
+  try {
+    const db = getDB();
+    const { data } = await db.from("respondo_config").select("*").limit(1).single();
+    if (!data) return res.json(null);
+    res.json(mapConfigFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.put("/api/config", async (req, res) => {
+  try {
+    const body = validateBody(AgentConfigSchema, req.body);
+    const db = getDB();
+    const { data: existing } = await db.from("respondo_config").select("id").limit(1).single();
+    let result: any;
+    if (existing) {
+      const { data } = await db.from("respondo_config").update(mapConfigToDB(body)).eq("id", existing.id).select().single();
+      result = data;
+    } else {
+      const { data } = await db.from("respondo_config").insert(mapConfigToDB(body)).select().single();
+      result = data;
+    }
+    res.json(mapConfigFromDB(result));
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
+// LEADS
+// ---------------------------------------------------------------------------
+app.get("/api/leads", async (_req, res) => {
+  try {
+    const db = getDB();
+    const { data, error } = await db.from("respondo_leads").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    res.json((data || []).map(mapLeadFromDB));
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/leads", async (req, res) => {
+  try {
+    const body = validateBody(LeadCreateSchema, req.body);
+    const db = getDB();
+    const { data, error } = await db.from("respondo_leads").insert(mapLeadToDB(body)).select().single();
+    if (error) throw error;
+    res.status(201).json(mapLeadFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.put("/api/leads/:id", async (req, res) => {
+  try {
+    const body = validateBody(LeadPatchSchema, req.body);
+    const db = getDB();
+    const { data, error } = await db.from("respondo_leads").update(mapLeadToDB(body)).eq("id", req.params.id).select().single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Lead no encontrado" });
+    res.json(mapLeadFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.delete("/api/leads/:id", async (req, res) => {
+  try {
+    const db = getDB();
+    const { error } = await db.from("respondo_leads").delete().eq("id", req.params.id);
+    if (error) throw error;
+    res.status(204).send();
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
+// CAMPAIGNS
+// ---------------------------------------------------------------------------
+app.get("/api/campaigns", async (_req, res) => {
+  try {
+    const db = getDB();
+    const { data, error } = await db.from("respondo_campaigns").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    res.json((data || []).map(mapCampaignFromDB));
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/campaigns", async (req, res) => {
+  try {
+    const body = validateBody(CampaignPatchSchema.extend({ name: z.string().min(1), template: z.string().min(1) }), req.body);
+    const db = getDB();
+    const { data, error } = await db.from("respondo_campaigns").insert(mapCampaignToDB(body)).select().single();
+    if (error) throw error;
+    res.status(201).json(mapCampaignFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.put("/api/campaigns/:id", async (req, res) => {
+  try {
+    const body = validateBody(CampaignPatchSchema, req.body);
+    const db = getDB();
+    const { data, error } = await db.from("respondo_campaigns").update(mapCampaignToDB(body)).eq("id", req.params.id).select().single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Campaña no encontrada" });
+    res.json(mapCampaignFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
+// CHAT (AI with tool-use)
+// ---------------------------------------------------------------------------
+app.post("/api/chat", async (req, res) => {
+  try {
+    const body = validateBody(ChatSchema, req.body);
+
+    // Resolve config: request body > DB > default
+    let config = body.agentConfig;
+    if (!config) {
+      const db = getDB();
+      const { data } = await db.from("respondo_config").select("*").limit(1).single();
+      config = data ? mapConfigFromDB(data) : {
+        businessName: "Zapas Respondo", businessType: "Calzado", catalog: "", tone: "Argentino/Cercano",
+      };
     }
 
-    const textResponse =
-      finalText || "Disculpame, no pude comprender. ¿Me podrías repetir la consulta?";
+    const { text, actions } = await runChat(body.message, body.history || [], config, body.attachment);
 
-    res.json({
-      text: textResponse,
-      role: "model",
-      actions: collectedActions,
-    });
+    // Persist CRM actions to DB
+    if (actions.length > 0) {
+      const db = getDB();
+      for (const action of actions) {
+        try {
+          if (action.type === "upsert_lead") {
+            const { nombre, telefono, interes, canal } = action.payload;
+            const { data: existing } = await db.from("respondo_leads").select("id")
+              .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).single();
+            const validCanal = ["WhatsApp","Instagram","Facebook"].includes(canal) ? canal : "WhatsApp";
+            if (existing) {
+              await db.from("respondo_leads").update({ notes: interes, last_interaction: "Ahora" }).eq("id", existing.id);
+            } else {
+              await db.from("respondo_leads").insert({
+                name: nombre || "Cliente sin identificar",
+                phone: telefono || "",
+                status: "Nuevo",
+                origin: validCanal,
+                notes: interes || "",
+                score: 70,
+                avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nombre || "?")}`,
+                conversation_history: [],
+              });
+            }
+          } else if (action.type === "update_lead_status") {
+            const { nombre, estado, nota } = action.payload;
+            const { data: lead } = await db.from("respondo_leads").select("id").ilike("name", nombre).limit(1).single();
+            if (lead) {
+              const patch: any = { status: estado, last_interaction: "Ahora" };
+              if (nota) patch.notes = nota;
+              await db.from("respondo_leads").update(patch).eq("id", lead.id);
+            }
+          }
+          // Log event
+          await db.from("respondo_chat_events").insert({
+            event_type: action.type,
+            channel: "chat",
+            payload: action.payload,
+          });
+        } catch (e) {
+          logger.warn({ action: action.type, err: (e as Error).message }, "action persist failed");
+        }
+      }
+    }
 
-  } catch (error: any) {
-    console.error("Error in /api/chat endpoint:", error);
-    res.status(500).json({
-      error: "Ocurrió un error al procesar la respuesta de la IA.",
-      details: error.message
-    });
+    res.json({ text, role: "model", actions });
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
+// WHATSAPP META API WEBHOOK
+// ---------------------------------------------------------------------------
+// GET: webhook verification challenge from Meta
+app.get("/webhook/whatsapp", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode === "subscribe" && token === WA_VERIFY_TOKEN) {
+    logger.info("WhatsApp webhook verified");
+    return res.status(200).send(challenge);
+  }
+  logger.warn({ mode, token }, "WhatsApp webhook verification failed");
+  res.status(403).json({ error: "Verification failed" });
+});
+
+// POST: incoming messages from Meta
+app.post("/webhook/whatsapp", async (req, res) => {
+  // Signature verification (when app secret is configured)
+  if (WA_APP_SECRET) {
+    const sig = String(req.headers["x-hub-signature-256"] || "");
+    const rawBody = JSON.stringify(req.body);
+    const expected = "sha256=" + crypto.createHmac("sha256", WA_APP_SECRET).update(rawBody).digest("hex");
+    if (sig !== expected) {
+      logger.warn("Invalid WhatsApp signature");
+      return res.status(403).json({ error: "Invalid signature" });
+    }
+  }
+
+  // Always acknowledge receipt immediately (Meta requires it)
+  res.status(200).json({ status: "received" });
+
+  const body = req.body as any;
+  if (body?.object !== "whatsapp_business_account") return;
+
+  for (const entry of (body.entry || [])) {
+    for (const change of (entry.changes || [])) {
+      const messages: any[] = change?.value?.messages || [];
+      for (const msg of messages) {
+        // Only handle text and audio transcripts for now
+        let userText = "";
+        if (msg.type === "text") {
+          userText = msg.text?.body || "";
+        } else if (msg.type === "audio") {
+          userText = "[Nota de voz recibida. Responde indicando que podés ayudar por texto mientras procesamos el audio.]";
+        } else {
+          continue; // Skip other types
+        }
+
+        const from = String(msg.from);
+        logger.info({ from, type: msg.type }, "WhatsApp message received");
+
+        // Process in background (don't block the 200 response)
+        processWhatsAppMessage(from, userText).catch((e) =>
+          logger.error({ err: e.message, from }, "WhatsApp processing error")
+        );
+      }
+    }
   }
 });
 
-// Vite Middleware & Static Asset Serving Setup
+async function processWhatsAppMessage(phone: string, text: string) {
+  const db = getDB();
+
+  // Get config
+  const { data: configRow } = await db.from("respondo_config").select("*").limit(1).single();
+  const config = configRow ? mapConfigFromDB(configRow) : { businessName: "Respondo", businessType: "", catalog: "", tone: "Argentino/Cercano" };
+
+  // Get or create lead and conversation history
+  const { data: existingLead } = await db.from("respondo_leads").select("*").eq("phone", phone).limit(1).single();
+  const history: any[] = (existingLead?.conversation_history || []).slice(-20); // keep last 20 msgs
+
+  // Run AI
+  const { text: aiReply, actions } = await runChat(text, history, config);
+
+  // Update conversation history
+  const newHistory = [
+    ...history,
+    { role: "user", text, timestamp: new Date().toISOString() },
+    { role: "model", text: aiReply, timestamp: new Date().toISOString() },
+  ];
+
+  if (existingLead) {
+    await db.from("respondo_leads").update({
+      conversation_history: newHistory,
+      last_interaction: "Ahora",
+      status: existingLead.status === "Nuevo" ? "Contactado" : existingLead.status,
+    }).eq("id", existingLead.id);
+  } else {
+    await db.from("respondo_leads").insert({
+      name: "WhatsApp " + phone,
+      phone,
+      status: "Contactado",
+      origin: "WhatsApp",
+      conversation_history: newHistory,
+      score: 65,
+      notes: `Primera consulta: "${text.substring(0, 100)}"`,
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(phone)}`,
+    });
+  }
+
+  // Log tool-use actions to events table
+  for (const action of actions) {
+    if (action.type === "upsert_lead" || action.type === "update_lead_status") {
+      db.from("respondo_chat_events").insert({
+        event_type: action.type, channel: "WhatsApp", payload: action.payload,
+      }).then(() => {});
+    }
+  }
+
+  // Send reply via Meta Graph API
+  if (WA_TOKEN && WA_PHONE_ID) {
+    await sendWhatsAppMessage(phone, aiReply);
+  } else {
+    logger.warn("WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set — reply not sent");
+  }
+}
+
+async function sendWhatsAppMessage(to: string, text: string) {
+  const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${WA_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body: text },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    logger.error({ status: res.status, err }, "Meta API send failed");
+  } else {
+    logger.info({ to }, "WhatsApp reply sent");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// VITE MIDDLEWARE & STATIC SERVING
+// ---------------------------------------------------------------------------
 const startServer = async () => {
   if (process.env.NODE_ENV !== "production") {
-    // Dynamically import Vite for development environment
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
+    const { createServer: createVite } = await import("vite");
+    const vite = await createVite({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
-    console.log("Vite development middleware mounted.");
+    logger.info("Vite dev middleware mounted");
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-    console.log("Serving built static assets in production.");
+    app.get("*", (_req, res) => res.sendFile(path.join(distPath, "index.html")));
+    logger.info("Serving static assets");
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Respondo Server is running on http://localhost:${PORT}`);
+    logger.info({ port: PORT, model: GEMINI_MODEL }, "Respondo server running");
   });
 };
 
 startServer().catch((err) => {
-  console.error("Failed to start Respondo server:", err);
+  logger.error({ err }, "Failed to start server");
+  process.exit(1);
 });

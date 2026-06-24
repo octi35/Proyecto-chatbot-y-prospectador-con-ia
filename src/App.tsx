@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
@@ -6,26 +6,22 @@ import {
   Users,
   BarChart3,
   Layers,
-  Settings,
   HelpCircle,
-  ExternalLink,
   ShieldCheck,
   Zap,
-  Activity,
-  Award,
-  Globe,
   Bell,
-  CheckCircle2,
-  Lock
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
-// Types
 import { AgentConfig, CRMLead, Campaign, AgentAction } from "./types";
+import { DEFAULT_CONFIG } from "./data";
+import {
+  getConfig, saveConfig,
+  getLeads, createLead, updateLead, deleteLead,
+  getCampaigns, createCampaign, updateCampaign,
+} from "./lib/api";
 
-// Shared Data
-import { DEFAULT_CONFIG, INITIAL_LEADS, INITIAL_CAMPAIGNS } from "./data";
-
-// Modular Components
 import AgentTrainer from "./components/AgentTrainer";
 import ChatSimulator from "./components/ChatSimulator";
 import CRMAdmin from "./components/CRMAdmin";
@@ -37,139 +33,249 @@ type TabType = "playground" | "crm" | "analytics" | "integrations" | "compare";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>("playground");
-  const [config, setConfig] = useState<AgentConfig>(() => {
-    const saved = localStorage.getItem("respondo_agent_config");
-    return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
-  });
-  const [leads, setLeads] = useState<CRMLead[]>(() => {
-    const saved = localStorage.getItem("respondo_crm_leads");
-    return saved ? JSON.parse(saved) : INITIAL_LEADS;
-  });
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
-    const saved = localStorage.getItem("respondo_campaigns");
-    return saved ? JSON.parse(saved) : INITIAL_CAMPAIGNS;
-  });
-  const [notifications, setNotifications] = useState<string[]>([
-    "🎉 ¡Bienvenido! Has ingresado al simulador oficial de Respondo AI.",
-    "📈 Conversión: El cliente Agustín Almendra pasó de 'Nuevo' a 'Contactado' tras la última respuesta del bot."
-  ]);
 
-  // Save changes to localStorage to enable 100% persistence in reality
+  // Data state (loaded from API)
+  const [config, setConfig] = useState<AgentConfig>(DEFAULT_CONFIG);
+  const [leads, setLeads] = useState<CRMLead[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+  // UI state
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<string[]>([]);
+
+  // Ref to avoid stale closure in pending config saves
+  const pendingConfigSave = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // INITIAL LOAD from API
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    localStorage.setItem("respondo_agent_config", JSON.stringify(config));
-  }, [config]);
+    (async () => {
+      try {
+        setLoading(true);
+        const [serverConfig, serverLeads, serverCampaigns] = await Promise.all([
+          getConfig(),
+          getLeads(),
+          getCampaigns(),
+        ]);
+        if (serverConfig) setConfig(serverConfig);
+        setLeads(serverLeads);
+        setCampaigns(serverCampaigns);
+        addNotification("✅ Datos cargados desde la base de datos.");
+      } catch (e) {
+        const msg = (e as Error).message;
+        setApiError(msg);
+        addNotification(`⚠️ Sin conexión a la API: ${msg}. Trabajando en modo local.`);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem("respondo_crm_leads", JSON.stringify(leads));
-  }, [leads]);
+  // ---------------------------------------------------------------------------
+  // CONFIG — debounce save to API on every change
+  // ---------------------------------------------------------------------------
+  const handleConfigChange = useCallback((newConfig: AgentConfig) => {
+    setConfig(newConfig);
+    if (pendingConfigSave.current) clearTimeout(pendingConfigSave.current);
+    pendingConfigSave.current = setTimeout(() => {
+      saveConfig(newConfig).catch((e) =>
+        addNotification(`⚠️ Config no guardada: ${(e as Error).message}`)
+      );
+    }, 800);
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem("respondo_campaigns", JSON.stringify(campaigns));
-  }, [campaigns]);
+  // ---------------------------------------------------------------------------
+  // LEADS CRUD (API-backed)
+  // ---------------------------------------------------------------------------
+  const handleCreateLead = useCallback(async (lead: Omit<CRMLead, "id">): Promise<CRMLead> => {
+    const created = await createLead(lead);
+    setLeads((prev) => [created, ...prev]);
+    return created;
+  }, []);
 
-  const handleClearNotifications = () => {
-    setNotifications([]);
-  };
+  const handleUpdateLead = useCallback(async (id: string, patch: Partial<CRMLead>) => {
+    const updated = await updateLead(id, patch);
+    setLeads((prev) => prev.map((l) => (l.id === id ? updated : l)));
+    return updated;
+  }, []);
 
+  const handleDeleteLead = useCallback(async (id: string) => {
+    await deleteLead(id);
+    setLeads((prev) => prev.filter((l) => l.id !== id));
+  }, []);
+
+  // Legacy setter for components that still use React.Dispatch pattern
+  const setLeadsCompat: React.Dispatch<React.SetStateAction<CRMLead[]>> = useCallback(
+    (updater) => {
+      setLeads((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        // Sync changed leads to API (fire and forget)
+        next.forEach((lead) => {
+          const old = prev.find((l) => l.id === lead.id);
+          if (old && JSON.stringify(old) !== JSON.stringify(lead)) {
+            updateLead(lead.id, lead).catch(() => {});
+          }
+        });
+        // Create any new leads that don't exist in prev
+        next.forEach((lead) => {
+          if (!prev.find((l) => l.id === lead.id)) {
+            // Already created via handleCreateLead, skip
+          }
+        });
+        return next;
+      });
+    },
+    []
+  );
+
+  // ---------------------------------------------------------------------------
+  // CAMPAIGNS CRUD (API-backed)
+  // ---------------------------------------------------------------------------
+  const handleCreateCampaign = useCallback(async (campaign: Omit<Campaign, "id">): Promise<Campaign> => {
+    const created = await createCampaign(campaign);
+    setCampaigns((prev) => [created, ...prev]);
+    return created;
+  }, []);
+
+  const handleUpdateCampaign = useCallback(async (id: string, patch: Partial<Campaign>) => {
+    const updated = await updateCampaign(id, patch);
+    setCampaigns((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    return updated;
+  }, []);
+
+  const setCampaignsCompat: React.Dispatch<React.SetStateAction<Campaign[]>> = useCallback(
+    (updater) => {
+      setCampaigns((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        next.forEach((camp) => {
+          if (!prev.find((c) => c.id === camp.id)) {
+            createCampaign(camp).catch(() => {});
+          } else {
+            const old = prev.find((c) => c.id === camp.id);
+            if (old && JSON.stringify(old) !== JSON.stringify(camp)) {
+              updateCampaign(camp.id, camp).catch(() => {});
+            }
+          }
+        });
+        return next;
+      });
+    },
+    []
+  );
+
+  // ---------------------------------------------------------------------------
+  // NOTIFICATIONS
+  // ---------------------------------------------------------------------------
   const addNotification = (text: string) => {
     setNotifications((prev) => [text, ...prev.slice(0, 4)]);
   };
 
-  // Callback to log active simulation events to the global notification stream
-  const handleLeadMessageAdded = (text: string, role: "user" | "model") => {
+  const handleLeadMessageAdded = useCallback((text: string, role: "user" | "model") => {
     if (role === "user") {
-      addNotification(`💬 Cliente envió un mensaje en el simulador: "${text.substring(0, 45)}${text.length > 45 ? "..." : ""}"`);
+      addNotification(`💬 Cliente: "${text.substring(0, 50)}${text.length > 50 ? "…" : ""}"`);
     } else {
-      addNotification(`🤖 Respondo AI contestó: "${text.substring(0, 45)}${text.length > 45 ? "..." : ""}"`);
+      addNotification(`🤖 Respondo AI: "${text.substring(0, 50)}${text.length > 50 ? "…" : ""}"`);
     }
-  };
+  }, []);
 
-  // Applies the tool-use actions the agent performed (function calling) to the
-  // real CRM state, so the chatbot can actually create/move leads on its own.
-  const handleAgentActions = (actions: AgentAction[]) => {
+  // ---------------------------------------------------------------------------
+  // AGENT TOOL-USE ACTIONS → persist to DB + update local state
+  // ---------------------------------------------------------------------------
+  const handleAgentActions = useCallback((actions: AgentAction[]) => {
     actions.forEach((action) => {
       addNotification(action.label);
 
       if (action.type === "upsert_lead") {
         const { nombre, telefono, interes, canal } = action.payload;
-        const allowedChannels = ["WhatsApp", "Instagram", "Facebook"];
+        const validOrigins = ["WhatsApp","Instagram","Facebook"];
+        const origin: CRMLead["origin"] = validOrigins.includes(canal) ? canal : "WhatsApp";
+
         setLeads((prev) => {
-          const idx = prev.findIndex(
-            (l) =>
-              (telefono && l.phone === telefono) ||
+          const existing = prev.find(
+            (l) => (telefono && l.phone === telefono) ||
               l.name.toLowerCase() === String(nombre || "").toLowerCase()
           );
-          if (idx >= 0) {
-            const updated = [...prev];
-            updated[idx] = {
-              ...updated[idx],
-              notes: interes || updated[idx].notes,
-              lastInteraction: "Ahora",
-            };
-            return updated;
+          if (existing) {
+            const patch = { notes: interes || existing.notes, lastInteraction: "Ahora" };
+            updateLead(existing.id, patch).catch(() => {});
+            return prev.map((l) => l.id === existing.id ? { ...l, ...patch } : l);
           }
-          const newLead: CRMLead = {
-            id: `lead-${Date.now()}`,
+          // Create new lead via API
+          const newLeadData: Omit<CRMLead, "id"> = {
             name: nombre || "Cliente sin identificar",
-            phone: telefono || "Sin teléfono",
+            phone: telefono || "",
             status: "Nuevo",
-            origin: (allowedChannels.includes(canal) ? canal : "WhatsApp") as CRMLead["origin"],
+            origin,
             lastInteraction: "Ahora",
             score: 70,
             notes: interes || "",
-            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nombre || "Cliente")}`,
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nombre || "?")}`,
             totalSpent: 0,
             conversationHistory: [],
           };
-          return [newLead, ...prev];
+          createLead(newLeadData)
+            .then((created) => setLeads((p) => [created, ...p.filter((l) => l.name !== nombre)]))
+            .catch(() => {});
+          return prev; // API response will update state
         });
+
       } else if (action.type === "update_lead_status") {
         const { nombre, estado, nota } = action.payload;
-        setLeads((prev) =>
-          prev.map((l) =>
-            l.name.toLowerCase() === String(nombre || "").toLowerCase()
-              ? {
-                  ...l,
-                  status: estado as CRMLead["status"],
-                  notes: nota || l.notes,
-                  lastInteraction: "Ahora",
-                }
-              : l
-          )
-        );
+        setLeads((prev) => {
+          const target = prev.find((l) => l.name.toLowerCase() === String(nombre || "").toLowerCase());
+          if (!target) return prev;
+          const patch: Partial<CRMLead> = {
+            status: estado as CRMLead["status"],
+            lastInteraction: "Ahora",
+            ...(nota ? { notes: nota } : {}),
+          };
+          updateLead(target.id, patch).catch(() => {});
+          return prev.map((l) => l.id === target.id ? { ...l, ...patch } : l);
+        });
       }
-      // schedule_followup & payment_link surface in the activity stream above.
+      // schedule_followup and payment_link appear in the activity stream only
     });
-  };
+  }, []);
 
-  // Real, dynamic workspace metrics calculated from active CRM leads
+  // ---------------------------------------------------------------------------
+  // METRICS (calculated from real CRM data)
+  // ---------------------------------------------------------------------------
   const totalLeads = leads.length;
   const closedLeads = leads.filter((l) => l.status === "Cerrado").length;
-  const totalSalesAmount = leads.reduce((acc, l) => acc + (l.totalSpent || 0), 0);
-  const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
+  const totalSales = leads.reduce((a, l) => a + (l.totalSpent || 0), 0);
+  const convRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
+
+  // ---------------------------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------------------------
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center gap-3">
+        <Loader2 size={32} className="text-blue-600 animate-spin" />
+        <p className="text-sm text-slate-500 font-medium">Cargando Respondo…</p>
+      </div>
+    );
+  }
 
   return (
     <div id="respondo-app" className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      
-      {/* Subtle light accent background line */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[1px] bg-gradient-to-r from-transparent via-blue-500/20 to-transparent pointer-events-none" />
 
-      {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        {/* Navigation & Header */}
+
+        {/* Header */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 gap-4 shadow-sm">
           <div className="flex items-center space-x-4">
             <div className="w-11 h-11 rounded-xl bg-blue-600 shadow-sm flex items-center justify-center shrink-0">
-              <span className="font-sans font-black text-xl tracking-tighter text-white">
-                R
-              </span>
+              <span className="font-black text-xl tracking-tighter text-white">R</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-sans font-black text-2xl tracking-tight text-slate-900">Respondo</h1>
+                <h1 className="font-black text-2xl tracking-tight text-slate-900">Respondo</h1>
                 <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-[10px] font-mono font-bold">
-                  v2.8 Enterprise
+                  v3.0 Real
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium">
@@ -178,217 +284,143 @@ export default function App() {
             </div>
           </div>
 
-          {/* Real operational stats based on CRM leads */}
           <div className="hidden lg:flex items-center space-x-6">
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Prospectos Totales</span>
-              <span className="font-mono text-sm font-bold text-slate-800">{totalLeads} Activos</span>
+              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Prospectos</span>
+              <span className="font-mono text-sm font-bold text-slate-800">{totalLeads} activos</span>
             </div>
-            <div className="h-8 w-[1px] bg-slate-200" />
+            <div className="h-8 w-px bg-slate-200" />
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Tasa de Conversión</span>
-              <span className="font-mono text-sm font-bold text-blue-600">{conversionRate}% Cierre</span>
+              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Conversión</span>
+              <span className="font-mono text-sm font-bold text-blue-600">{convRate}% cierre</span>
             </div>
-            <div className="h-8 w-[1px] bg-slate-200" />
+            <div className="h-8 w-px bg-slate-200" />
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Ventas Concretadas</span>
-              <span className="font-mono text-sm font-bold text-emerald-600">${totalSalesAmount.toLocaleString("es-AR")} ARS</span>
+              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Ventas</span>
+              <span className="font-mono text-sm font-bold text-emerald-600">${totalSales.toLocaleString("es-AR")} ARS</span>
             </div>
-            <div className="h-8 w-[1px] bg-slate-200" />
+            <div className="h-8 w-px bg-slate-200" />
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Estado de Servidor</span>
-              <span className="text-xs text-slate-700 font-bold bg-slate-50 px-2.5 py-1 border border-slate-200 rounded-lg flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> 100% Real
+              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Base de datos</span>
+              <span className={`text-xs font-bold px-2.5 py-1 border rounded-lg flex items-center gap-1.5 ${apiError ? "text-red-600 bg-red-50 border-red-200" : "text-slate-700 bg-slate-50 border-slate-200"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${apiError ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
+                {apiError ? "Local" : "Supabase"}
               </span>
             </div>
           </div>
         </header>
 
-        {/* Navigation Tabs bar */}
+        {/* Navigation */}
         <nav className="flex bg-white p-1 border border-slate-200 rounded-2xl overflow-x-auto gap-1 shadow-sm">
-          <button
-            onClick={() => setActiveTab("playground")}
-            className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 ${
-              activeTab === "playground"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <MessageSquare size={14} />
-            Estudio de IA (Entrenamiento y Chat)
-          </button>
-          <button
-            onClick={() => setActiveTab("crm")}
-            className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 ${
-              activeTab === "crm"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <Users size={14} />
-            CRM de Ventas & Meta API
-          </button>
-          <button
-            onClick={() => setActiveTab("analytics")}
-            className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 ${
-              activeTab === "analytics"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <BarChart3 size={14} />
-            Métricas & Analíticas
-          </button>
-          <button
-            onClick={() => setActiveTab("integrations")}
-            className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 ${
-              activeTab === "integrations"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <Layers size={14} />
-            Integraciones & White Label
-          </button>
-          <button
-            onClick={() => setActiveTab("compare")}
-            className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 ${
-              activeTab === "compare"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-            }`}
-          >
-            <HelpCircle size={14} />
-            Comparativa Chatbots
-          </button>
+          {([
+            ["playground", <MessageSquare size={14} />, "Estudio IA (Entrenamiento y Chat)"],
+            ["crm",        <Users size={14} />,        "CRM de Ventas & Meta API"],
+            ["analytics",  <BarChart3 size={14} />,    "Métricas & Analíticas"],
+            ["integrations",<Layers size={14} />,      "Integraciones & White Label"],
+            ["compare",    <HelpCircle size={14} />,   "Comparativa Chatbots"],
+          ] as [TabType, React.ReactNode, string][]).map(([tab, icon, label]) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 ${
+                activeTab === tab ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              {icon}{label}
+            </button>
+          ))}
         </nav>
 
-        {/* Live Activity Stream (Toast bar for demo immersion) */}
+        {/* Activity Stream */}
         {notifications.length > 0 && (
           <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-start gap-3 shadow-sm">
-            <Bell size={15} className="text-blue-600 shrink-0 mt-0.5 animate-bounce" />
+            <Bell size={15} className="text-blue-600 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Actividad de la Plataforma en Vivo
-              </span>
-              <div className="space-y-1.5 max-h-[80px] overflow-y-auto pr-2">
-                {notifications.map((notif, i) => (
-                  <p key={i} className="text-[11px] text-slate-600 truncate leading-relaxed">
-                    • {notif}
-                  </p>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Actividad en Vivo</span>
+              <div className="space-y-1 max-h-[80px] overflow-y-auto pr-2">
+                {notifications.map((n, i) => (
+                  <p key={i} className="text-[11px] text-slate-600 truncate leading-relaxed">• {n}</p>
                 ))}
               </div>
             </div>
             <button
-              onClick={handleClearNotifications}
-              className="text-[9px] text-slate-500 hover:text-slate-800 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 shrink-0 transition-colors"
+              onClick={() => setNotifications([])}
+              className="text-[9px] text-slate-500 hover:text-slate-800 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 shrink-0"
             >
-              Limpiar logs
+              Limpiar
             </button>
           </div>
         )}
 
-        {/* Tabs Main Panels */}
+        {/* API error banner */}
+        {apiError && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-2 text-xs text-amber-800">
+            <AlertTriangle size={14} className="shrink-0" />
+            <span><strong>API no disponible:</strong> {apiError}. Revisá que SUPABASE_URL y SUPABASE_ANON_KEY estén configurados en el .env.</span>
+          </div>
+        )}
+
+        {/* Main content */}
         <main className="min-h-[500px]">
           <AnimatePresence mode="wait">
-            
-            {/* Tab: AI Playground & Training */}
             {activeTab === "playground" && (
-              <motion.div
-                key="playground"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-              >
-                {/* Left Side: Training Form (7 columns on large grids) */}
+              <motion.div key="playground" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
+                className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-7">
-                  <AgentTrainer config={config} onChange={setConfig} />
+                  <AgentTrainer config={config} onChange={handleConfigChange} />
                 </div>
-
-                {/* Right Side: Interactive Mobile Chatbot Simulator (5 columns on large grids) */}
                 <div className="lg:col-span-5 h-[620px]">
-                  <ChatSimulator config={config} onLeadMessageAdded={handleLeadMessageAdded} onAgentActions={handleAgentActions} />
+                  <ChatSimulator
+                    config={config}
+                    onLeadMessageAdded={handleLeadMessageAdded}
+                    onAgentActions={handleAgentActions}
+                  />
                 </div>
               </motion.div>
             )}
 
-            {/* Tab: Native CRM Dashboard */}
             {activeTab === "crm" && (
-              <motion.div
-                key="crm"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-              >
-                <CRMAdmin 
-                  leads={leads} 
-                  setLeads={setLeads} 
-                  campaigns={campaigns} 
-                  setCampaigns={setCampaigns} 
+              <motion.div key="crm" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                <CRMAdmin
+                  leads={leads}
+                  setLeads={setLeadsCompat}
+                  campaigns={campaigns}
+                  setCampaigns={setCampaignsCompat}
+                  onLeadUpdate={handleUpdateLead}
+                  onLeadDelete={handleDeleteLead}
+                  onCampaignCreate={handleCreateCampaign}
                 />
               </motion.div>
             )}
 
-            {/* Tab: Analytics & Metrics Dashboard */}
             {activeTab === "analytics" && (
-              <motion.div
-                key="analytics"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-              >
-                <AnalyticsPanel 
-                  leads={leads} 
-                  campaigns={campaigns} 
-                  config={config} 
-                />
+              <motion.div key="analytics" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                <AnalyticsPanel leads={leads} campaigns={campaigns} config={config} />
               </motion.div>
             )}
 
-            {/* Tab: Integrations & White Label Agency Studio */}
             {activeTab === "integrations" && (
-              <motion.div
-                key="integrations"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-              >
+              <motion.div key="integrations" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
                 <WhiteLabelStudio />
               </motion.div>
             )}
 
-            {/* Tab: Comparison Matrix */}
             {activeTab === "compare" && (
-              <motion.div
-                key="compare"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-              >
+              <motion.div key="compare" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
                 <ComparisonTable />
               </motion.div>
             )}
-
           </AnimatePresence>
         </main>
 
-        {/* Footer info brand */}
         <footer className="text-center pt-8 border-t border-slate-200 text-xs text-slate-400 space-y-2">
-          <p>
-            Respondo — Tu infraestructura de automatización de ventas inteligente y gestor de clientes en tiempo real.
-          </p>
+          <p>Respondo — Automatización de ventas inteligente y CRM en tiempo real.</p>
           <div className="flex items-center justify-center space-x-4">
-            <span className="flex items-center gap-1">
-              <ShieldCheck size={12} className="text-emerald-600" /> Encriptación de Datos de Extremo a Extremo
-            </span>
+            <span className="flex items-center gap-1"><ShieldCheck size={12} className="text-emerald-600" /> Datos en Supabase (sa-east-1)</span>
             <span>•</span>
-            <span className="flex items-center gap-1">
-              <Zap size={12} className="text-blue-600" /> Servidores Cloud en Latencia Ultra Baja
-            </span>
+            <span className="flex items-center gap-1"><Zap size={12} className="text-blue-600" /> Gemini AI — Function Calling activo</span>
           </div>
         </footer>
-
       </div>
     </div>
   );
