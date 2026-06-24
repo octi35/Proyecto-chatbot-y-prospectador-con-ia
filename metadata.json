@@ -1,0 +1,6 @@
+{
+  "name": "Respondo",
+  "description": "Plataforma de Inteligencia Artificial conversacional para automatización de ventas y atención al cliente en WhatsApp, Instagram y Facebook.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

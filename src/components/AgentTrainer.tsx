@@ -1,0 +1,257 @@
+import React, { useState } from "react";
+import { 
+  Sparkles, 
+  Store, 
+  RefreshCw, 
+  Settings, 
+  MessageSquare, 
+  ChevronRight, 
+  Coins, 
+  Clock, 
+  ShoppingBag,
+  HelpCircle
+} from "lucide-react";
+import { AgentConfig } from "../types";
+
+// Predefined business presets for instant loading
+const BUSINESS_PRESETS = [
+  {
+    businessName: "Zapas Outlet Argentina",
+    businessType: "Zapatillas y Calzado Deportivo",
+    tone: "Argentino/Cercano",
+    syncStore: "TiendaNube" as const,
+    customGreeting: "¡Hola che! Qué bueno que nos contactes. Comentame qué talle y modelo de zapas estás buscando hoy y te digo el stock al toque. 🔥",
+    autoFollowUpMinutes: 15,
+    catalog: `- Nike Air Max 90: $120.000 (Talles 39 al 44, colores Negro y Blanco. Envíos gratis).
+- Adidas Forum Low: $115.000 (Talles 37 al 43, color Blanco puro).
+- Puma Suede Classic: $90.000 (Talles 36 al 45, color Azul Marino y Negro).
+- Oferta Especial: 15% de descuento adicional pagando en efectivo o transferencia bancaria.`
+  },
+  {
+    businessName: "Kyoto Sushi Express",
+    businessType: "Gastronomía y Delivery",
+    tone: "Casual/Juvenil",
+    syncStore: "WooCommerce" as const,
+    customGreeting: "¡Hola, hola! 🍣 ¿Antojo de sushi hoy? Decime qué te tienta o pedime que te recomiende un combo especial para tu noche.",
+    autoFollowUpMinutes: 10,
+    catalog: `- Combo Kyoto 15 Piezas: $18.500 (Salmón variadito, rolls y niguiris).
+- Combo Veggie Zen 15 Piezas: $15.000 (Rolls de palta, pepino, queso crema y mango).
+- Hot Rolls fritos (5 unidades): $6.500.
+- Delivery gratis en zona de Palermo, Belgrano y Colegiales. Envíos a otros barrios desde $1.500.`
+  },
+  {
+    businessName: "Inmobiliaria del Parque",
+    businessType: "Inmuebles y Bienes Raíces",
+    tone: "Profesional/Formal",
+    syncStore: "Ninguna" as const,
+    customGreeting: "Estimado/a, le damos la bienvenida a Inmobiliaria del Parque. ¿Está buscando alquilar, vender o comprar una propiedad? Indíquenos las especificaciones para asesorarle.",
+    autoFollowUpMinutes: 30,
+    catalog: `- Alquiler Depto 2 Ambientes en Caballito: $450.000/mes + expensas. (Balcón, muy luminoso, se aceptan mascotas).
+- Venta Casa en Barrio Cerrado Pilar: U$D 185.000. (4 ambientes, 3 dormitorios, piscina, jardín de 500m2).
+- Requisitos alquiler: Garantía propietaria o seguro de caución (Finaer/Premia), mes de depósito y recibo de sueldo de inquilino.`
+  },
+  {
+    businessName: "Bella Estética & Spa",
+    businessType: "Salud, Belleza y Bienestar",
+    tone: "Argentino/Cercano",
+    syncStore: "Shopify" as const,
+    customGreeting: "¡Hola linda! ✨ Bienvenida a Bella Estética. ¿Buscabas agendar un turno para depilación, limpieza facial o masajes corporales?",
+    autoFollowUpMinutes: 20,
+    catalog: `- Limpieza Facial Profunda con Hidratación: $22.000. (Duración 60 min).
+- Depilación Definitiva Soprano Ice (Sesión cuerpo entero): $35.000.
+- Masaje Relajante Descontracturante con Piedras Calientes: $25.000. (Duración 50 min).
+- Turnos: Se agendan de Lunes a Sábados de 9 a 20 hs. Requiere seña de $5.000 para reservar.`
+  }
+];
+
+interface AgentTrainerProps {
+  config: AgentConfig;
+  onChange: (newConfig: AgentConfig) => void;
+}
+
+export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const handleFieldChange = (key: keyof AgentConfig, value: any) => {
+    onChange({
+      ...config,
+      [key]: value
+    });
+  };
+
+  const loadPreset = (preset: typeof BUSINESS_PRESETS[0]) => {
+    onChange(preset);
+    setSuccessMsg(`Preset "${preset.businessName}" cargado exitosamente.`);
+    setTimeout(() => setSuccessMsg(""), 3000);
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+      {/* Block title */}
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+            <Store size={20} />
+          </div>
+          <div>
+            <h3 className="font-sans font-semibold text-lg text-slate-900">Entrenamiento del Agente</h3>
+            <p className="text-xs text-slate-500">Instruye a tu IA con las reglas de tu negocio</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-xs font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span>
+          Respondo Engine Active
+        </div>
+      </div>
+
+      {/* Preset Loading Pills */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+            Cargar Plantillas de Negocio de Ejemplo (Presets LATAM)
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {BUSINESS_PRESETS.map((preset) => (
+            <button
+              key={preset.businessName}
+              onClick={() => loadPreset(preset)}
+              className={`p-2.5 rounded-xl border text-left transition-all ${
+                config.businessName === preset.businessName
+                  ? "bg-blue-50/70 border-blue-500 text-blue-700 font-semibold"
+                  : "bg-slate-50/60 border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-100/80"
+              }`}
+            >
+              <span className="text-xs font-bold block truncate">{preset.businessName}</span>
+              <span className="text-[10px] text-slate-400 truncate block">{preset.businessType}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {successMsg && (
+        <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-xs font-medium text-center animate-pulse">
+          {successMsg}
+        </div>
+      )}
+
+      {/* Trainer Form Fields */}
+      <div className="space-y-4">
+        {/* Row 1 */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Nombre de la Empresa</label>
+            <input
+              type="text"
+              value={config.businessName}
+              onChange={(e) => handleFieldChange("businessName", e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              placeholder="Ej: Tienda de Deportes S.A."
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Rubro o Industria</label>
+            <input
+              type="text"
+              value={config.businessType}
+              onChange={(e) => handleFieldChange("businessType", e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              placeholder="Ej: Indumentaria Masculina"
+            />
+          </div>
+        </div>
+
+        {/* Row 2: Tone & Store Sync */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Tono de Comunicación</label>
+            <select
+              value={config.tone}
+              onChange={(e) => handleFieldChange("tone", e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+            >
+              <option value="Argentino/Cercano">Argentino/Cercano (vos, che, re cálido)</option>
+              <option value="Profesional/Formal">Profesional/Formal (usted, neutro)</option>
+              <option value="Casual/Juvenil">Casual/Juvenil (tú/vos, emojis, relajado)</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500 flex items-center">
+              Sincronizar Stock & Tienda
+            </label>
+            <select
+              value={config.syncStore}
+              onChange={(e) => handleFieldChange("syncStore", e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+            >
+              <option value="Ninguna">Ninguna (Carga Manual)</option>
+              <option value="TiendaNube">TiendaNube (Sincronización Aut.)</option>
+              <option value="Shopify">Shopify (Sincronización Aut.)</option>
+              <option value="WooCommerce">WooCommerce (Sincronización Aut.)</option>
+              <option value="MercadoLibre">Mercado Libre (Sincronización Aut.)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 3: Auto follow up & custom greetings */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between">
+            <label className="text-xs font-medium text-slate-500 flex items-center">
+              <MessageSquare size={13} className="mr-1 text-blue-600" /> Mensaje de Bienvenida Inicial
+            </label>
+            <span className="text-[10px] text-slate-400">Se envía ante el saludo del cliente</span>
+          </div>
+          <textarea
+            value={config.customGreeting || ""}
+            onChange={(e) => handleFieldChange("customGreeting", e.target.value)}
+            rows={2}
+            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
+            placeholder="Escribe el mensaje con el que el bot recibirá a tus clientes..."
+          />
+        </div>
+
+        {/* Catalog and Knowledge Database */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-medium text-slate-500 flex items-center">
+              <ShoppingBag size={13} className="mr-1 text-blue-600" /> Catálogo de Productos y Reglas de Negocio
+            </label>
+            <span className="text-[10px] text-slate-400">El núcleo de respuestas del bot</span>
+          </div>
+          <textarea
+            value={config.catalog}
+            onChange={(e) => handleFieldChange("catalog", e.target.value)}
+            rows={7}
+            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-y leading-relaxed"
+            placeholder="Define aquí tus productos, precios, stock, políticas de envío, métodos de pago aceptados y cualquier otra regla relevante."
+          />
+        </div>
+
+        {/* Auto Follow-up Settings */}
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-amber-50 text-amber-700 rounded-lg">
+              <Clock size={16} />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-800 block">Seguimientos Automáticos de Conversación</span>
+              <p className="text-[10px] text-slate-500 max-w-xs">Si el cliente consulta y no vuelve a responder, Respondo le recontactará sutilmente.</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="number"
+              value={config.autoFollowUpMinutes}
+              onChange={(e) => handleFieldChange("autoFollowUpMinutes", Number(e.target.value))}
+              className="w-16 bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-center text-slate-800 font-bold focus:outline-none focus:border-blue-500"
+              min={1}
+            />
+            <span className="text-xs text-slate-500">minutos</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
