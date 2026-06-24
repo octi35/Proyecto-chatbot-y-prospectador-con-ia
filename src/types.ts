@@ -9,6 +9,14 @@ export interface AgentConfig {
   syncStore?: "Ninguna" | "TiendaNube" | "Shopify" | "WooCommerce" | "MercadoLibre";
 }
 
+// Structured action the agent performed via tool-use. The backend returns these
+// alongside its reply; the frontend applies them to the CRM.
+export interface AgentAction {
+  type: "upsert_lead" | "update_lead_status" | "schedule_followup" | "payment_link";
+  label: string;
+  payload: Record<string, any>;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "model";
@@ -19,6 +27,7 @@ export interface ChatMessage {
   isImage?: boolean;
   imageUrl?: string;
   status?: "sending" | "sent" | "read";
+  actions?: AgentAction[];
 }
 
 export interface CRMLead {

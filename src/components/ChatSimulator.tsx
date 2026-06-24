@@ -18,9 +18,10 @@ import {
   MessageCircle,
   Trash2,
   ChevronRight,
-  FileAudio
+  FileAudio,
+  Zap
 } from "lucide-react";
-import { ChatMessage, AgentConfig } from "../types";
+import { ChatMessage, AgentConfig, AgentAction } from "../types";
 
 // High-quality sample products for image analysis
 const MOCK_IMAGES = [
@@ -63,9 +64,10 @@ const VOICE_SCENARIOS = [
 interface ChatSimulatorProps {
   config: AgentConfig;
   onLeadMessageAdded?: (messageText: string, role: "user" | "model") => void;
+  onAgentActions?: (actions: AgentAction[]) => void;
 }
 
-export default function ChatSimulator({ config, onLeadMessageAdded }: ChatSimulatorProps) {
+export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActions }: ChatSimulatorProps) {
   const [platform, setPlatform] = useState<"whatsapp" | "instagram">("whatsapp");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -160,7 +162,11 @@ export default function ChatSimulator({ config, onLeadMessageAdded }: ChatSimula
       }
 
       const data = await response.json();
-      addMessage("model", data.text);
+      const actions: AgentAction[] = Array.isArray(data.actions) ? data.actions : [];
+      addMessage("model", data.text, actions.length ? { actions } : undefined);
+      if (actions.length && onAgentActions) {
+        onAgentActions(actions);
+      }
     } catch (error) {
       console.error(error);
       addMessage("model", "Che, disculpame pero se me complicó la conexión temporalmente. ¿Me podrías repetir la pregunta?");
@@ -495,6 +501,21 @@ export default function ChatSimulator({ config, onLeadMessageAdded }: ChatSimula
                     <p className="text-xs font-normal leading-relaxed whitespace-pre-wrap">
                       {msg.text}
                     </p>
+                  )}
+
+                  {/* Tool-use action chips: shows what the agent did in the CRM */}
+                  {!isUser && msg.actions && msg.actions.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
+                      {msg.actions.map((action, ai) => (
+                        <div
+                          key={ai}
+                          className="flex items-start gap-1 px-1.5 py-1 bg-blue-50 border border-blue-100 rounded-lg text-[9px] text-blue-700 leading-snug"
+                        >
+                          <Zap size={9} className="shrink-0 mt-0.5" />
+                          <span className="font-medium">{action.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
 
                   {/* Bubble Footer Info */}

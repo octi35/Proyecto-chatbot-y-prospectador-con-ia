@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 // Types
-import { AgentConfig, CRMLead, Campaign } from "./types";
+import { AgentConfig, CRMLead, Campaign, AgentAction } from "./types";
 
 // Shared Data
 import { DEFAULT_CONFIG, INITIAL_LEADS, INITIAL_CAMPAIGNS } from "./data";
@@ -82,6 +82,64 @@ export default function App() {
     } else {
       addNotification(`🤖 Respondo AI contestó: "${text.substring(0, 45)}${text.length > 45 ? "..." : ""}"`);
     }
+  };
+
+  // Applies the tool-use actions the agent performed (function calling) to the
+  // real CRM state, so the chatbot can actually create/move leads on its own.
+  const handleAgentActions = (actions: AgentAction[]) => {
+    actions.forEach((action) => {
+      addNotification(action.label);
+
+      if (action.type === "upsert_lead") {
+        const { nombre, telefono, interes, canal } = action.payload;
+        const allowedChannels = ["WhatsApp", "Instagram", "Facebook"];
+        setLeads((prev) => {
+          const idx = prev.findIndex(
+            (l) =>
+              (telefono && l.phone === telefono) ||
+              l.name.toLowerCase() === String(nombre || "").toLowerCase()
+          );
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = {
+              ...updated[idx],
+              notes: interes || updated[idx].notes,
+              lastInteraction: "Ahora",
+            };
+            return updated;
+          }
+          const newLead: CRMLead = {
+            id: `lead-${Date.now()}`,
+            name: nombre || "Cliente sin identificar",
+            phone: telefono || "Sin teléfono",
+            status: "Nuevo",
+            origin: (allowedChannels.includes(canal) ? canal : "WhatsApp") as CRMLead["origin"],
+            lastInteraction: "Ahora",
+            score: 70,
+            notes: interes || "",
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nombre || "Cliente")}`,
+            totalSpent: 0,
+            conversationHistory: [],
+          };
+          return [newLead, ...prev];
+        });
+      } else if (action.type === "update_lead_status") {
+        const { nombre, estado, nota } = action.payload;
+        setLeads((prev) =>
+          prev.map((l) =>
+            l.name.toLowerCase() === String(nombre || "").toLowerCase()
+              ? {
+                  ...l,
+                  status: estado as CRMLead["status"],
+                  notes: nota || l.notes,
+                  lastInteraction: "Ahora",
+                }
+              : l
+          )
+        );
+      }
+      // schedule_followup & payment_link surface in the activity stream above.
+    });
   };
 
   // Real, dynamic workspace metrics calculated from active CRM leads
@@ -250,7 +308,7 @@ export default function App() {
 
                 {/* Right Side: Interactive Mobile Chatbot Simulator (5 columns on large grids) */}
                 <div className="lg:col-span-5 h-[620px]">
-                  <ChatSimulator config={config} onLeadMessageAdded={handleLeadMessageAdded} />
+                  <ChatSimulator config={config} onLeadMessageAdded={handleLeadMessageAdded} onAgentActions={handleAgentActions} />
                 </div>
               </motion.div>
             )}
