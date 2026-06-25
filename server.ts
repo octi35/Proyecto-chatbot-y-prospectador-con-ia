@@ -654,11 +654,14 @@ app.post("/api/chat", async (req, res) => {
             const { data: existing } = await db.from("respondo_leads").select("id")
               .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).maybeSingle();
             const validCanal = ["WhatsApp","Instagram","Facebook"].includes(canal) ? canal : "WhatsApp";
+            // Score grows with conversation depth: more messages = more engaged prospect
+            const dynamicScore = Math.min(95, 55 + Math.floor(conversationSnapshot.length * 2.5));
             if (existing) {
               await db.from("respondo_leads").update({
                 notes: interes,
                 last_interaction: now,
                 conversation_history: conversationSnapshot,
+                score: dynamicScore,
               }).eq("id", existing.id);
             } else {
               await db.from("respondo_leads").insert({
@@ -667,7 +670,7 @@ app.post("/api/chat", async (req, res) => {
                 status: "Nuevo",
                 origin: validCanal,
                 notes: interes || "",
-                score: 70,
+                score: dynamicScore,
                 avatar: makeAvatarUrl(nombre || "?"),
                 conversation_history: conversationSnapshot,
               });
@@ -789,11 +792,13 @@ async function processWhatsAppMessage(phone: string, text: string) {
     { role: "model", text: aiReply, timestamp: new Date().toISOString() },
   ];
 
+  const waScore = Math.min(95, 55 + Math.floor(newHistory.length * 2.5));
   if (existingLead) {
     await db.from("respondo_leads").update({
       conversation_history: newHistory,
       last_interaction: new Date().toISOString(),
       status: existingLead.status === "Nuevo" ? "Contactado" : existingLead.status,
+      score: waScore,
     }).eq("id", existingLead.id);
   } else {
     await db.from("respondo_leads").insert({
@@ -802,7 +807,7 @@ async function processWhatsAppMessage(phone: string, text: string) {
       status: "Contactado",
       origin: "WhatsApp",
       conversation_history: newHistory,
-      score: 65,
+      score: waScore,
       notes: `Primera consulta: "${text.substring(0, 100)}"`,
       avatar: makeAvatarUrl(phone),
     });

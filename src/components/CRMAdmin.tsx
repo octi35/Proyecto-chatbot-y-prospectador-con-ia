@@ -5,21 +5,16 @@ import {
   Send,
   CheckCheck,
   Plus,
-  Filter,
   User,
   MessageSquare,
-  HelpCircle,
   ExternalLink,
   ShieldCheck,
-  Target,
   FileSpreadsheet,
-  AlertCircle,
   UserCheck,
   Zap,
-  Tag,
-  ArrowRight,
   Trash2,
   Search,
+  Phone,
 } from "lucide-react";
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
@@ -42,6 +37,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(leads[0] || null);
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [channelFilter, setChannelFilter] = useState<CRMLead["origin"] | "Todos">("Todos");
   const [isDeletingLead, setIsDeletingLead] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null); // null = not editing
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -129,14 +125,14 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
     URL.revokeObjectURL(url);
   };
 
-  const filteredLeads = searchQuery.trim()
-    ? leads.filter(
-        (l) =>
-          l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          l.phone.includes(searchQuery) ||
-          l.notes.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : leads;
+  const filteredLeads = leads.filter((l) => {
+    const matchesSearch = !searchQuery.trim() ||
+      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.phone.includes(searchQuery) ||
+      l.notes.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesChannel = channelFilter === "Todos" || l.origin === channelFilter;
+    return matchesSearch && matchesChannel;
+  });
 
   // Status Column list
   const COLUMNS: CRMLead["status"][] = ["Nuevo", "Contactado", "Presupuestado", "Cerrado"];
@@ -282,7 +278,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
             >
               {/* Funnel Columns Left (3 columns on lg grid) */}
               <div className="lg:col-span-8 p-4 border-r border-slate-200 overflow-y-auto space-y-4 max-h-[520px]">
-                {/* Search + Add Lead bar */}
+                {/* Search + Filter + Add Lead bar */}
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -290,10 +286,21 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Buscar leads por nombre, teléfono o notas…"
+                      placeholder="Buscar por nombre, teléfono o notas…"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
                     />
                   </div>
+                  <select
+                    value={channelFilter}
+                    onChange={(e) => setChannelFilter(e.target.value as CRMLead["origin"] | "Todos")}
+                    className="bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs text-slate-700 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                    title="Filtrar por canal"
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Facebook">Facebook</option>
+                  </select>
                   {onLeadCreate && (
                     <button
                       onClick={() => setShowAddForm((v) => !v)}
@@ -442,20 +449,31 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                   <div className="space-y-4 flex-1 flex flex-col justify-between">
                     <div>
                       {/* Avatar Profile */}
-                      <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
+                      <div className="flex items-start space-x-3 pb-3 border-b border-slate-100">
                         <img
                           referrerPolicy="no-referrer"
                           src={selectedLead.avatar}
                           alt={selectedLead.name}
-                          className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                          className="w-12 h-12 rounded-full object-cover border border-slate-200 shrink-0"
                         />
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-sm text-slate-900">{selectedLead.name}</h4>
-                          <span className="text-xs text-slate-500 block">{selectedLead.phone}</span>
+                          <span className="text-xs text-slate-500 block">{selectedLead.phone || "Sin teléfono"}</span>
                           <span className={`text-[9px] font-mono font-bold uppercase ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`}>
-                            Fidelidad: {selectedLead.score}/100 — {selectedLead.score >= 85 ? "Muy Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
+                            Score: {selectedLead.score}/100 — {selectedLead.score >= 85 ? "Muy Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
                           </span>
                         </div>
+                        {selectedLead.phone && (
+                          <a
+                            href={`https://wa.me/${selectedLead.phone.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-all shrink-0"
+                            title="Abrir chat en WhatsApp"
+                          >
+                            <Phone size={11} /> WA
+                          </a>
+                        )}
                       </div>
 
                       {/* Lead Stage Controls */}
@@ -564,19 +582,39 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
 
                       {/* Conversation Monitoring history */}
                       <div className="py-3 space-y-2">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-                          Monitoreo de Conversación IA
-                        </span>
-                        <div className="space-y-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 max-h-[140px] overflow-y-auto">
-                          {selectedLead.conversationHistory.map((h, index) => (
-                            <div key={index} className="text-[10px] space-y-0.5">
-                              <span className={`font-bold block ${h.role === "user" ? "text-blue-600" : "text-slate-500"}`}>
-                                {h.role === "user" ? "Cliente:" : "Respondo AI:"}
-                              </span>
-                              <p className="text-slate-700 italic">"{h.text}"</p>
-                            </div>
-                          ))}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            Conversación IA ({selectedLead.conversationHistory.length} mensajes)
+                          </span>
+                          {selectedLead.conversationHistory.length > 0 && (
+                            <span className="text-[9px] text-slate-400">{timeAgo(selectedLead.lastInteraction)}</span>
+                          )}
                         </div>
+                        {selectedLead.conversationHistory.length === 0 ? (
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center text-[10px] text-slate-400 italic">
+                            Sin historial aún. Iniciá una conversación en el chat simulador.
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200 max-h-[180px] overflow-y-auto">
+                            {selectedLead.conversationHistory.map((h, index) => (
+                              <div
+                                key={index}
+                                className={`flex ${h.role === "user" ? "justify-end" : "justify-start"}`}
+                              >
+                                <div className={`max-w-[85%] px-2.5 py-1.5 rounded-xl text-[10px] leading-relaxed ${
+                                  h.role === "user"
+                                    ? "bg-emerald-100 text-emerald-900 rounded-tr-none"
+                                    : "bg-white border border-slate-200 text-slate-700 rounded-tl-none"
+                                }`}>
+                                  <span className={`font-bold block text-[8px] mb-0.5 ${h.role === "user" ? "text-emerald-700" : "text-blue-600"}`}>
+                                    {h.role === "user" ? "Cliente" : "Respondo AI"}
+                                  </span>
+                                  {h.text}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
