@@ -37,6 +37,10 @@ export const updateLead = (id: string, patch: Partial<Omit<CRMLead, "id">>) =>
   request<CRMLead>(`/api/leads/${id}`, { method: "PUT", body: JSON.stringify(patch) });
 export const deleteLead = (id: string) =>
   request<void>(`/api/leads/${id}`, { method: "DELETE" });
+export const sendLeadMessage = (id: string, text: string) =>
+  request<{ ok: boolean; sent: boolean; note?: string }>(`/api/leads/${id}/message`, {
+    method: "POST", body: JSON.stringify({ text }),
+  });
 
 // Campaigns
 export const getCampaigns = () => request<Campaign[]>("/api/campaigns");

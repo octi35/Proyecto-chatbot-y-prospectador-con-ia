@@ -534,6 +534,30 @@ app.delete("/api/leads/:id", async (req, res) => {
   } catch (err) { handleError(res, err); }
 });
 
+// Manual message send: CRM user → WhatsApp lead
+app.post("/api/leads/:id/message", async (req, res) => {
+  try {
+    const { text } = z.object({ text: z.string().min(1).max(4000) }).parse(req.body);
+    const db = getDB();
+    const { data: lead } = await db.from("respondo_leads").select("phone,conversation_history").eq("id", req.params.id).maybeSingle();
+    if (!lead?.phone) return res.status(400).json({ error: "El lead no tiene teléfono registrado" });
+
+    // Append message to conversation history
+    const now = new Date().toISOString();
+    const history = Array.isArray(lead.conversation_history) ? lead.conversation_history : [];
+    history.push({ role: "model", text, timestamp: now });
+    await db.from("respondo_leads").update({ conversation_history: history, last_interaction: now }).eq("id", req.params.id);
+
+    // Send via WhatsApp API (only if configured)
+    if (WA_TOKEN && WA_PHONE_ID) {
+      await sendWhatsAppMessage(lead.phone, text);
+      res.json({ ok: true, sent: true });
+    } else {
+      res.json({ ok: true, sent: false, note: "WhatsApp no configurado — mensaje guardado en historial únicamente" });
+    }
+  } catch (err) { handleError(res, err); }
+});
+
 // ---------------------------------------------------------------------------
 // CAMPAIGNS
 // ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ import {
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
 import { timeAgo } from "../lib/timeAgo";
+import { sendLeadMessage } from "../lib/api";
 
 interface CRMAdminProps {
   leads: CRMLead[];
@@ -47,6 +48,31 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [newLeadOrigin, setNewLeadOrigin] = useState<CRMLead["origin"]>("WhatsApp");
   const [isAddingLead, setIsAddingLead] = useState(false);
   
+  // Manual message state (human override)
+  const [manualMessage, setManualMessage] = useState("");
+  const [isSendingManual, setIsSendingManual] = useState(false);
+  const [manualSendFeedback, setManualSendFeedback] = useState<string | null>(null);
+
+  const handleSendManualMessage = async () => {
+    if (!selectedLead || !manualMessage.trim()) return;
+    setIsSendingManual(true);
+    setManualSendFeedback(null);
+    try {
+      const result = await sendLeadMessage(selectedLead.id, manualMessage.trim());
+      setManualMessage("");
+      setManualSendFeedback(result.sent ? "✅ Enviado por WhatsApp" : `💾 ${result.note || "Guardado en historial"}`);
+      // Update local conversation history
+      const newMsg = { role: "model" as const, text: manualMessage.trim(), timestamp: new Date().toISOString() };
+      setSelectedLead((prev) => prev ? { ...prev, conversationHistory: [...prev.conversationHistory, newMsg], lastInteraction: newMsg.timestamp } : prev);
+      setLeads((prev) => prev.map((l) => l.id === selectedLead.id ? { ...l, conversationHistory: [...l.conversationHistory, newMsg], lastInteraction: newMsg.timestamp } : l));
+    } catch (e) {
+      setManualSendFeedback("⚠️ Error al enviar. Verificá que el lead tenga teléfono.");
+    } finally {
+      setIsSendingManual(false);
+      setTimeout(() => setManualSendFeedback(null), 4000);
+    }
+  };
+
   // Broadcasting Campaign Form States
   const [newCampName, setNewCampName] = useState("");
   const [newCampTemplate, setNewCampTemplate] = useState("Hola {{nombre}}, te escribimos de {{empresa}} porque tenemos novedades especiales para vos...");
@@ -621,7 +647,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                     {/* Human Override Controls */}
                     <div className="pt-3 border-t border-slate-100 space-y-2">
                       <button
-                        onClick={() => toggleManualOverride(selectedLead.id)}
+                        onClick={() => { toggleManualOverride(selectedLead.id); setManualMessage(""); setManualSendFeedback(null); }}
                         className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                           manualOverrideActive[selectedLead.id]
                             ? "bg-red-600 hover:bg-red-700 text-white"
@@ -633,11 +659,37 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                           ? "Re-activar Agente de IA"
                           : "Intervenir Chat (Derivar a Humano)"}
                       </button>
-                      <p className="text-[9px] text-slate-400 text-center">
-                        {manualOverrideActive[selectedLead.id]
-                          ? "La IA está pausada para este cliente. Escribe manualmente."
-                          : "La IA de Respondo responde 24/7 de forma autónoma."}
-                      </p>
+                      {manualOverrideActive[selectedLead.id] ? (
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 text-center font-medium">
+                            IA pausada. Escribí un mensaje para enviar al cliente.
+                          </p>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={manualMessage}
+                              onChange={(e) => setManualMessage(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendManualMessage(); } }}
+                              placeholder="Escribí tu mensaje…"
+                              className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                            />
+                            <button
+                              onClick={handleSendManualMessage}
+                              disabled={isSendingManual || !manualMessage.trim()}
+                              className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              <Send size={13} />
+                            </button>
+                          </div>
+                          {manualSendFeedback && (
+                            <p className="text-[9px] text-center font-medium text-slate-600">{manualSendFeedback}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[9px] text-slate-400 text-center">
+                          La IA de Respondo responde 24/7 de forma autónoma.
+                        </p>
+                      )}
                       {onLeadDelete && (
                         <button
                           onClick={handleDeleteSelectedLead}
