@@ -16,6 +16,8 @@ import {
   Search,
   Phone,
   ChevronRight,
+  Clock,
+  TrendingUp,
 } from "lucide-react";
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
@@ -172,6 +174,17 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
 
   // Status Column list
   const COLUMNS: CRMLead["status"][] = ["Nuevo", "Contactado", "Presupuestado", "Cerrado"];
+
+  // Stale = no interaction for >24h and not closed
+  const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+  const isStale = (lead: CRMLead) =>
+    lead.status !== "Cerrado" &&
+    Date.now() - new Date(lead.lastInteraction).getTime() > STALE_THRESHOLD_MS;
+
+  // Quick CRM aggregate stats
+  const totalValue = leads.reduce((a, l) => a + (l.totalSpent || 0), 0);
+  const staleCount = leads.filter(isStale).length;
+  const avgScore = leads.length ? Math.round(leads.reduce((a, l) => a + l.score, 0) / leads.length) : 0;
 
   // Colors based on stage
   const getStageColor = (status: CRMLead["status"]) => {
@@ -347,6 +360,43 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
             >
               {/* Funnel Columns Left (3 columns on lg grid) */}
               <div className="lg:col-span-8 p-4 border-r border-slate-200 overflow-y-auto space-y-4 max-h-[520px]">
+                {/* Quick stats strip */}
+                <div className="grid grid-cols-4 gap-2">
+                  {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((s) => {
+                    const count = leads.filter((l) => l.status === s).length;
+                    const colors: Record<string, string> = {
+                      Nuevo: "text-sky-700 bg-sky-50 border-sky-100",
+                      Contactado: "text-amber-700 bg-amber-50 border-amber-100",
+                      Presupuestado: "text-purple-700 bg-purple-50 border-purple-100",
+                      Cerrado: "text-emerald-700 bg-emerald-50 border-emerald-100",
+                    };
+                    return (
+                      <div key={s} className={`text-center p-2 rounded-xl border text-xs ${colors[s]}`}>
+                        <span className="font-black text-base block leading-tight">{count}</span>
+                        <span className="font-semibold text-[9px] uppercase tracking-wide opacity-80 block leading-tight">{s}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(staleCount > 0 || totalValue > 0) && (
+                  <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                    {staleCount > 0 && (
+                      <span className="flex items-center gap-1 text-amber-600 font-semibold">
+                        <Clock size={11} /> {staleCount} lead{staleCount > 1 ? "s" : ""} sin actividad (+24h)
+                      </span>
+                    )}
+                    {totalValue > 0 && (
+                      <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                        <TrendingUp size={11} /> ${totalValue.toLocaleString("es-AR")} ARS facturado
+                      </span>
+                    )}
+                    {avgScore > 0 && (
+                      <span className="flex items-center gap-1 text-blue-600 font-semibold ml-auto">
+                        Score prom: {avgScore}%
+                      </span>
+                    )}
+                  </div>
+                )}
                 {/* Search + Filter + Add Lead bar */}
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -481,6 +531,11 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                                   className="w-5 h-5 rounded-full object-cover shrink-0"
                                 />
                                 <span className="text-xs font-bold text-slate-800 truncate flex-1">{lead.name}</span>
+                                {isStale(lead) && (
+                                  <span title="Sin actividad hace +24h" className="shrink-0">
+                                    <Clock size={10} className="text-amber-500" />
+                                  </span>
+                                )}
                               </div>
                               {/* Lead score mini bar */}
                               <div className="w-full h-0.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">

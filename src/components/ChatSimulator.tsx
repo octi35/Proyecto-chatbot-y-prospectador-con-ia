@@ -14,7 +14,7 @@ interface ChatSimulatorProps {
 }
 
 export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActions }: ChatSimulatorProps) {
-  const [platform, setPlatform] = useState<"whatsapp" | "instagram">("whatsapp");
+  const [platform, setPlatform] = useState<"whatsapp" | "instagram" | "facebook">("whatsapp");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -242,12 +242,16 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
       {/* Platform selector */}
       <div className="bg-slate-50 p-3 border-b border-slate-200 flex items-center justify-between z-10">
         <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-          {(["whatsapp","instagram"] as const).map((p) => (
+          {(["whatsapp","instagram","facebook"] as const).map((p) => (
             <button key={p} onClick={() => setPlatform(p)}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
-                platform === p ? (p === "whatsapp" ? "bg-emerald-600 text-white shadow-sm" : "bg-blue-600 text-white shadow-sm") : "text-slate-500 hover:text-slate-900"
+              className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
+                platform === p
+                  ? p === "whatsapp" ? "bg-emerald-600 text-white shadow-sm"
+                  : p === "instagram" ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm"
+                  : "bg-blue-700 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
               }`}>
-              {p === "whatsapp" ? "WhatsApp" : "Instagram"}
+              {p === "whatsapp" ? "WhatsApp" : p === "instagram" ? "Instagram" : "Facebook"}
             </button>
           ))}
         </div>
@@ -261,7 +265,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
       <div className="px-4 py-3 flex items-center justify-between text-slate-800 shadow-sm border-b border-slate-200 z-10 bg-white">
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-inner ${platform === "whatsapp" ? "bg-emerald-600" : "bg-blue-600"}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-inner ${platform === "whatsapp" ? "bg-emerald-600" : platform === "facebook" ? "bg-blue-700" : "bg-gradient-to-br from-pink-500 to-purple-600"}`}>
               {config.businessName.substring(0, 2).toUpperCase()}
             </div>
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
@@ -289,7 +293,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
             : "none",
           backgroundSize: "20px 20px",
           backgroundPosition: "0 0, 10px 10px",
-          backgroundColor: platform === "whatsapp" ? "#f8fafc" : "#ffffff",
+          backgroundColor: platform === "whatsapp" ? "#f8fafc" : platform === "facebook" ? "#f0f2f5" : "#ffffff",
         }}>
 
         <AnimatePresence initial={false}>
@@ -311,7 +315,9 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
 
                 <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm relative ${
                   isUser
-                    ? platform === "whatsapp" ? "bg-[#DCF8C6] text-slate-800 rounded-tr-none border border-[#c2e7af]" : "bg-blue-600 text-white rounded-tr-none"
+                    ? platform === "whatsapp" ? "bg-[#DCF8C6] text-slate-800 rounded-tr-none border border-[#c2e7af]"
+                    : platform === "instagram" ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-tr-none"
+                    : "bg-blue-700 text-white rounded-tr-none"
                     : platform === "whatsapp" ? "bg-white text-slate-800 border border-slate-200 rounded-tl-none" : "bg-slate-100 text-slate-800 rounded-tl-none"
                 }`}>
 
@@ -506,7 +512,9 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
           className={`p-2.5 rounded-full text-white transition-all shadow-sm cursor-pointer ${
             !inputText.trim() || isLoading
               ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-              : platform === "whatsapp" ? "bg-emerald-600 hover:bg-emerald-700 hover:scale-105 active:scale-95" : "bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95"
+              : platform === "whatsapp" ? "bg-emerald-600 hover:bg-emerald-700 hover:scale-105 active:scale-95"
+              : platform === "facebook" ? "bg-blue-700 hover:bg-blue-800 hover:scale-105 active:scale-95"
+              : "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 hover:scale-105 active:scale-95"
           }`}>
           <Send size={14} />
         </button>
