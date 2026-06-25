@@ -129,6 +129,7 @@ function mapLeadFromDB(row: any) {
     status: row.status,
     origin: row.origin,
     lastInteraction: row.last_interaction,
+    createdAt: row.created_at ?? undefined,
     score: row.score,
     notes: row.notes,
     category: row.category ?? undefined,

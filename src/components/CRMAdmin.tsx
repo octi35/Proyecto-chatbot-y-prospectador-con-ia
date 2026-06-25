@@ -492,6 +492,11 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                           <span className={`text-[9px] font-mono font-bold uppercase ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`}>
                             Score: {selectedLead.score}/100 — {selectedLead.score >= 85 ? "Muy Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
                           </span>
+                          {selectedLead.createdAt && (
+                            <span className="text-[8px] text-slate-400 block mt-0.5">
+                              Alta: {new Date(selectedLead.createdAt).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
+                            </span>
+                          )}
                         </div>
                         {selectedLead.phone && (
                           <a

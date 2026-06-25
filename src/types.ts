@@ -37,6 +37,7 @@ export interface CRMLead {
   status: "Nuevo" | "Contactado" | "Presupuestado" | "Cerrado";
   origin: "WhatsApp" | "Instagram" | "Facebook";
   lastInteraction: string;
+  createdAt?: string;
   score: number; // 0-100 lead score
   notes: string;
   category?: string;
