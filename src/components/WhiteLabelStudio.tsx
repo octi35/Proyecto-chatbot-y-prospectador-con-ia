@@ -7,8 +7,12 @@ import {
   XCircle,
   Copy,
   Webhook,
+  Terminal,
+  Zap,
+  Shield,
+  MessageSquare,
 } from "lucide-react";
-import { getHealth, type HealthData } from "../lib/api";
+import { getHealth, runFollowups, type HealthData } from "../lib/api";
 
 // Integration colors & initials used as logo fallback (no external images)
 const INTEGRATION_LIST = [
@@ -86,10 +90,22 @@ export default function WhiteLabelStudio() {
   const [integrations, setIntegrations] = useState(INTEGRATION_LIST);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [followupMsg, setFollowupMsg] = useState<string | null>(null);
 
   useEffect(() => {
     getHealth().then(setHealth).catch(() => {});
   }, []);
+
+  const handleRunFollowups = async () => {
+    try {
+      const result = await runFollowups();
+      setFollowupMsg(`✅ ${result.contacted} seguimiento${result.contacted !== 1 ? "s" : ""} enviado${result.contacted !== 1 ? "s" : ""} (${result.totalStale} leads inactivos detectados)`);
+    } catch {
+      setFollowupMsg("⚠️ Error al ejecutar seguimientos.");
+    }
+    setTimeout(() => setFollowupMsg(null), 6000);
+  };
 
   const copyWebhook = () => {
     const url = health?.webhookUrl || `${window.location.origin}/webhook/whatsapp`;
@@ -184,6 +200,64 @@ export default function WhiteLabelStudio() {
             Pegá esta URL en <strong>Meta for Developers → WhatsApp → Configuración del Webhook</strong>. El token de verificación se configura en la variable <code className="bg-slate-100 px-1 rounded">WEBHOOK_VERIFY_TOKEN</code> del servidor.
           </p>
         </div>
+
+        {/* Quick actions row */}
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+          <button
+            onClick={() => setShowSetupGuide((v) => !v)}
+            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer transition-all"
+          >
+            <Terminal size={12} /> {showSetupGuide ? "Ocultar Guía" : "Ver Guía de Configuración"}
+          </button>
+          <button
+            onClick={handleRunFollowups}
+            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 flex items-center gap-1.5 cursor-pointer transition-all"
+          >
+            <Zap size={12} /> Ejecutar Seguimientos Automáticos
+          </button>
+        </div>
+
+        {followupMsg && (
+          <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-medium">
+            {followupMsg}
+          </div>
+        )}
+
+        {/* Setup guide */}
+        {showSetupGuide && (
+          <div className="bg-slate-900 text-slate-100 rounded-2xl p-5 space-y-4 text-[11px] font-mono leading-relaxed">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-700">
+              <Shield size={14} className="text-emerald-400" />
+              <span className="font-bold text-emerald-400 uppercase tracking-wider text-[10px]">Guía de Configuración — Variables de Entorno</span>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <span className="text-slate-400 text-[9px] uppercase block mb-1">1. Gemini AI (Google)</span>
+                <code className="text-amber-300">GEMINI_API_KEY=AIza…</code>
+                <p className="text-slate-500 text-[9px] mt-0.5">Obtené la key en: aistudio.google.com/apikey</p>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[9px] uppercase block mb-1">2. Supabase Database</span>
+                <code className="text-amber-300">SUPABASE_URL=https://xxxx.supabase.co</code><br/>
+                <code className="text-amber-300">SUPABASE_ANON_KEY=eyJ…</code>
+                <p className="text-slate-500 text-[9px] mt-0.5">Supabase → Settings → API → Project URL y anon/public key</p>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[9px] uppercase block mb-1">3. WhatsApp Meta API (para mensajes reales)</span>
+                <code className="text-amber-300">WHATSAPP_TOKEN=EAABz…</code><br/>
+                <code className="text-amber-300">WHATSAPP_PHONE_NUMBER_ID=1234567890</code><br/>
+                <code className="text-amber-300">WHATSAPP_APP_SECRET=abc123…</code><br/>
+                <code className="text-amber-300">WEBHOOK_VERIFY_TOKEN=mi-token-secreto</code><br/>
+                <code className="text-amber-300">APP_URL=https://tu-dominio.com</code>
+                <p className="text-slate-500 text-[9px] mt-0.5">Meta for Developers → WhatsApp → API Setup</p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-slate-700 flex items-start gap-2">
+              <MessageSquare size={11} className="text-blue-400 shrink-0 mt-0.5" />
+              <span className="text-slate-400 text-[9px]">Creá un archivo <code className="text-slate-200">.env</code> en la raíz del proyecto con estas variables, luego reiniciá el servidor con <code className="text-slate-200">npm run dev</code>.</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
