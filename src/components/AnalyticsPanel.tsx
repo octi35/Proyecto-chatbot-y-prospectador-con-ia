@@ -1,16 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { 
-  TrendingUp, 
-  Clock, 
-  ShoppingBag, 
-  Users, 
-  Sparkles, 
-  ShieldCheck, 
-  Zap, 
-  Award 
+import {
+  TrendingUp,
+  Clock,
+  ShoppingBag,
+  Users,
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  Award,
+  MessageCircle
 } from "lucide-react";
 import { CRMLead, Campaign, AgentConfig } from "../types";
+import { getAnalytics, AnalyticsData } from "../lib/api";
 
 interface AnalyticsPanelProps {
   leads: CRMLead[];
@@ -20,6 +22,12 @@ interface AnalyticsPanelProps {
 
 export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPanelProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+
+  // Load real aggregated analytics from the database
+  useEffect(() => {
+    getAnalytics().then(setAnalytics).catch(() => setAnalytics(null));
+  }, [leads]);
 
   // Dynamic calculations from the actual live CRM state
   const totalLeads = leads.length;
@@ -29,25 +37,25 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
   const closedLeads = leads.filter(l => l.status === "Cerrado").length;
   const totalSalesAmount = leads.reduce((acc, l) => acc + (l.totalSpent || 0), 0);
   const conversionRate = totalLeads > 0 ? ((closedLeads / totalLeads) * 100).toFixed(1) : "0.0";
-  
+
   // Average Lead Score
-  const avgLeadScore = totalLeads > 0 
-    ? Math.round(leads.reduce((acc, l) => acc + l.score, 0) / totalLeads) 
+  const avgLeadScore = totalLeads > 0
+    ? Math.round(leads.reduce((acc, l) => acc + l.score, 0) / totalLeads)
     : 0;
 
-  // Active campaign count and total official sent messages via Meta API
+  // Active campaign count
   const totalCampaigns = campaigns.length;
-  const totalMessagesSent = campaigns.reduce((acc, c) => acc + (c.sentCount || 0), 0);
 
-  // Live historical monthly simulation with June mapped to actual live CRM sales
-  const chartData = [
-    { month: "Ene", sales: 15000 },
-    { month: "Feb", sales: 32000 },
-    { month: "Mar", sales: 58000 },
-    { month: "Abr", sales: 74000 },
-    { month: "May", sales: 95000 },
-    { month: "Jun", sales: totalSalesAmount || 115000 } // Falls back to standard demo metric if live sales are 0
-  ];
+  // Real monthly sales from DB (last 6 months); empty until real sales close
+  const chartData = analytics?.monthlySales?.length
+    ? analytics.monthlySales
+    : [
+        { month: "Ene", sales: 0 }, { month: "Feb", sales: 0 }, { month: "Mar", sales: 0 },
+        { month: "Abr", sales: 0 }, { month: "May", sales: 0 }, { month: "Jun", sales: 0 },
+      ];
+
+  const totalConversations = analytics?.totalConversations ?? leads.filter(l => l.conversationHistory.length > 0).length;
+  const totalInteractions = analytics?.totalMessages ?? 0;
 
   // Dynamic scaling for the SVG vector line chart to support any dynamic CRM values
   const maxVal = Math.max(...chartData.map(d => d.sales)) || 1;
@@ -299,22 +307,22 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
           </div>
         </div>
 
-        {/* Campañas de WhatsApp segmentadas */}
+        {/* Actividad real del agente */}
         <div className="lg:col-span-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <h4 className="font-sans font-semibold text-sm text-slate-800">Rendimiento de Difusiones</h4>
-            <p className="text-xs text-slate-500 mb-6">Mensajes masivos enviados por Meta API</p>
+            <h4 className="font-sans font-semibold text-sm text-slate-800">Actividad del Agente</h4>
+            <p className="text-xs text-slate-500 mb-6">Métricas reales de conversaciones procesadas por la IA</p>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-slate-700">Campañas Creadas</span>
-                <span className="text-blue-600 font-mono font-bold">{totalCampaigns}</span>
+                <span className="font-bold text-slate-700 flex items-center gap-1"><MessageCircle size={12} className="text-blue-600" /> Conversaciones Atendidas</span>
+                <span className="text-blue-600 font-mono font-bold">{totalConversations}</span>
               </div>
               <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
                 <div
-                  style={{ width: `${Math.min(100, (totalCampaigns / 5) * 100)}%` }}
+                  style={{ width: `${Math.min(100, totalLeads ? (totalConversations / totalLeads) * 100 : 0)}%` }}
                   className="h-full bg-blue-500 rounded-full"
                 />
               </div>
@@ -322,12 +330,25 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-slate-700">Mensajes Entregados</span>
-                <span className="text-emerald-600 font-mono font-bold">{totalMessagesSent}</span>
+                <span className="font-bold text-slate-700">Mensajes Procesados</span>
+                <span className="text-indigo-600 font-mono font-bold">{totalInteractions}</span>
               </div>
               <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
                 <div
-                  style={{ width: `${Math.min(100, (totalMessagesSent / 500) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (totalInteractions / 100) * 100)}%` }}
+                  className="h-full bg-indigo-500 rounded-full"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="font-bold text-slate-700">Campañas de Difusión</span>
+                <span className="text-emerald-600 font-mono font-bold">{totalCampaigns}</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+                <div
+                  style={{ width: `${Math.min(100, (totalCampaigns / 5) * 100)}%` }}
                   className="h-full bg-emerald-500 rounded-full"
                 />
               </div>
@@ -335,8 +356,8 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
-            <span className="font-semibold text-slate-800 block mb-1">💡 Control del Negocio</span>
-            Toda la información visualizada proviene directamente de tu CRM. Cuando cierras ventas o editas prospectos, este panel actualiza automáticamente tu embudo en tiempo real.
+            <span className="font-semibold text-slate-800 block mb-1">💡 Datos 100% reales</span>
+            Todas las métricas provienen de la base de datos (Supabase). El gráfico de ventas se llena a medida que el agente cierra ventas reales.
           </div>
         </div>
 

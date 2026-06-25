@@ -420,13 +420,14 @@ function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
   return schema.parse(body);
 }
 
-function handleError(res: express.Response, err: unknown) {
+function handleError(res: express.Response, err: any) {
   if (err instanceof ZodError) {
     return res.status(400).json({ error: "Datos inválidos", details: err.flatten() });
   }
-  const msg = err instanceof Error ? err.message : String(err);
-  logger.error({ err: msg });
-  return res.status(500).json({ error: msg });
+  // Supabase/Postgrest errors are plain objects with message/details/hint/code
+  const msg = err?.message || err?.error_description || (err instanceof Error ? err.message : JSON.stringify(err));
+  logger.error({ message: err?.message, code: err?.code, details: err?.details, hint: err?.hint }, "request error");
+  return res.status(500).json({ error: msg, code: err?.code });
 }
 
 // ---------------------------------------------------------------------------
@@ -442,7 +443,8 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/config", async (_req, res) => {
   try {
     const db = getDB();
-    const { data } = await db.from("respondo_config").select("*").limit(1).single();
+    const { data, error } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
+    if (error) throw error;
     if (!data) return res.json(null);
     res.json(mapConfigFromDB(data));
   } catch (err) { handleError(res, err); }
@@ -452,7 +454,7 @@ app.put("/api/config", async (req, res) => {
   try {
     const body = validateBody(AgentConfigSchema, req.body);
     const db = getDB();
-    const { data: existing } = await db.from("respondo_config").select("id").limit(1).single();
+    const { data: existing } = await db.from("respondo_config").select("id").limit(1).maybeSingle();
     let result: any;
     if (existing) {
       const { data } = await db.from("respondo_config").update(mapConfigToDB(body)).eq("id", existing.id).select().single();
@@ -541,6 +543,56 @@ app.put("/api/campaigns/:id", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// ANALYTICS (real aggregation from DB)
+// ---------------------------------------------------------------------------
+app.get("/api/analytics", async (_req, res) => {
+  try {
+    const db = getDB();
+    const { data: leads, error } = await db.from("respondo_leads")
+      .select("status,total_spent,updated_at,created_at,origin,conversation_history");
+    if (error) throw error;
+
+    const { count: eventCount } = await db.from("respondo_chat_events")
+      .select("*", { count: "exact", head: true });
+
+    const monthLabels = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    const now = new Date();
+    const months: { key: string; label: string; sales: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: monthLabels[d.getMonth()], sales: 0 });
+    }
+
+    let totalConversations = 0;
+    let totalMessages = 0;
+    const channelCounts: Record<string, number> = {};
+
+    for (const l of (leads || [])) {
+      const hist = Array.isArray((l as any).conversation_history) ? (l as any).conversation_history : [];
+      if (hist.length > 0) totalConversations++;
+      totalMessages += hist.length;
+      const origin = (l as any).origin || "WhatsApp";
+      channelCounts[origin] = (channelCounts[origin] || 0) + 1;
+
+      if ((l as any).status === "Cerrado") {
+        const d = new Date((l as any).updated_at);
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        const m = months.find((mm) => mm.key === key);
+        if (m) m.sales += parseFloat((l as any).total_spent) || 0;
+      }
+    }
+
+    res.json({
+      monthlySales: months.map((m) => ({ month: m.label, sales: m.sales })),
+      totalConversations,
+      totalMessages,
+      totalEvents: eventCount || 0,
+      channelCounts,
+    });
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
 // CHAT (AI with tool-use)
 // ---------------------------------------------------------------------------
 app.post("/api/chat", async (req, res) => {
@@ -551,7 +603,7 @@ app.post("/api/chat", async (req, res) => {
     let config = body.agentConfig;
     if (!config) {
       const db = getDB();
-      const { data } = await db.from("respondo_config").select("*").limit(1).single();
+      const { data } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
       config = data ? mapConfigFromDB(data) : {
         businessName: "Zapas Respondo", businessType: "Calzado", catalog: "", tone: "Argentino/Cercano",
       };
@@ -567,7 +619,7 @@ app.post("/api/chat", async (req, res) => {
           if (action.type === "upsert_lead") {
             const { nombre, telefono, interes, canal } = action.payload;
             const { data: existing } = await db.from("respondo_leads").select("id")
-              .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).single();
+              .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).maybeSingle();
             const validCanal = ["WhatsApp","Instagram","Facebook"].includes(canal) ? canal : "WhatsApp";
             if (existing) {
               await db.from("respondo_leads").update({ notes: interes, last_interaction: "Ahora" }).eq("id", existing.id);
@@ -585,7 +637,7 @@ app.post("/api/chat", async (req, res) => {
             }
           } else if (action.type === "update_lead_status") {
             const { nombre, estado, nota } = action.payload;
-            const { data: lead } = await db.from("respondo_leads").select("id").ilike("name", nombre).limit(1).single();
+            const { data: lead } = await db.from("respondo_leads").select("id").ilike("name", nombre).limit(1).maybeSingle();
             if (lead) {
               const patch: any = { status: estado, last_interaction: "Ahora" };
               if (nota) patch.notes = nota;
@@ -673,11 +725,11 @@ async function processWhatsAppMessage(phone: string, text: string) {
   const db = getDB();
 
   // Get config
-  const { data: configRow } = await db.from("respondo_config").select("*").limit(1).single();
+  const { data: configRow } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
   const config = configRow ? mapConfigFromDB(configRow) : { businessName: "Respondo", businessType: "", catalog: "", tone: "Argentino/Cercano" };
 
   // Get or create lead and conversation history
-  const { data: existingLead } = await db.from("respondo_leads").select("*").eq("phone", phone).limit(1).single();
+  const { data: existingLead } = await db.from("respondo_leads").select("*").eq("phone", phone).limit(1).maybeSingle();
   const history: any[] = (existingLead?.conversation_history || []).slice(-20); // keep last 20 msgs
 
   // Run AI

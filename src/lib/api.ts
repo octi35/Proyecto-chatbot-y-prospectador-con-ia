@@ -33,3 +33,13 @@ export const createCampaign = (campaign: Omit<Campaign, "id">) =>
   request<Campaign>("/api/campaigns", { method: "POST", body: JSON.stringify(campaign) });
 export const updateCampaign = (id: string, patch: Partial<Campaign>) =>
   request<Campaign>(`/api/campaigns/${id}`, { method: "PUT", body: JSON.stringify(patch) });
+
+// Analytics
+export interface AnalyticsData {
+  monthlySales: { month: string; sales: number }[];
+  totalConversations: number;
+  totalMessages: number;
+  totalEvents: number;
+  channelCounts: Record<string, number>;
+}
+export const getAnalytics = () => request<AnalyticsData>("/api/analytics");
