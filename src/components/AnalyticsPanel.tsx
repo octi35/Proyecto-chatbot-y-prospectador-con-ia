@@ -43,6 +43,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
     ? Math.round(leads.reduce((acc, l) => acc + l.score, 0) / totalLeads)
     : 0;
 
+  // Funnel conversion rates between each stage
+  const funnelRates = {
+    toContactado: newLeads + contactedLeads > 0 ? Math.round((contactedLeads / (newLeads + contactedLeads)) * 100) : 0,
+    toPresupuestado: contactedLeads + budgetedLeads > 0 ? Math.round((budgetedLeads / (contactedLeads + budgetedLeads)) * 100) : 0,
+    toCerrado: budgetedLeads + closedLeads > 0 ? Math.round((closedLeads / (budgetedLeads + closedLeads)) * 100) : 0,
+  };
+
   // Active campaign count
   const totalCampaigns = campaigns.length;
 
@@ -208,6 +215,47 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Funnel conversion rates */}
+      {totalLeads > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-sans font-semibold text-sm text-slate-800">Tasas de Conversión por Etapa</h4>
+              <p className="text-xs text-slate-500">% de leads que avanzan entre cada etapa del embudo</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {[
+              { label: "Nuevo", count: newLeads, color: "bg-sky-400 text-sky-700" },
+              { label: "→ Contactado", rate: funnelRates.toContactado, color: "text-slate-400" },
+              { label: "Contactado", count: contactedLeads, color: "bg-amber-400 text-amber-700" },
+              { label: "→ Presupuestado", rate: funnelRates.toPresupuestado, color: "text-slate-400" },
+              { label: "Presupuestado", count: budgetedLeads, color: "bg-purple-500 text-purple-700" },
+              { label: "→ Cerrado", rate: funnelRates.toCerrado, color: "text-slate-400" },
+              { label: "Cerrado", count: closedLeads, color: "bg-emerald-500 text-emerald-700" },
+            ].map((item, i) =>
+              "rate" in item ? (
+                <div key={i} className="flex flex-col items-center flex-1 min-w-0">
+                  <span className={`text-[10px] font-bold font-mono ${item.rate >= 50 ? "text-emerald-600" : item.rate >= 25 ? "text-amber-600" : "text-red-500"}`}>
+                    {item.rate}%
+                  </span>
+                  <div className="w-full h-0.5 bg-slate-200 relative">
+                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-slate-300" />
+                  </div>
+                </div>
+              ) : (
+                <div key={i} className="flex flex-col items-center gap-1 shrink-0">
+                  <span className={`text-sm font-black ${item.color.split(" ")[1]}`}>{item.count}</span>
+                  <div className={`w-14 h-6 rounded-lg ${item.color.split(" ")[0]} flex items-center justify-center`}>
+                    <span className="text-white text-[9px] font-bold">{item.label}</span>
+                  </div>
+                </div>
+              )
+            )}
           </div>
         </div>
       )}

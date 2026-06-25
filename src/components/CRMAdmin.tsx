@@ -78,6 +78,15 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
     }
   };
 
+  // Pre-built campaign templates
+  const CAMPAIGN_TEMPLATES = [
+    { name: "Oferta de Temporada", text: "¡Hola {{nombre}}! 🔥 Tenemos una oferta especial de temporada sólo por hoy. ¿Te interesa conocer los detalles? ¡Respondé este mensaje!" },
+    { name: "Seguimiento de Consulta", text: "Hola {{nombre}}, somos de {{empresa}}. Te contactamos para seguir con tu consulta. ¿Pudiste decidirte? Estamos para ayudarte 😊" },
+    { name: "Carrito Abandonado", text: "¡{{nombre}}, te olvidaste algo! 🛒 Todavía tenés tu pedido guardado en {{empresa}}. ¿Querés que lo completemos juntos? Escribinos." },
+    { name: "Nuevo Producto", text: "¡Hola {{nombre}}! 🆕 Acaba de llegar algo que te va a encantar en {{empresa}}. ¿Querés que te cuente más? Solo respondé este mensaje." },
+    { name: "Recordatorio de Turno", text: "Hola {{nombre}}, te recordamos que tenés un turno agendado con {{empresa}}. Confirmá con un 👍 o avisanos si necesitás cambiar el horario." },
+  ];
+
   // Broadcasting Campaign Form States
   const [newCampName, setNewCampName] = useState("");
   const [newCampTemplate, setNewCampTemplate] = useState("Hola {{nombre}}, te escribimos de {{empresa}} porque tenemos novedades especiales para vos...");
@@ -819,6 +828,19 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                           <p className="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 text-center font-medium">
                             IA pausada. Escribí un mensaje para enviar al cliente.
                           </p>
+                          {/* Quick reply chips for human agent */}
+                          <div className="flex flex-wrap gap-1">
+                            {["¿En qué más te ayudo?","Te paso el precio","¿Coordinamos el envío?","Muchas gracias por tu consulta"].map((r) => (
+                              <button
+                                key={r}
+                                type="button"
+                                onClick={() => setManualMessage(r)}
+                                className="text-[8px] font-medium px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 cursor-pointer transition-all"
+                              >
+                                {r}
+                              </button>
+                            ))}
+                          </div>
                           <div className="flex gap-1.5">
                             <input
                               type="text"
@@ -921,6 +943,19 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                     <div className="flex justify-between items-center">
                       <label className="text-xs font-medium text-slate-500">Plantilla de Mensaje</label>
                       <span className="text-[9px] text-slate-400 font-mono font-bold">Use {"{{nombre}}"} y {"{{empresa}}"}</span>
+                    </div>
+                    {/* Quick template picker */}
+                    <div className="flex flex-wrap gap-1.5 pb-1">
+                      {CAMPAIGN_TEMPLATES.map((tpl) => (
+                        <button
+                          key={tpl.name}
+                          type="button"
+                          onClick={() => { setNewCampTemplate(tpl.text); setNewCampName(tpl.name); }}
+                          className="text-[9px] font-semibold px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all cursor-pointer"
+                        >
+                          {tpl.name}
+                        </button>
+                      ))}
                     </div>
                     <textarea
                       value={newCampTemplate}
