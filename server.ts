@@ -8,6 +8,7 @@ import helmet from "helmet";
 import cors from "cors";
 import pino from "pino";
 import { z, ZodError } from "zod";
+import { localBotReply } from "./botEngine";
 
 dotenv.config();
 
@@ -406,7 +407,14 @@ async function runChat(
   history: { role: string; text: string }[],
   config: any,
   attachment?: { data: string; mimeType: string }
-): Promise<{ text: string; actions: AgentAction[] }> {
+): Promise<{ text: string; actions: AgentAction[]; engine?: string }> {
+  // When no LLM is configured, the built-in rule-based bot keeps the agent
+  // alive: it parses the catalog, detects intent and replies in the right tone.
+  if (!process.env.GEMINI_API_KEY) {
+    const reply = localBotReply(message, history || [], config);
+    return { text: reply.text, actions: reply.actions as AgentAction[], engine: "local" };
+  }
+
   const ai = getAI();
 
   const personaName = config.botPersonaName?.trim() || "Respondo";
@@ -471,31 +479,38 @@ Lema: "Chatea menos, Vendé más."`;
   const actions: AgentAction[] = [];
   let finalText = "";
 
-  for (let i = 0; i < 5; i++) {
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents,
-      config: { systemInstruction, temperature: 0.8, topP: 0.95, tools: TOOL_DECLARATIONS },
-    });
+  try {
+    for (let i = 0; i < 5; i++) {
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents,
+        config: { systemInstruction, temperature: 0.8, topP: 0.95, tools: TOOL_DECLARATIONS },
+      });
 
-    const calls = response.functionCalls;
-    if (calls && calls.length > 0) {
-      const modelContent = response.candidates?.[0]?.content;
-      if (modelContent) contents.push(modelContent);
-      const parts: any[] = [];
-      for (const call of calls) {
-        const { result, action } = executeTool(call.name as string, (call.args as any) || {}, config);
-        if (action) actions.push(action);
-        parts.push({ functionResponse: { name: call.name, response: result } });
+      const calls = response.functionCalls;
+      if (calls && calls.length > 0) {
+        const modelContent = response.candidates?.[0]?.content;
+        if (modelContent) contents.push(modelContent);
+        const parts: any[] = [];
+        for (const call of calls) {
+          const { result, action } = executeTool(call.name as string, (call.args as any) || {}, config);
+          if (action) actions.push(action);
+          parts.push({ functionResponse: { name: call.name, response: result } });
+        }
+        contents.push({ role: "user", parts });
+        continue;
       }
-      contents.push({ role: "user", parts });
-      continue;
+      finalText = response.text || "";
+      break;
     }
-    finalText = response.text || "";
-    break;
+  } catch (err) {
+    // LLM unavailable (quota, network, etc.) — fall back to the local bot
+    logger.warn({ err }, "LLM call failed; using local bot fallback");
+    const reply = localBotReply(message, history || [], config);
+    return { text: reply.text, actions: reply.actions as AgentAction[], engine: "local-fallback" };
   }
 
-  return { text: finalText || "Disculpame, no pude procesar la consulta. ¿Me la repetís?", actions };
+  return { text: finalText || "Disculpame, no pude procesar la consulta. ¿Me la repetís?", actions, engine: "gemini" };
 }
 
 // ---------------------------------------------------------------------------
@@ -538,6 +553,9 @@ app.get("/api/health", (_req, res) => {
     status: "ok",
     time: new Date().toISOString(),
     model: GEMINI_MODEL,
+    // The bot is always alive: Gemini when a key is set, otherwise the
+    // built-in rule-based engine.
+    botEngine: process.env.GEMINI_API_KEY ? "gemini" : "local",
     integrations: {
       gemini: !!process.env.GEMINI_API_KEY,
       supabase: !!(SUPABASE_URL && SUPABASE_ANON_KEY),
@@ -894,7 +912,7 @@ app.post("/api/chat", async (req, res) => {
       };
     }
 
-    const { text, actions } = await runChat(body.message, body.history || [], config, body.attachment);
+    const { text, actions, engine } = await runChat(body.message, body.history || [], config, body.attachment);
 
     // Build conversation snapshot for DB storage (history + current exchange)
     const now = new Date().toISOString();
@@ -966,7 +984,7 @@ app.post("/api/chat", async (req, res) => {
       });
     } catch { /* non-critical */ }
 
-    res.json({ text, role: "model", actions });
+    res.json({ text, role: "model", actions, engine });
   } catch (err) { handleError(res, err); }
 });
 

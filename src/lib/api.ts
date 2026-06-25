@@ -3,6 +3,7 @@ import type { CRMLead, Campaign, AgentConfig, AutomationRule } from "../types";
 export interface HealthData {
   status: string;
   model: string;
+  botEngine?: "gemini" | "local";
   integrations: { gemini: boolean; supabase: boolean; whatsapp: boolean };
   webhookUrl: string | null;
 }
