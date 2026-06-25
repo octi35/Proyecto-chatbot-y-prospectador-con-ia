@@ -32,9 +32,21 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   // Map from message id → HTMLAudioElement so each voice note has its own player
   const audioMapRef = useRef<Map<string, HTMLAudioElement>>(new Map());
 
-  // Set initial greeting only once on mount (or when chat is manually cleared)
+  const STORAGE_KEY = "respondo_chat_session";
+
+  // Restore messages from sessionStorage on mount, or show greeting if none
   const greetingText = config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`;
   useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
     setMessages([{
       id: "initial-1",
       role: "model",
@@ -45,6 +57,13 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   // We intentionally only run this on mount; config changes don't reset an ongoing chat
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist messages to sessionStorage on every change
+  useEffect(() => {
+    if (messages.length > 1) {
+      try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch { /* ignore */ }
+    }
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -207,6 +226,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
     audioMapRef.current.clear();
     setPlayingAudioId(null);
     setQuickReplies([]);
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
     setMessages([{
       id: "initial-1",
       role: "model",

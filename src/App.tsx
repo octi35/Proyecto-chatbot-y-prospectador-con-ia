@@ -115,6 +115,16 @@ export default function App() {
     if (activeTab === "crm") setNewLeadsBadge(0);
   }, [activeTab]);
 
+  // Update document title with new leads badge
+  useEffect(() => {
+    const name = config.businessName && config.businessName !== "Mi Negocio"
+      ? config.businessName
+      : "Respondo";
+    document.title = newLeadsBadge > 0
+      ? `(${newLeadsBadge}) ${name} — CRM`
+      : `${name} — Panel de Control`;
+  }, [newLeadsBadge, config.businessName]);
+
   // ---------------------------------------------------------------------------
   // CONFIG — debounce save to API on every change
   // ---------------------------------------------------------------------------
