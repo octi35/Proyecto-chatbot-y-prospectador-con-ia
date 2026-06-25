@@ -151,11 +151,22 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   };
 
   const exportCSV = () => {
-    const header = ["Nombre", "Teléfono", "Estado", "Canal", "Puntaje", "Última interacción", "Notas"].join(",");
-    const rows = leads.map((l) =>
-      [l.name, l.phone, l.status, l.origin, l.score, l.lastInteraction, `"${l.notes.replace(/"/g, '""')}"`].join(",")
-    );
-    const csv = [header, ...rows].join("\n");
+    const header = ["Nombre","Teléfono","Estado","Canal","Puntaje","Categoría","Mensajes","Venta ARS","Alta","Última actividad","Notas"].join(",");
+    const rows = leads.map((l) => [
+      `"${(l.name || "").replace(/"/g, '""')}"`,
+      l.phone || "",
+      l.status,
+      l.origin,
+      l.score,
+      l.category || "",
+      l.conversationHistory.length,
+      l.totalSpent || 0,
+      l.createdAt ? new Date(l.createdAt).toLocaleDateString("es-AR") : "",
+      new Date(l.lastInteraction).toLocaleDateString("es-AR"),
+      `"${(l.notes || "").replace(/"/g, '""')}"`,
+    ].join(","));
+    const bom = "﻿"; // UTF-8 BOM for Excel compatibility
+    const csv = bom + [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -189,6 +200,12 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const isStale = (lead: CRMLead) =>
     lead.status !== "Cerrado" &&
     Date.now() - new Date(lead.lastInteraction).getTime() > STALE_THRESHOLD_MS;
+
+  // Hot lead = score >= 85 and activity within the last 2 hours
+  const HOT_THRESHOLD_MS = 2 * 60 * 60 * 1000;
+  const isHot = (lead: CRMLead) =>
+    lead.score >= 85 &&
+    Date.now() - new Date(lead.lastInteraction).getTime() < HOT_THRESHOLD_MS;
 
   // Quick CRM aggregate stats
   const totalValue = leads.reduce((a, l) => a + (l.totalSpent || 0), 0);
@@ -540,7 +557,10 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                                   className="w-5 h-5 rounded-full object-cover shrink-0"
                                 />
                                 <span className="text-xs font-bold text-slate-800 truncate flex-1">{lead.name}</span>
-                                {isStale(lead) && (
+                                {isHot(lead) && (
+                                  <span title="Lead caliente — alta intención de compra, activo hace <2h" className="shrink-0 text-[10px]">🔥</span>
+                                )}
+                                {!isHot(lead) && isStale(lead) && (
                                   <span title="Sin actividad hace +24h" className="shrink-0">
                                     <Clock size={10} className="text-amber-500" />
                                   </span>
@@ -623,8 +643,9 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-sm text-slate-900">{selectedLead.name}</h4>
                           <span className="text-xs text-slate-500 block">{selectedLead.phone || "Sin teléfono"}</span>
-                          <span className={`text-[9px] font-mono font-bold uppercase ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`}>
+                          <span className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`}>
                             Score: {selectedLead.score}/100 — {selectedLead.score >= 85 ? "Muy Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
+                            {isHot(selectedLead) && <span title="Lead caliente">🔥</span>}
                           </span>
                           {selectedLead.createdAt && (
                             <span className="text-[8px] text-slate-400 block mt-0.5">
