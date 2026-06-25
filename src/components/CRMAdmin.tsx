@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Clock,
   TrendingUp,
+  Upload,
 } from "lucide-react";
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
@@ -53,6 +54,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [newLeadOrigin, setNewLeadOrigin] = useState<CRMLead["origin"]>("WhatsApp");
   const [isAddingLead, setIsAddingLead] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const importCsvRef = useRef<HTMLInputElement>(null);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
   // "/" keyboard shortcut focuses search when in pipeline view
   useEffect(() => {
@@ -196,6 +199,48 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
     a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onLeadCreate) return;
+    const text = await file.text();
+    const lines = text.replace(/\r/g, "").split("\n").filter((l) => l.trim());
+    if (lines.length < 2) { setImportResult("⚠️ CSV vacío o sin filas de datos."); return; }
+    const headers = lines[0].toLowerCase().split(",").map((h) => h.replace(/"/g, "").trim());
+    let imported = 0; let errors = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(",").map((v) => v.replace(/^"|"$/g, "").trim());
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => { row[h] = values[idx] ?? ""; });
+      const name = row["nombre"] || row["name"] || "";
+      if (!name) continue;
+      const rawStatus = row["estado"] || row["status"] || "Nuevo";
+      const validStatuses = ["Nuevo","Contactado","Presupuestado","Cerrado"] as const;
+      const status = validStatuses.includes(rawStatus as typeof validStatuses[number]) ? rawStatus as CRMLead["status"] : "Nuevo";
+      const rawOrigin = row["canal"] || row["origin"] || "WhatsApp";
+      const validOrigins = ["WhatsApp","Instagram","Facebook"] as const;
+      const origin = validOrigins.includes(rawOrigin as typeof validOrigins[number]) ? rawOrigin as CRMLead["origin"] : "WhatsApp";
+      try {
+        await onLeadCreate({
+          name,
+          phone: row["teléfono"] || row["telefono"] || row["phone"] || "",
+          status,
+          origin,
+          notes: row["notas"] || row["notes"] || "",
+          category: row["categoría"] || row["categoria"] || row["category"] || undefined,
+          score: parseInt(row["puntaje"] || row["score"] || "65") || 65,
+          lastInteraction: new Date().toISOString(),
+          avatar: makeAvatarUrl(name),
+          totalSpent: parseFloat(row["venta ars"] || row["totalspent"] || "0") || 0,
+          conversationHistory: [],
+        });
+        imported++;
+      } catch { errors++; }
+    }
+    setImportResult(`✅ ${imported} lead${imported !== 1 ? "s" : ""} importado${imported !== 1 ? "s" : ""}${errors > 0 ? ` · ${errors} error${errors !== 1 ? "es" : ""}` : ""}`);
+    setTimeout(() => setImportResult(null), 6000);
+    e.target.value = "";
   };
 
   const filteredLeads = leads
@@ -347,6 +392,16 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
           >
             <Zap size={13} /> Seguimientos
           </button>
+          <input ref={importCsvRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+          {onLeadCreate && (
+            <button
+              onClick={() => importCsvRef.current?.click()}
+              className="px-3 py-1.5 text-xs rounded-lg font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Importar leads desde CSV (columnas: nombre, teléfono, estado, canal, notas, puntaje)"
+            >
+              <Upload size={13} /> Importar CSV
+            </button>
+          )}
           <button
             onClick={exportCSV}
             className="px-3 py-1.5 text-xs rounded-lg font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 transition-all cursor-pointer"
@@ -389,6 +444,16 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
             className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800 font-medium"
           >
             {followupResult}
+          </motion.div>
+        )}
+        {importResult && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-4 py-2 bg-blue-50 border-b border-blue-200 text-xs text-blue-800 font-medium"
+          >
+            {importResult}
           </motion.div>
         )}
       </AnimatePresence>

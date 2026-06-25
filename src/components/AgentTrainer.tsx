@@ -9,8 +9,9 @@ import {
   ShieldAlert,
   Eye,
   EyeOff,
-  Moon,
   Sun,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import { AgentConfig } from "../types";
 
@@ -91,6 +92,18 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
     return lines.join("\n");
   };
 
+  // Setup completion checklist
+  const checklistItems = [
+    { label: "Nombre del negocio", done: !!config.businessName && config.businessName !== "Mi Negocio", weight: 15 },
+    { label: "Rubro / Industria", done: !!config.businessType, weight: 10 },
+    { label: "Catálogo cargado", done: config.catalog?.trim().length > 30, weight: 30 },
+    { label: "Saludo inicial", done: !!config.customGreeting, weight: 15 },
+    { label: "Nombre del bot", done: !!config.botPersonaName, weight: 10 },
+    { label: "Logo del negocio", done: !!config.logoUrl, weight: 10 },
+    { label: "Horario de atención", done: config.workingHoursStart !== undefined, weight: 10 },
+  ];
+  const completionPct = checklistItems.reduce((sum, item) => sum + (item.done ? item.weight : 0), 0);
+
   const handleFieldChange = (key: keyof AgentConfig, value: any) => {
     setIsSaving(true);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -128,6 +141,38 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full mr-1 ${isSaving ? "bg-amber-500 animate-bounce" : "bg-emerald-500 animate-pulse"}`}></span>
           {isSaving ? "Guardando…" : "Respondo Engine Active"}
+        </div>
+      </div>
+
+      {/* Setup Progress Checklist */}
+      <div className={`rounded-2xl p-4 space-y-3 border ${completionPct === 100 ? "bg-emerald-50 border-emerald-200" : "bg-blue-50/60 border-blue-200"}`}>
+        <div className="flex items-center justify-between">
+          <span className={`text-xs font-bold flex items-center gap-1.5 ${completionPct === 100 ? "text-emerald-700" : "text-blue-800"}`}>
+            {completionPct === 100
+              ? <><CheckCircle2 size={14} /> Agente listo para producción</>
+              : <><Sparkles size={14} /> Progreso de configuración</>
+            }
+          </span>
+          <span className={`text-sm font-black ${completionPct === 100 ? "text-emerald-700" : "text-blue-700"}`}>
+            {completionPct}%
+          </span>
+        </div>
+        <div className="w-full h-2 bg-white/60 rounded-full overflow-hidden border border-white/40">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${completionPct === 100 ? "bg-emerald-500" : "bg-blue-500"}`}
+            style={{ width: `${completionPct}%` }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          {checklistItems.map((item) => (
+            <div key={item.label} className={`flex items-center gap-1.5 text-[10px] ${item.done ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+              {item.done
+                ? <CheckCircle2 size={10} className="shrink-0" />
+                : <Circle size={10} className="shrink-0 opacity-50" />
+              }
+              <span>{item.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
