@@ -434,7 +434,17 @@ function handleError(res: express.Response, err: any) {
 // HEALTH CHECK
 // ---------------------------------------------------------------------------
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString(), model: GEMINI_MODEL });
+  res.json({
+    status: "ok",
+    time: new Date().toISOString(),
+    model: GEMINI_MODEL,
+    integrations: {
+      gemini: !!process.env.GEMINI_API_KEY,
+      supabase: !!(SUPABASE_URL && SUPABASE_ANON_KEY),
+      whatsapp: !!(WA_TOKEN && WA_PHONE_ID),
+    },
+    webhookUrl: process.env.APP_URL ? `${process.env.APP_URL}/webhook/whatsapp` : null,
+  });
 });
 
 // ---------------------------------------------------------------------------

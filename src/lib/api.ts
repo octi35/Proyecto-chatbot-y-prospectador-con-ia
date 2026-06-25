@@ -1,5 +1,12 @@
 import type { CRMLead, Campaign, AgentConfig } from "../types";
 
+export interface HealthData {
+  status: string;
+  model: string;
+  integrations: { gemini: boolean; supabase: boolean; whatsapp: boolean };
+  webhookUrl: string | null;
+}
+
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json", ...opts?.headers },
@@ -12,6 +19,9 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+// Health
+export const getHealth = () => request<HealthData>("/api/health");
 
 // Config
 export const getConfig = () => request<AgentConfig | null>("/api/config");

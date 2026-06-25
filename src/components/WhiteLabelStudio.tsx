@@ -1,18 +1,14 @@
-import React, { useState } from "react";
-import { 
-  Briefcase, 
-  Settings, 
-  Upload, 
-  Globe, 
-  Check, 
-  Sparkles, 
-  Code, 
-  ShoppingBag, 
-  CreditCard, 
-  Calendar, 
-  HelpCircle,
-  Building
+import React, { useState, useEffect } from "react";
+import {
+  Briefcase,
+  Globe,
+  Check,
+  CheckCircle2,
+  XCircle,
+  Copy,
+  Webhook,
 } from "lucide-react";
+import { getHealth, type HealthData } from "../lib/api";
 
 // Integration colors & initials used as logo fallback (no external images)
 const INTEGRATION_LIST = [
@@ -88,6 +84,20 @@ export default function WhiteLabelStudio() {
   const [accentColor, setAccentColor] = useState("#2563eb");
   const [whiteLabelActive, setWhiteLabelActive] = useState(false);
   const [integrations, setIntegrations] = useState(INTEGRATION_LIST);
+  const [health, setHealth] = useState<HealthData | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    getHealth().then(setHealth).catch(() => {});
+  }, []);
+
+  const copyWebhook = () => {
+    const url = health?.webhookUrl || `${window.location.origin}/webhook/whatsapp`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const handleToggleIntegration = (name: string) => {
     setIntegrations((prev) =>
@@ -106,9 +116,78 @@ export default function WhiteLabelStudio() {
     setWhiteLabelActive(true);
   };
 
+  const StatusBadge = ({ ok }: { ok: boolean }) =>
+    ok ? (
+      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+        <CheckCircle2 size={10} /> Conectado
+      </span>
+    ) : (
+      <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+        <XCircle size={10} /> Sin configurar
+      </span>
+    );
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      
+    <div className="space-y-6">
+
+      {/* Connection status row */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-sans font-semibold text-sm text-slate-900 flex items-center gap-2">
+            <Webhook size={16} className="text-blue-600" /> Estado de Conexiones
+          </h3>
+          <span className="text-[10px] text-slate-400">Verificado en el arranque del servidor</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div>
+              <span className="text-xs font-bold text-slate-800 block">Gemini AI</span>
+              <span className="text-[9px] text-slate-500">GEMINI_API_KEY</span>
+            </div>
+            <StatusBadge ok={health?.integrations.gemini ?? false} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div>
+              <span className="text-xs font-bold text-slate-800 block">Supabase DB</span>
+              <span className="text-[9px] text-slate-500">SUPABASE_URL / KEY</span>
+            </div>
+            <StatusBadge ok={health?.integrations.supabase ?? false} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div>
+              <span className="text-xs font-bold text-slate-800 block">WhatsApp Meta API</span>
+              <span className="text-[9px] text-slate-500">WA_TOKEN / PHONE_ID</span>
+            </div>
+            <StatusBadge ok={health?.integrations.whatsapp ?? false} />
+          </div>
+        </div>
+
+        {/* Webhook URL */}
+        <div className="space-y-1.5">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+            URL del Webhook de WhatsApp (pegar en Meta for Developers)
+          </span>
+          <div className="flex gap-2">
+            <code className="flex-1 bg-slate-900 text-emerald-400 text-[11px] font-mono px-3 py-2 rounded-xl overflow-x-auto whitespace-nowrap">
+              {health?.webhookUrl || `${window.location.origin}/webhook/whatsapp`}
+            </code>
+            <button
+              onClick={copyWebhook}
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 leading-normal">
+            Pegá esta URL en <strong>Meta for Developers → WhatsApp → Configuración del Webhook</strong>. El token de verificación se configura en la variable <code className="bg-slate-100 px-1 rounded">WEBHOOK_VERIFY_TOKEN</code> del servidor.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
       {/* Integrations Grid Left (7 columns) */}
       <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
         <div>
@@ -236,6 +315,7 @@ export default function WhiteLabelStudio() {
 
       </div>
 
+      </div>{/* end lg grid */}
     </div>
   );
 }
