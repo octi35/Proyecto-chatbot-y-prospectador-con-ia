@@ -71,6 +71,18 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
   const leadsPerDay = analytics?.leadsPerDay ?? [];
   const maxDayLeads = Math.max(1, ...leadsPerDay.map((d) => d.count));
 
+  // Leads by category breakdown
+  const categoryCounts: Record<string, number> = {};
+  leads.forEach((l) => {
+    const cat = l.category?.trim() || "Sin categoría";
+    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+  });
+  const categoryEntries = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+  const maxCategoryCount = Math.max(1, ...categoryEntries.map(([, c]) => c));
+  const CATEGORY_COLORS = ["bg-blue-500","bg-purple-500","bg-emerald-500","bg-amber-500","bg-pink-500","bg-indigo-500","bg-rose-500","bg-teal-500"];
+
   // Hourly activity heatmap derived from lead lastInteraction timestamps
   const hourCounts = Array.from({ length: 24 }, (_, h) => ({
     hour: h,
@@ -360,6 +372,38 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               ({maxHourCount} lead{maxHourCount !== 1 ? "s" : ""})
             </p>
           )}
+        </div>
+      )}
+
+      {/* Leads by category */}
+      {categoryEntries.length > 1 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-sans font-semibold text-sm text-slate-800">Distribución por Categoría / Interés</h4>
+              <p className="text-xs text-slate-500">Qué productos o servicios generan más consultas</p>
+            </div>
+            <span className="text-xs font-mono font-bold text-blue-600">{categoryEntries.length} categorías</span>
+          </div>
+          <div className="space-y-2">
+            {categoryEntries.map(([cat, count], i) => {
+              const pct = Math.round((count / totalLeads) * 100);
+              return (
+                <div key={cat} className="space-y-0.5">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="font-semibold text-slate-700 truncate max-w-[60%]">{cat}</span>
+                    <span className="font-mono text-slate-500">{count} lead{count !== 1 ? "s" : ""} · {pct}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
+                      style={{ width: `${Math.max(4, (count / maxCategoryCount) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

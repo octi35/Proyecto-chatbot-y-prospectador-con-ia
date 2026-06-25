@@ -291,6 +291,20 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
   const closedToday = leads.filter((l) => l.status === "Cerrado" && new Date(l.lastInteraction).toDateString() === todayStr).length;
   const revenueToday = leads.filter((l) => l.status === "Cerrado" && new Date(l.lastInteraction).toDateString() === todayStr).reduce((a, l) => a + (l.totalSpent || 0), 0);
 
+  // Score label with intent explanation
+  const getScoreLabel = (lead: CRMLead) => {
+    const HIGH_INTENT = ["precio","cuánto","costo","comprar","reservar","disponible","quiero","necesito","envío","delivery","talle","color","stock","modelo","foto","medida"];
+    const VERY_HIGH_INTENT = ["pago","transferencia","confirmar","efectivo","tarjeta","cuotas","link de pago","pagar","saldo","factura"];
+    const msgs = lead.conversationHistory.filter(m => m.role === "user").map(m => m.text).join(" ").toLowerCase();
+    const hi = HIGH_INTENT.filter(kw => msgs.includes(kw));
+    const vhi = VERY_HIGH_INTENT.filter(kw => msgs.includes(kw));
+    if (vhi.length > 0) return `Alta intención de pago: "${vhi[0]}"`;
+    if (hi.length > 0) return `Interés de compra: "${hi[0]}"`;
+    if (lead.score >= 85) return "Lead caliente por actividad reciente";
+    if (lead.score >= 70) return "Interés moderado";
+    return "Lead nuevo sin señales claras";
+  };
+
   // Colors based on stage
   const getStageColor = (status: CRMLead["status"]) => {
     switch (status) {
@@ -814,7 +828,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                                 )}
                               </div>
                               {/* Lead score mini bar */}
-                              <div className="w-full h-0.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
+                              <div className="w-full h-0.5 bg-slate-100 rounded-full overflow-hidden mb-1.5" title={getScoreLabel(lead)}>
                                 <div
                                   className={`h-full rounded-full transition-all ${lead.score >= 85 ? "bg-emerald-500" : lead.score >= 70 ? "bg-amber-400" : "bg-slate-300"}`}
                                   style={{ width: `${lead.score}%` }}
@@ -890,9 +904,12 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-sm text-slate-900">{selectedLead.name}</h4>
                           <span className="text-xs text-slate-500 block">{selectedLead.phone || "Sin teléfono"}</span>
-                          <span className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`}>
+                          <span className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`} title={getScoreLabel(selectedLead)}>
                             Score: {selectedLead.score}/100 — {selectedLead.score >= 85 ? "Muy Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
                             {isHot(selectedLead) && <span title="Lead caliente">🔥</span>}
+                          </span>
+                          <span className="text-[8px] text-slate-400 italic block mt-0.5">
+                            {getScoreLabel(selectedLead)}
                           </span>
                           {selectedLead.createdAt && (
                             <span className="text-[8px] text-slate-400 block mt-0.5">
