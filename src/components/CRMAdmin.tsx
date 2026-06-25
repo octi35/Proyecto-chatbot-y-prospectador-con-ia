@@ -116,6 +116,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [newCampName, setNewCampName] = useState("");
   const [newCampTemplate, setNewCampTemplate] = useState("Hola {{nombre}}, te escribimos de {{empresa}} porque tenemos novedades especiales para vos...");
   const [newCampSegment, setNewCampSegment] = useState("Todos los contactos");
+  const [newCampScheduledAt, setNewCampScheduledAt] = useState("");
+  const [newCampMediaUrl, setNewCampMediaUrl] = useState("");
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [sendingProgress, setSendingProgress] = useState(0);
 
@@ -324,6 +326,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
     }, 400);
 
     try {
+      const isScheduled = !!newCampScheduledAt && new Date(newCampScheduledAt) > new Date();
       const draft: Omit<Campaign, "id"> = {
         name: newCampName,
         template: newCampTemplate,
@@ -333,7 +336,29 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
         readCount: 0,
         repliesCount: 0,
         dateCreated: new Date().toISOString().split("T")[0],
+        ...(newCampScheduledAt ? { scheduledAt: new Date(newCampScheduledAt).toISOString() } : {}),
+        ...(newCampMediaUrl.trim() ? { mediaUrl: newCampMediaUrl.trim(), mediaType: "image" as const } : {}),
       };
+      // If scheduled for the future, save as draft without sending now
+      if (isScheduled) {
+        let saved: Campaign;
+        if (onCampaignCreate) {
+          saved = await onCampaignCreate(draft);
+        } else {
+          saved = { ...draft, id: `camp-${Date.now()}` };
+          setCampaigns((prev) => [saved, ...prev]);
+        }
+        clearInterval(progressTick);
+        setSendingProgress(100);
+        setTimeout(() => {
+          setSendingProgress(0);
+          setIsSendingCampaign(false);
+          setNewCampName("");
+          setNewCampScheduledAt("");
+          setNewCampMediaUrl("");
+        }, 800);
+        return;
+      }
 
       let saved: Campaign;
       if (onCampaignCreate) {
@@ -1091,6 +1116,40 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                   </div>
                 </div>
 
+                  {/* Media URL (optional) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-500">Imagen adjunta (URL opcional)</label>
+                    <input
+                      type="url"
+                      value={newCampMediaUrl}
+                      onChange={(e) => setNewCampMediaUrl(e.target.value)}
+                      placeholder="https://tu-tienda.com/banner-oferta.jpg"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                    {newCampMediaUrl && (
+                      <img src={newCampMediaUrl} alt="Preview" className="w-full max-h-24 object-cover rounded-xl border border-slate-200 mt-1" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    )}
+                  </div>
+
+                  {/* Scheduling */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                      <Clock size={11} className="text-amber-500" /> Programar envío (opcional — dejá vacío para enviar ahora)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={newCampScheduledAt}
+                      onChange={(e) => setNewCampScheduledAt(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                    {newCampScheduledAt && new Date(newCampScheduledAt) > new Date() && (
+                      <p className="text-[10px] text-amber-700 font-medium flex items-center gap-1">
+                        <Clock size={10} /> Programado para: {new Date(newCampScheduledAt).toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" })}
+                      </p>
+                    )}
+                  </div>
+
                 {isSendingCampaign ? (
                   <div className="space-y-2 py-2">
                     <div className="flex justify-between text-xs font-semibold text-emerald-600">
@@ -1112,10 +1171,16 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                 ) : (
                   <button
                     onClick={handleLaunchCampaign}
-                    className="w-full py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                    className={`w-full py-2 px-4 rounded-xl text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${
+                      newCampScheduledAt && new Date(newCampScheduledAt) > new Date()
+                        ? "bg-amber-600 hover:bg-amber-700"
+                        : "bg-emerald-600 hover:bg-emerald-700"
+                    }`}
                   >
-                    <Send size={12} />
-                    Disparar Campaña Masiva
+                    {newCampScheduledAt && new Date(newCampScheduledAt) > new Date()
+                      ? <><Clock size={12} /> Programar Campaña</>
+                      : <><Send size={12} /> Disparar Campaña Masiva</>
+                    }
                   </button>
                 )}
               </div>
@@ -1139,15 +1204,25 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                             Segmento: {camp.segment}
                           </span>
                         </div>
-                        <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                          camp.status === "Completado"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-slate-100 text-slate-400 border-slate-300"
-                        }`}>
-                          {camp.status}
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                            camp.status === "Completado"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-100 text-slate-400 border-slate-300"
+                          }`}>
+                            {camp.status}
+                          </span>
+                          {camp.scheduledAt && (
+                            <span className="text-[8px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5">
+                              <Clock size={8} /> {new Date(camp.scheduledAt).toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
+                      {camp.mediaUrl && (
+                        <img src={camp.mediaUrl} alt="Media" className="w-full h-16 object-cover rounded-lg border border-slate-200" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      )}
                       <p className="text-[10px] text-slate-600 bg-white p-2 rounded-lg italic border border-slate-200 font-mono">
                         "{camp.template.replace("{{nombre}}", "Agustín").replace("{{empresa}}", "Respondo")}"
                       </p>

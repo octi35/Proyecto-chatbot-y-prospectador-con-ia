@@ -60,4 +60,7 @@ export interface Campaign {
   readCount: number;
   repliesCount: number;
   dateCreated: string;
+  scheduledAt?: string;  // ISO datetime for scheduled campaigns
+  mediaUrl?: string;     // Optional image/video URL to attach
+  mediaType?: string;    // "image" | "video" | "document"
 }

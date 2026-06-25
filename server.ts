@@ -132,6 +132,9 @@ const CampaignPatchSchema = z.object({
   readCount: z.number().int().min(0).optional(),
   repliesCount: z.number().int().min(0).optional(),
   dateCreated: z.string().optional(),
+  scheduledAt: z.string().datetime({ offset: true }).optional().nullable(),
+  mediaUrl: z.string().url().optional().nullable().or(z.literal("")),
+  mediaType: z.enum(["image","video","document"]).optional().nullable(),
 });
 
 // ---------------------------------------------------------------------------
@@ -182,6 +185,9 @@ function mapCampaignFromDB(row: any) {
     readCount: row.read_count,
     repliesCount: row.replies_count,
     dateCreated: row.date_created,
+    scheduledAt: row.scheduled_at ?? undefined,
+    mediaUrl: row.media_url ?? undefined,
+    mediaType: row.media_type ?? undefined,
   };
 }
 
@@ -195,6 +201,9 @@ function mapCampaignToDB(data: any) {
   if (data.readCount !== undefined) out.read_count = data.readCount;
   if (data.repliesCount !== undefined) out.replies_count = data.repliesCount;
   if (data.dateCreated !== undefined) out.date_created = data.dateCreated;
+  if (data.scheduledAt !== undefined) out.scheduled_at = data.scheduledAt || null;
+  if (data.mediaUrl !== undefined) out.media_url = data.mediaUrl || null;
+  if (data.mediaType !== undefined) out.media_type = data.mediaType || null;
   return out;
 }
 
