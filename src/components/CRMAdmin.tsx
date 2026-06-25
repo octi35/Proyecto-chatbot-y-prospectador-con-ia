@@ -17,7 +17,9 @@ import {
   UserCheck,
   Zap,
   Tag,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  Search,
 } from "lucide-react";
 import { CRMLead, Campaign } from "../types";
 
@@ -36,6 +38,10 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [activeTab, setActiveTab] = useState<"pipeline" | "broadcast">("pipeline");
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(leads[0] || null);
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isDeletingLead, setIsDeletingLead] = useState(false);
+  const [editingNotes, setEditingNotes] = useState<string | null>(null); // null = not editing
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
   
   // Broadcasting Campaign Form States
   const [newCampName, setNewCampName] = useState("");
@@ -43,6 +49,59 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [newCampSegment, setNewCampSegment] = useState("Todos los contactos");
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [sendingProgress, setSendingProgress] = useState(0);
+
+  const handleDeleteSelectedLead = async () => {
+    if (!selectedLead || !onLeadDelete) return;
+    setIsDeletingLead(true);
+    try {
+      await onLeadDelete(selectedLead.id);
+      setLeads((prev) => prev.filter((l) => l.id !== selectedLead.id));
+      setSelectedLead(null);
+    } catch (e) {
+      console.error("Delete lead failed:", e);
+    } finally {
+      setIsDeletingLead(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedLead || editingNotes === null || !onLeadUpdate) return;
+    setIsSavingNotes(true);
+    try {
+      const updated = await onLeadUpdate(selectedLead.id, { notes: editingNotes });
+      setSelectedLead(updated);
+      setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+      setEditingNotes(null);
+    } catch (e) {
+      console.error("Save notes failed:", e);
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const exportCSV = () => {
+    const header = ["Nombre", "Teléfono", "Estado", "Canal", "Puntaje", "Última interacción", "Notas"].join(",");
+    const rows = leads.map((l) =>
+      [l.name, l.phone, l.status, l.origin, l.score, l.lastInteraction, `"${l.notes.replace(/"/g, '""')}"`].join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredLeads = searchQuery.trim()
+    ? leads.filter(
+        (l) =>
+          l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          l.phone.includes(searchQuery) ||
+          l.notes.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : leads;
 
   // Status Column list
   const COLUMNS: CRMLead["status"][] = ["Nuevo", "Contactado", "Presupuestado", "Cerrado"];
@@ -140,27 +199,36 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
           <p className="text-xs text-slate-500">Gestiona prospectos, asume chats de la IA y lanza difusiones masivas</p>
         </div>
 
-        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab("pipeline")}
-            className={`px-4 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
-              activeTab === "pipeline"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900"
-            }`}
+            onClick={exportCSV}
+            className="px-3 py-1.5 text-xs rounded-lg font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Exportar leads a CSV"
           >
-            Embudo de Ventas
+            <FileSpreadsheet size={13} /> Exportar CSV
           </button>
-          <button
-            onClick={() => setActiveTab("broadcast")}
-            className={`px-4 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
-              activeTab === "broadcast"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-900"
-            }`}
-          >
-            Envíos Masivos (Meta API)
-          </button>
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              onClick={() => setActiveTab("pipeline")}
+              className={`px-4 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
+                activeTab === "pipeline"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              Embudo de Ventas
+            </button>
+            <button
+              onClick={() => setActiveTab("broadcast")}
+              className={`px-4 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
+                activeTab === "broadcast"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              Envíos Masivos (Meta API)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -179,9 +247,20 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
             >
               {/* Funnel Columns Left (3 columns on lg grid) */}
               <div className="lg:col-span-8 p-4 border-r border-slate-200 overflow-y-auto space-y-4 max-h-[520px]">
+                {/* Search bar */}
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar leads por nombre, teléfono o notas…"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
+                  />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   {COLUMNS.map((col) => {
-                    const columnLeads = leads.filter((l) => l.status === col);
+                    const columnLeads = filteredLeads.filter((l) => l.status === col);
                     return (
                       <div key={col} className="bg-slate-50 rounded-2xl p-3 border border-slate-200 flex flex-col h-[320px]">
                         <div className="flex justify-between items-center mb-3">
@@ -198,7 +277,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                           {columnLeads.map((lead) => (
                             <div
                               key={lead.id}
-                              onClick={() => setSelectedLead(lead)}
+                              onClick={() => { setSelectedLead(lead); setEditingNotes(null); }}
                               className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
                                 selectedLead?.id === lead.id
                                   ? "bg-blue-50 border-blue-500 shadow-sm"
@@ -298,14 +377,50 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                         </div>
                       </div>
 
-                      {/* CRM Notes */}
+                      {/* CRM Notes — editable */}
                       <div className="py-3 border-b border-slate-100 space-y-1.5">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-                          Notas del Lead & Interés
-                        </span>
-                        <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200 leading-relaxed font-mono">
-                          {selectedLead.notes}
-                        </p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            Notas del Lead & Interés
+                          </span>
+                          {onLeadUpdate && editingNotes === null && (
+                            <button
+                              onClick={() => setEditingNotes(selectedLead.notes)}
+                              className="text-[9px] text-blue-600 hover:underline cursor-pointer"
+                            >
+                              Editar
+                            </button>
+                          )}
+                        </div>
+                        {editingNotes !== null ? (
+                          <div className="space-y-1.5">
+                            <textarea
+                              value={editingNotes}
+                              onChange={(e) => setEditingNotes(e.target.value)}
+                              rows={3}
+                              className="w-full bg-white border border-blue-300 rounded-xl p-2.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 resize-none font-mono"
+                            />
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={handleSaveNotes}
+                                disabled={isSavingNotes}
+                                className="flex-1 py-1 rounded-lg bg-blue-600 text-white text-[10px] font-bold hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50"
+                              >
+                                {isSavingNotes ? "Guardando…" : "Guardar"}
+                              </button>
+                              <button
+                                onClick={() => setEditingNotes(null)}
+                                className="py-1 px-3 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold hover:bg-slate-200 transition-all cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200 leading-relaxed font-mono min-h-[40px]">
+                            {selectedLead.notes || <span className="text-slate-400 italic">Sin notas</span>}
+                          </p>
+                        )}
                       </div>
 
                       {/* Conversation Monitoring history */}
@@ -327,7 +442,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                     </div>
 
                     {/* Human Override Controls */}
-                    <div className="pt-3 border-t border-slate-100">
+                    <div className="pt-3 border-t border-slate-100 space-y-2">
                       <button
                         onClick={() => toggleManualOverride(selectedLead.id)}
                         className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -341,11 +456,21 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                           ? "Re-activar Agente de IA"
                           : "Intervenir Chat (Derivar a Humano)"}
                       </button>
-                      <p className="text-[9px] text-slate-400 text-center mt-1.5">
+                      <p className="text-[9px] text-slate-400 text-center">
                         {manualOverrideActive[selectedLead.id]
                           ? "La IA está pausada para este cliente. Escribe manualmente."
                           : "La IA de Respondo responde 24/7 de forma autónoma."}
                       </p>
+                      {onLeadDelete && (
+                        <button
+                          onClick={handleDeleteSelectedLead}
+                          disabled={isDeletingLead}
+                          className="w-full py-1.5 px-4 rounded-xl text-xs font-semibold border border-red-200 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          <Trash2 size={12} />
+                          {isDeletingLead ? "Eliminando…" : "Eliminar lead"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (

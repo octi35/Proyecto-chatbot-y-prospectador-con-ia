@@ -28,7 +28,8 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Map from message id → HTMLAudioElement so each voice note has its own player
+  const audioMapRef = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   // Greeting message from config
   useEffect(() => {
@@ -139,8 +140,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
           const base64 = (reader.result as string).split(",")[1];
           const url = URL.createObjectURL(blob);
           const msg = addMessage("user", "[Nota de voz]", { isAudio: true, audioDuration: durationStr });
-          // Store url for local playback
-          audioRef.current = new Audio(url);
+          audioMapRef.current.set(msg.id, new Audio(url));
           setTimeout(() => updateStatus(msg.id, "sent"), 300);
           setTimeout(() => updateStatus(msg.id, "read"), 800);
           await callChatAPI(
@@ -269,11 +269,15 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
                     <div className="flex items-center space-x-3 py-1 px-0.5">
                       <button
                         onClick={() => {
+                          const player = audioMapRef.current.get(msg.id);
                           if (playingAudioId === msg.id) {
-                            audioRef.current?.pause();
+                            player?.pause();
                             setPlayingAudioId(null);
                           } else {
-                            audioRef.current?.play().catch(() => {});
+                            // Pause any currently playing audio
+                            if (playingAudioId) audioMapRef.current.get(playingAudioId)?.pause();
+                            player?.play().catch(() => {});
+                            if (player) player.onended = () => setPlayingAudioId(null);
                             setPlayingAudioId(msg.id);
                           }
                         }}

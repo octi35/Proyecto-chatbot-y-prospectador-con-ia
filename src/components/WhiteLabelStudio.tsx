@@ -96,7 +96,6 @@ export default function WhiteLabelStudio() {
   const handleSaveWhiteLabel = (e: React.FormEvent) => {
     e.preventDefault();
     setWhiteLabelActive(true);
-    alert(`🎉 ¡Configuración White Label guardada! El sistema se re-brandeó a "${partnerBrand}". Las agencias partners ya pueden comercializar la plataforma con su propio logo y dominio.`);
   };
 
   return (

@@ -43,9 +43,11 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<string[]>([]);
+  const [newLeadsBadge, setNewLeadsBadge] = useState(0);
 
   // Ref to avoid stale closure in pending config saves
   const pendingConfigSave = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLeadsCountRef = useRef(0);
 
   // ---------------------------------------------------------------------------
   // INITIAL LOAD from API
@@ -62,6 +64,7 @@ export default function App() {
         if (serverConfig) setConfig(serverConfig);
         setLeads(serverLeads);
         setCampaigns(serverCampaigns);
+        lastLeadsCountRef.current = serverLeads.length;
         addNotification("✅ Datos cargados desde la base de datos.");
       } catch (e) {
         const msg = (e as Error).message;
@@ -72,6 +75,35 @@ export default function App() {
       }
     })();
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // AUTO-POLL leads every 30 s to catch incoming WhatsApp messages
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (loading || apiError) return;
+    const interval = setInterval(async () => {
+      try {
+        const updated = await getLeads();
+        const diff = updated.length - lastLeadsCountRef.current;
+        if (diff > 0) {
+          setLeads(updated);
+          lastLeadsCountRef.current = updated.length;
+          if (activeTab !== "crm") {
+            setNewLeadsBadge((b) => b + diff);
+            addNotification(`📲 ${diff} nuevo${diff > 1 ? "s" : ""} lead${diff > 1 ? "s" : ""} recibido${diff > 1 ? "s" : ""} desde WhatsApp`);
+          }
+        }
+      } catch {
+        // Polling failures are non-critical; ignore silently
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [loading, apiError, activeTab]);
+
+  // Clear badge when user navigates to CRM
+  useEffect(() => {
+    if (activeTab === "crm") setNewLeadsBadge(0);
+  }, [activeTab]);
 
   // ---------------------------------------------------------------------------
   // CONFIG — debounce save to API on every change
@@ -313,20 +345,25 @@ export default function App() {
         {/* Navigation */}
         <nav className="flex bg-white p-1 border border-slate-200 rounded-2xl overflow-x-auto gap-1 shadow-sm">
           {([
-            ["playground", <MessageSquare size={14} />, "Estudio IA (Entrenamiento y Chat)"],
-            ["crm",        <Users size={14} />,        "CRM de Ventas & Meta API"],
-            ["analytics",  <BarChart3 size={14} />,    "Métricas & Analíticas"],
-            ["integrations",<Layers size={14} />,      "Integraciones & White Label"],
-            ["compare",    <HelpCircle size={14} />,   "Comparativa Chatbots"],
-          ] as [TabType, React.ReactNode, string][]).map(([tab, icon, label]) => (
+            ["playground",   <MessageSquare size={14} />, "Estudio IA (Entrenamiento y Chat)", 0],
+            ["crm",          <Users size={14} />,         "CRM de Ventas & Meta API",          newLeadsBadge],
+            ["analytics",    <BarChart3 size={14} />,     "Métricas & Analíticas",              0],
+            ["integrations", <Layers size={14} />,        "Integraciones & White Label",        0],
+            ["compare",      <HelpCircle size={14} />,    "Comparativa Chatbots",               0],
+          ] as [TabType, React.ReactNode, string, number][]).map(([tab, icon, label, badge]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 ${
+              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 relative ${
                 activeTab === tab ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               {icon}{label}
+              {badge > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
