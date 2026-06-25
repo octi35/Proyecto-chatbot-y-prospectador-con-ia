@@ -636,6 +636,14 @@ app.post("/api/chat", async (req, res) => {
 
     const { text, actions } = await runChat(body.message, body.history || [], config, body.attachment);
 
+    // Build conversation snapshot for DB storage (history + current exchange)
+    const now = new Date().toISOString();
+    const conversationSnapshot = [
+      ...(body.history || []).map((h: any) => ({ role: h.role as string, text: h.text as string, timestamp: now })),
+      { role: "user", text: body.message || "", timestamp: now },
+      { role: "model", text, timestamp: now },
+    ];
+
     // Persist CRM actions to DB
     if (actions.length > 0) {
       const db = getDB();
@@ -647,7 +655,11 @@ app.post("/api/chat", async (req, res) => {
               .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).maybeSingle();
             const validCanal = ["WhatsApp","Instagram","Facebook"].includes(canal) ? canal : "WhatsApp";
             if (existing) {
-              await db.from("respondo_leads").update({ notes: interes, last_interaction: new Date().toISOString() }).eq("id", existing.id);
+              await db.from("respondo_leads").update({
+                notes: interes,
+                last_interaction: now,
+                conversation_history: conversationSnapshot,
+              }).eq("id", existing.id);
             } else {
               await db.from("respondo_leads").insert({
                 name: nombre || "Cliente sin identificar",
@@ -657,7 +669,7 @@ app.post("/api/chat", async (req, res) => {
                 notes: interes || "",
                 score: 70,
                 avatar: makeAvatarUrl(nombre || "?"),
-                conversation_history: [],
+                conversation_history: conversationSnapshot,
               });
             }
           } else if (action.type === "update_lead_status") {
@@ -680,6 +692,16 @@ app.post("/api/chat", async (req, res) => {
         }
       }
     }
+
+    // Track every chat interaction for analytics
+    try {
+      const db = getDB();
+      await db.from("respondo_chat_events").insert({
+        event_type: "chat_message",
+        channel: "chat",
+        payload: { messageLength: body.message?.length ?? 0, hasAttachment: !!body.attachment, actionsCount: actions.length },
+      });
+    } catch { /* non-critical */ }
 
     res.json({ text, role: "model", actions });
   } catch (err) { handleError(res, err); }

@@ -56,6 +56,9 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
   const totalConversations = analytics?.totalConversations ?? leads.filter(l => l.conversationHistory.length > 0).length;
   const totalInteractions = analytics?.totalMessages ?? 0;
+  const channelCounts = analytics?.channelCounts ?? {};
+  const channelValues: number[] = Object.values(channelCounts) as number[];
+  const totalChannelLeads: number = channelValues.reduce((a, b) => a + b, 0) || 1;
 
   // Dynamic scaling for the SVG vector line chart to support any dynamic CRM values
   const maxVal = Math.max(...chartData.map(d => d.sales)) || 1;
@@ -335,8 +338,8 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               </div>
               <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
                 <div
-                  style={{ width: `${Math.min(100, (totalInteractions / 100) * 100)}%` }}
-                  className="h-full bg-indigo-500 rounded-full"
+                  style={{ width: totalInteractions > 0 ? `${Math.min(100, (totalInteractions / Math.max(totalInteractions, 200)) * 100)}%` : "0%" }}
+                  className="h-full bg-indigo-500 rounded-full transition-all"
                 />
               </div>
             </div>
@@ -348,11 +351,36 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               </div>
               <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
                 <div
-                  style={{ width: `${Math.min(100, (totalCampaigns / 5) * 100)}%` }}
-                  className="h-full bg-emerald-500 rounded-full"
+                  style={{ width: `${Math.min(100, (totalCampaigns / Math.max(totalCampaigns, 5)) * 100)}%` }}
+                  className="h-full bg-emerald-500 rounded-full transition-all"
                 />
               </div>
             </div>
+
+            {/* Channel Breakdown */}
+            {Object.keys(channelCounts).length > 0 && (
+              <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Leads por Canal</span>
+                {(["WhatsApp","Instagram","Facebook"] as const).map((ch) => {
+                  const count: number = (channelCounts[ch] as number | undefined) ?? 0;
+                  const pct: number = Math.round((count / totalChannelLeads) * 100);
+                  return count > 0 ? (
+                    <div key={ch} className="space-y-0.5">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-semibold text-slate-600">{ch}</span>
+                        <span className="font-mono text-slate-500">{count} ({pct}%)</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          style={{ width: `${pct}%` }}
+                          className={`h-full rounded-full transition-all ${ch === "WhatsApp" ? "bg-emerald-500" : ch === "Instagram" ? "bg-pink-500" : "bg-blue-500"}`}
+                        />
+                      </div>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            )}
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
