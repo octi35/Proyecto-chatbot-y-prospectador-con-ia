@@ -19,7 +19,7 @@ import {
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
 import { timeAgo } from "../lib/timeAgo";
-import { sendLeadMessage } from "../lib/api";
+import { sendLeadMessage, sendCampaign } from "../lib/api";
 
 interface CRMAdminProps {
   leads: CRMLead[];
@@ -204,8 +204,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
     setSendingProgress(10);
 
     const progressTick = setInterval(() => {
-      setSendingProgress((p) => Math.min(p + 10, 90));
-    }, 200);
+      setSendingProgress((p) => Math.min(p + 8, 85));
+    }, 400);
 
     try {
       const draft: Omit<Campaign, "id"> = {
@@ -227,20 +227,24 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
         setCampaigns((prev) => [saved, ...prev]);
       }
 
-      // Update to "Enviando" (real Meta API calls would go here)
+      // Trigger actual send via API
+      const result = await sendCampaign(saved.id);
       clearInterval(progressTick);
       setSendingProgress(100);
+
+      // Update local campaigns state
+      setCampaigns((prev) => prev.map((c) => c.id === saved.id ? result : c));
 
       setTimeout(() => {
         setSendingProgress(0);
         setIsSendingCampaign(false);
         setNewCampName("");
-      }, 600);
+      }, 800);
     } catch (e) {
       clearInterval(progressTick);
       setSendingProgress(0);
       setIsSendingCampaign(false);
-      console.error("Campaign create failed:", e);
+      console.error("Campaign send failed:", e);
     }
   };
 

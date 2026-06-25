@@ -48,6 +48,8 @@ export const createCampaign = (campaign: Omit<Campaign, "id">) =>
   request<Campaign>("/api/campaigns", { method: "POST", body: JSON.stringify(campaign) });
 export const updateCampaign = (id: string, patch: Partial<Campaign>) =>
   request<Campaign>(`/api/campaigns/${id}`, { method: "PUT", body: JSON.stringify(patch) });
+export const sendCampaign = (id: string) =>
+  request<Campaign & { waConfigured: boolean; totalTargeted: number }>(`/api/campaigns/${id}/send`, { method: "POST" });
 
 // Analytics
 export interface AnalyticsData {
