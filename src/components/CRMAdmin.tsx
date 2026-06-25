@@ -40,6 +40,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   // Selection States
   const [activeTab, setActiveTab] = useState<"pipeline" | "broadcast">("pipeline");
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(leads[0] || null);
+  const [checkedLeadIds, setCheckedLeadIds] = useState<Set<string>>(new Set());
+  const [isBulkActing, setIsBulkActing] = useState(false);
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState<CRMLead["origin"] | "Todos">("Todos");
@@ -305,6 +307,44 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
     if (selectedLead?.id === leadId) setSelectedLead((prev) => prev ? { ...prev, ...patch } : prev);
     if (onLeadUpdate) {
       await onLeadUpdate(leadId, patch).catch((e) => console.error("Lead update failed:", e));
+    }
+  };
+
+  const toggleCheckedLead = (leadId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCheckedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId); else next.add(leadId);
+      return next;
+    });
+  };
+
+  const handleBulkMove = async (newStatus: CRMLead["status"]) => {
+    if (checkedLeadIds.size === 0 || isBulkActing) return;
+    setIsBulkActing(true);
+    try {
+      const patch = { status: newStatus, lastInteraction: new Date().toISOString() };
+      setLeads((prev) => prev.map((l) => checkedLeadIds.has(l.id) ? { ...l, ...patch } : l));
+      if (onLeadUpdate) {
+        await Promise.all([...checkedLeadIds].map((id) => onLeadUpdate(id, patch).catch(() => {})));
+      }
+      setCheckedLeadIds(new Set());
+    } finally {
+      setIsBulkActing(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (checkedLeadIds.size === 0 || isBulkActing || !onLeadDelete) return;
+    if (!window.confirm(`¿Eliminar ${checkedLeadIds.size} lead${checkedLeadIds.size !== 1 ? "s" : ""}?`)) return;
+    setIsBulkActing(true);
+    try {
+      await Promise.all([...checkedLeadIds].map((id) => onLeadDelete(id).catch(() => {})));
+      setLeads((prev) => prev.filter((l) => !checkedLeadIds.has(l.id)));
+      if (selectedLead && checkedLeadIds.has(selectedLead.id)) setSelectedLead(null);
+      setCheckedLeadIds(new Set());
+    } finally {
+      setIsBulkActing(false);
     }
   };
 
@@ -581,6 +621,52 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                   )}
                 </div>
 
+                {/* Bulk actions bar */}
+                <AnimatePresence>
+                  {checkedLeadIds.size > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
+                        <span className="text-xs font-bold text-blue-700 shrink-0">
+                          {checkedLeadIds.size} seleccionado{checkedLeadIds.size !== 1 ? "s" : ""}
+                        </span>
+                        <span className="text-blue-300 mx-1">|</span>
+                        <span className="text-[10px] text-blue-600 font-semibold shrink-0">Mover a:</span>
+                        {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => handleBulkMove(s)}
+                            disabled={isBulkActing}
+                            className="text-[9px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                        <span className="flex-1" />
+                        {onLeadDelete && (
+                          <button
+                            onClick={handleBulkDelete}
+                            disabled={isBulkActing}
+                            className="text-[9px] font-bold px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0"
+                          >
+                            <Trash2 size={10} /> Eliminar
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setCheckedLeadIds(new Set())}
+                          className="text-[9px] text-blue-500 hover:text-blue-700 cursor-pointer shrink-0"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Quick add lead form */}
                 <AnimatePresence>
                   {showAddForm && (
@@ -663,6 +749,20 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                               }`}
                             >
                               <div className="flex items-center space-x-2 mb-1.5">
+                                <div
+                                  onClick={(e) => toggleCheckedLead(lead.id, e)}
+                                  className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center cursor-pointer transition-all ${
+                                    checkedLeadIds.has(lead.id)
+                                      ? "bg-blue-600 border-blue-600"
+                                      : "border-slate-300 bg-white hover:border-blue-400"
+                                  }`}
+                                >
+                                  {checkedLeadIds.has(lead.id) && (
+                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
                                 <img
                                   referrerPolicy="no-referrer"
                                   src={lead.avatar}
