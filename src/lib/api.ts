@@ -19,7 +19,8 @@ export const saveConfig = (config: AgentConfig) =>
   request<AgentConfig>("/api/config", { method: "PUT", body: JSON.stringify(config) });
 
 // Leads
-export const getLeads = () => request<CRMLead[]>("/api/leads");
+export const getLeads = (since?: string) =>
+  request<CRMLead[]>(since ? `/api/leads?since=${encodeURIComponent(since)}` : "/api/leads");
 export const createLead = (lead: Omit<CRMLead, "id">) =>
   request<CRMLead>("/api/leads", { method: "POST", body: JSON.stringify(lead) });
 export const updateLead = (id: string, patch: Partial<Omit<CRMLead, "id">>) =>

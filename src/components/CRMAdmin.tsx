@@ -423,6 +423,42 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                         )}
                       </div>
 
+                      {/* Register sale amount */}
+                      {selectedLead.status === "Cerrado" && onLeadUpdate && (
+                        <div className="py-3 border-b border-slate-100 space-y-1.5">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                            Monto de la Venta (ARS)
+                          </span>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="number"
+                              min={0}
+                              defaultValue={selectedLead.totalSpent || 0}
+                              id={`total-spent-${selectedLead.id}`}
+                              className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                              placeholder="0"
+                            />
+                            <button
+                              onClick={async () => {
+                                const input = document.getElementById(`total-spent-${selectedLead.id}`) as HTMLInputElement;
+                                const amount = parseFloat(input.value) || 0;
+                                const updated = await onLeadUpdate(selectedLead.id, { totalSpent: amount });
+                                setSelectedLead(updated);
+                                setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+                              }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-xl transition-all cursor-pointer"
+                            >
+                              Guardar
+                            </button>
+                          </div>
+                          {selectedLead.totalSpent ? (
+                            <p className="text-[9px] text-emerald-600 font-mono font-bold">
+                              Venta actual: ${selectedLead.totalSpent.toLocaleString("es-AR")} ARS
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+
                       {/* Conversation Monitoring history */}
                       <div className="py-3 space-y-2">
                         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">

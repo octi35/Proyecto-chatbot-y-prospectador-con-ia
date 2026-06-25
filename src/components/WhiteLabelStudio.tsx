@@ -14,64 +14,72 @@ import {
   Building
 } from "lucide-react";
 
-// List of integrations from the product specifications
+// Integration colors & initials used as logo fallback (no external images)
 const INTEGRATION_LIST = [
   {
     name: "TiendaNube",
     category: "E-commerce",
     desc: "Sincroniza stock, precios y genera links de carritos de compra automáticamente.",
-    logo: "https://images.unsplash.com/photo-1472851294608-062f824d296e?w=80&auto=format&fit=crop&q=80",
-    status: "Conectado"
+    color: "bg-blue-500",
+    initials: "TN",
+    status: "Conectado",
   },
   {
     name: "Shopify",
     category: "E-commerce",
     desc: "Conexión en tiempo real con catálogo de productos y variantes de talle/color.",
-    logo: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=80&auto=format&fit=crop&q=80",
-    status: "Disponible"
+    color: "bg-emerald-600",
+    initials: "SH",
+    status: "Disponible",
   },
   {
     name: "WooCommerce",
     category: "E-commerce",
     desc: "Sincroniza inventario para sitios WordPress de forma directa y segura.",
-    logo: "https://images.unsplash.com/photo-1563013544-824ae1d704d3?w=80&auto=format&fit=crop&q=80",
-    status: "Disponible"
+    color: "bg-purple-600",
+    initials: "WC",
+    status: "Disponible",
   },
   {
     name: "Mercado Pago",
     category: "Pagos",
     desc: "Genera links de cobro en pesos (Argentina) directo en el chat para cerrar la venta.",
-    logo: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=80&auto=format&fit=crop&q=80",
-    status: "Conectado"
+    color: "bg-sky-500",
+    initials: "MP",
+    status: "Conectado",
   },
   {
     name: "Google Calendar",
     category: "Calendarios",
     desc: "Permite agendar turnos, reuniones o asesorías directo desde WhatsApp.",
-    logo: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=80&auto=format&fit=crop&q=80",
-    status: "Conectado"
+    color: "bg-red-500",
+    initials: "GC",
+    status: "Conectado",
   },
   {
     name: "Tokko Broker",
     category: "Inmobiliaria",
     desc: "Consulta propiedades disponibles y agenda visitas para inmobiliarias.",
-    logo: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=80&auto=format&fit=crop&q=80",
-    status: "Disponible"
+    color: "bg-amber-500",
+    initials: "TK",
+    status: "Disponible",
   },
   {
     name: "Meta API (Oficial)",
     category: "Mensajería",
     desc: "API Oficial de WhatsApp Business Cloud. Envío masivo sin riesgo de baneo.",
-    logo: "https://images.unsplash.com/photo-1557200134-90327ee9fafa?w=80&auto=format&fit=crop&q=80",
-    status: "Conectado"
+    color: "bg-indigo-600",
+    initials: "WA",
+    status: "Conectado",
   },
   {
-    name: "Model Context Protocol",
-    category: "Protocolo IA",
-    desc: "Integración segura con bases de datos y ERPs de la empresa utilizando MCP.",
-    logo: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=80&auto=format&fit=crop&q=80",
-    status: "Conectado"
-  }
+    name: "MercadoLibre",
+    category: "Marketplace",
+    desc: "Responde consultas y convierte visitas en ventas desde tu tienda MeLi.",
+    color: "bg-yellow-400",
+    initials: "ML",
+    status: "Disponible",
+  },
 ];
 
 export default function WhiteLabelStudio() {
@@ -114,13 +122,8 @@ export default function WhiteLabelStudio() {
               key={it.name}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-3 hover:border-slate-300 transition-all group"
             >
-              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white border border-slate-200">
-                <img
-                  referrerPolicy="no-referrer"
-                  src={it.logo}
-                  alt={it.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                />
+              <div className={`w-10 h-10 rounded-xl shrink-0 ${(it as any).color} flex items-center justify-center`}>
+                <span className="text-white text-xs font-black">{(it as any).initials}</span>
               </div>
 
               <div className="flex-1 min-w-0">

@@ -470,10 +470,14 @@ app.put("/api/config", async (req, res) => {
 // ---------------------------------------------------------------------------
 // LEADS
 // ---------------------------------------------------------------------------
-app.get("/api/leads", async (_req, res) => {
+app.get("/api/leads", async (req, res) => {
   try {
     const db = getDB();
-    const { data, error } = await db.from("respondo_leads").select("*").order("created_at", { ascending: false });
+    let query = db.from("respondo_leads").select("*").order("created_at", { ascending: false });
+    // ?since=ISO8601 — return only leads created/updated after that timestamp
+    const since = req.query.since as string | undefined;
+    if (since) query = query.gte("updated_at", since);
+    const { data, error } = await query;
     if (error) throw error;
     res.json((data || []).map(mapLeadFromDB));
   } catch (err) { handleError(res, err); }

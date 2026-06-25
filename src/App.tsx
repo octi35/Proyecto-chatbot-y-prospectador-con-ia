@@ -47,7 +47,6 @@ export default function App() {
 
   // Ref to avoid stale closure in pending config saves
   const pendingConfigSave = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastLeadsCountRef = useRef(0);
 
   // ---------------------------------------------------------------------------
   // INITIAL LOAD from API
@@ -64,7 +63,6 @@ export default function App() {
         if (serverConfig) setConfig(serverConfig);
         setLeads(serverLeads);
         setCampaigns(serverCampaigns);
-        lastLeadsCountRef.current = serverLeads.length;
         addNotification("✅ Datos cargados desde la base de datos.");
       } catch (e) {
         const msg = (e as Error).message;
@@ -79,18 +77,28 @@ export default function App() {
   // ---------------------------------------------------------------------------
   // AUTO-POLL leads every 30 s to catch incoming WhatsApp messages
   // ---------------------------------------------------------------------------
+  const lastPollTimeRef = useRef<string | null>(null);
   useEffect(() => {
     if (loading || apiError) return;
     const interval = setInterval(async () => {
       try {
-        const updated = await getLeads();
-        const diff = updated.length - lastLeadsCountRef.current;
-        if (diff > 0) {
-          setLeads(updated);
-          lastLeadsCountRef.current = updated.length;
-          if (activeTab !== "crm") {
-            setNewLeadsBadge((b) => b + diff);
-            addNotification(`📲 ${diff} nuevo${diff > 1 ? "s" : ""} lead${diff > 1 ? "s" : ""} recibido${diff > 1 ? "s" : ""} desde WhatsApp`);
+        const since = lastPollTimeRef.current;
+        lastPollTimeRef.current = new Date().toISOString();
+        const recent = await getLeads(since ?? undefined);
+        if (recent.length > 0) {
+          // Merge: new leads prepended, existing ones updated in place
+          setLeads((prev) => {
+            const existingIds = new Set(prev.map((l) => l.id));
+            const brandNew = recent.filter((l) => !existingIds.has(l.id));
+            const merged = prev.map((l) => recent.find((r) => r.id === l.id) || l);
+            return [...brandNew, ...merged];
+          });
+          const brandNewCount = recent.filter((r) => {
+            return !leads.find((l) => l.id === r.id);
+          }).length;
+          if (brandNewCount > 0 && activeTab !== "crm") {
+            setNewLeadsBadge((b) => b + brandNewCount);
+            addNotification(`📲 ${brandNewCount} nuevo${brandNewCount > 1 ? "s" : ""} lead${brandNewCount > 1 ? "s" : ""} recibido${brandNewCount > 1 ? "s" : ""} desde WhatsApp`);
           }
         }
       } catch {
@@ -98,6 +106,7 @@ export default function App() {
       }
     }, 30_000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, apiError, activeTab]);
 
   // Clear badge when user navigates to CRM
