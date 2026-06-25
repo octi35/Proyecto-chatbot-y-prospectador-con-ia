@@ -92,6 +92,8 @@ export default function WhiteLabelStudio() {
   const [copied, setCopied] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [followupMsg, setFollowupMsg] = useState<string | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     getHealth().then(setHealth).catch(() => {});
@@ -213,9 +215,44 @@ export default function WhiteLabelStudio() {
             onClick={handleRunFollowups}
             className="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 flex items-center gap-1.5 cursor-pointer transition-all"
           >
-            <Zap size={12} /> Ejecutar Seguimientos Automáticos
+            <Zap size={12} /> Ejecutar Seguimientos
           </button>
         </div>
+
+        {/* Webhook test */}
+        <div className="flex gap-2 items-center pt-1">
+          <input
+            type="tel"
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+            placeholder="Número para test (ej: 5491112345678)"
+            className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+          />
+          <button
+            onClick={async () => {
+              if (!testPhone.trim()) return;
+              try {
+                const r = await fetch("/api/test-webhook", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ phone: testPhone.trim() }),
+                });
+                const data = await r.json();
+                setTestResult(data.ok
+                  ? `✅ Mensaje de prueba enviado a ${data.phone}`
+                  : `⚠️ ${data.reason || "Sin configuración de WA"}`
+                );
+              } catch {
+                setTestResult("⚠️ Error al conectar con el servidor");
+              }
+              setTimeout(() => setTestResult(null), 5000);
+            }}
+            className="px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+          >
+            <MessageSquare size={12} /> Enviar Test WA
+          </button>
+        </div>
+        {testResult && <p className="text-[10px] text-slate-600 font-medium">{testResult}</p>}
 
         {followupMsg && (
           <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-medium">

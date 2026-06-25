@@ -997,6 +997,20 @@ async function sendWhatsAppMessage(to: string, text: string) {
 }
 
 // ---------------------------------------------------------------------------
+// WEBHOOK TEST
+// ---------------------------------------------------------------------------
+app.post("/api/test-webhook", async (req, res) => {
+  try {
+    const { phone } = z.object({ phone: z.string().min(7).max(20) }).parse(req.body);
+    if (!WA_TOKEN || !WA_PHONE_ID) {
+      return res.json({ ok: false, reason: "WhatsApp no configurado (WHATSAPP_TOKEN o WHATSAPP_PHONE_NUMBER_ID faltante)" });
+    }
+    await sendWhatsAppMessage(phone, "✅ Test de integración Respondo ↔ WhatsApp exitoso. ¡El agente está listo para operar!");
+    res.json({ ok: true, phone });
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
 // VITE MIDDLEWARE & STATIC SERVING
 // ---------------------------------------------------------------------------
 const startServer = async () => {
@@ -1015,6 +1029,40 @@ const startServer = async () => {
   app.listen(PORT, "0.0.0.0", () => {
     logger.info({ port: PORT, model: GEMINI_MODEL }, "Respondo server running");
   });
+
+  // Auto-run follow-ups every 30 minutes (only when WhatsApp is configured)
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    setInterval(async () => {
+      try {
+        const db = getDB();
+        const { data: configRow } = await db.from("respondo_config").select("auto_follow_up_minutes").limit(1).maybeSingle();
+        const followUpMinutes = configRow?.auto_follow_up_minutes ?? 30;
+        const cutoff = new Date(Date.now() - followUpMinutes * 60 * 1000).toISOString();
+        const { data: stale } = await db.from("respondo_leads")
+          .select("id,name,phone,conversation_history")
+          .neq("status", "Cerrado")
+          .lt("last_interaction", cutoff)
+          .limit(20);
+        let contacted = 0;
+        const followUpMsg = `¡Hola de nuevo! 😊 ¿Seguís con dudas o querés que te ayude a cerrar tu pedido?`;
+        for (const lead of (stale || [])) {
+          if (!lead.phone) continue;
+          const now = new Date().toISOString();
+          const history = Array.isArray(lead.conversation_history) ? lead.conversation_history : [];
+          history.push({ role: "model", text: followUpMsg, timestamp: now });
+          await db.from("respondo_leads").update({ last_interaction: now, conversation_history: history }).eq("id", lead.id);
+          if (WA_TOKEN && WA_PHONE_ID) {
+            await sendWhatsAppMessage(lead.phone, followUpMsg).catch(() => {});
+          }
+          contacted++;
+        }
+        if (contacted > 0) logger.info({ contacted }, "Auto follow-ups sent");
+      } catch (e) {
+        logger.warn({ err: (e as Error).message }, "Auto follow-up run failed");
+      }
+    }, 30 * 60 * 1000); // every 30 minutes
+    logger.info("Auto follow-up scheduler started (30 min interval)");
+  }
 };
 
 startServer().catch((err) => {
