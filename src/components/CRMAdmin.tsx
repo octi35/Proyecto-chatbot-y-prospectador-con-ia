@@ -283,6 +283,13 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const staleCount = leads.filter(isStale).length;
   const avgScore = leads.length ? Math.round(leads.reduce((a, l) => a + l.score, 0) / leads.length) : 0;
 
+  // Today's activity summary
+  const todayStr = new Date().toDateString();
+  const newLeadsToday = leads.filter((l) => l.createdAt && new Date(l.createdAt).toDateString() === todayStr).length;
+  const activeToday = leads.filter((l) => new Date(l.lastInteraction).toDateString() === todayStr).length;
+  const closedToday = leads.filter((l) => l.status === "Cerrado" && new Date(l.lastInteraction).toDateString() === todayStr).length;
+  const revenueToday = leads.filter((l) => l.status === "Cerrado" && new Date(l.lastInteraction).toDateString() === todayStr).reduce((a, l) => a + (l.totalSpent || 0), 0);
+
   // Colors based on stage
   const getStageColor = (status: CRMLead["status"]) => {
     switch (status) {
@@ -538,6 +545,32 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
             >
               {/* Funnel Columns Left (3 columns on lg grid) */}
               <div className="lg:col-span-8 p-4 border-r border-slate-200 overflow-y-auto space-y-4 max-h-[520px]">
+                {/* Today's Activity card */}
+                {(newLeadsToday > 0 || activeToday > 0 || closedToday > 0) && (
+                  <div className="rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-3">
+                    <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <TrendingUp size={11} /> Actividad de hoy
+                    </p>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="text-center">
+                        <span className="block text-lg font-black text-blue-700 leading-tight">{newLeadsToday}</span>
+                        <span className="block text-[9px] text-blue-500 font-semibold uppercase tracking-wide leading-tight">Nuevos</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-lg font-black text-indigo-700 leading-tight">{activeToday}</span>
+                        <span className="block text-[9px] text-indigo-500 font-semibold uppercase tracking-wide leading-tight">Activos</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-lg font-black text-emerald-700 leading-tight">{closedToday}</span>
+                        <span className="block text-[9px] text-emerald-500 font-semibold uppercase tracking-wide leading-tight">Cerrados</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-lg font-black text-purple-700 leading-tight">${revenueToday > 0 ? revenueToday.toLocaleString("es-AR") : "0"}</span>
+                        <span className="block text-[9px] text-purple-500 font-semibold uppercase tracking-wide leading-tight">Ingresos</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {/* Quick stats strip */}
                 <div className="grid grid-cols-4 gap-2">
                   {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((s) => {
