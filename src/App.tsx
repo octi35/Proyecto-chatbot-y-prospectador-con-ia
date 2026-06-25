@@ -21,6 +21,7 @@ import {
   getLeads, createLead, updateLead, deleteLead,
   getCampaigns, createCampaign, updateCampaign,
 } from "./lib/api";
+import { makeAvatarUrl } from "./lib/avatar";
 
 import AgentTrainer from "./components/AgentTrainer";
 import ChatSimulator from "./components/ChatSimulator";
@@ -252,7 +253,7 @@ export default function App() {
             lastInteraction: "Ahora",
             score: 70,
             notes: interes || "",
-            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nombre || "?")}`,
+            avatar: makeAvatarUrl(nombre || "?"),
             totalSpent: 0,
             conversationHistory: [],
           };

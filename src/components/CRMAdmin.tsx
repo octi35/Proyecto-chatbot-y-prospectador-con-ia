@@ -22,6 +22,7 @@ import {
   Search,
 } from "lucide-react";
 import { CRMLead, Campaign } from "../types";
+import { makeAvatarUrl } from "../lib/avatar";
 
 interface CRMAdminProps {
   leads: CRMLead[];
@@ -68,7 +69,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
         lastInteraction: "Ahora",
         score: 65,
         notes: "",
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newLeadName.trim())}`,
+        avatar: makeAvatarUrl(newLeadName.trim()),
         totalSpent: 0,
         conversationHistory: [],
       });
@@ -450,8 +451,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                         <div>
                           <h4 className="font-bold text-sm text-slate-900">{selectedLead.name}</h4>
                           <span className="text-xs text-slate-500 block">{selectedLead.phone}</span>
-                          <span className={`text-[9px] font-mono font-bold uppercase ${selectedLead.score >= 85 ? "text-emerald-600" : "text-amber-600"}`}>
-                            Fidelidad de compra: {selectedLead.score}/100 (Muy Alta)
+                          <span className={`text-[9px] font-mono font-bold uppercase ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`}>
+                            Fidelidad: {selectedLead.score}/100 — {selectedLead.score >= 85 ? "Muy Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
                           </span>
                         </div>
                       </div>
