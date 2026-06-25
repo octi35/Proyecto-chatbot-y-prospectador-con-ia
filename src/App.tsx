@@ -310,12 +310,18 @@ export default function App() {
         {/* Header */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 gap-4 shadow-sm">
           <div className="flex items-center space-x-4">
-            <div className="w-11 h-11 rounded-xl bg-blue-600 shadow-sm flex items-center justify-center shrink-0">
-              <span className="font-black text-xl tracking-tighter text-white">R</span>
+            <div className="w-11 h-11 rounded-xl bg-blue-600 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+              {config.logoUrl ? (
+                <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+              ) : (
+                <span className="font-black text-xl tracking-tighter text-white">R</span>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-black text-2xl tracking-tight text-slate-900">Respondo</h1>
+                <h1 className="font-black text-2xl tracking-tight text-slate-900">
+                  {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
+                </h1>
                 <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-[10px] font-mono font-bold">
                   v3.0 Real
                 </span>

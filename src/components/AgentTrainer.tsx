@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   Sparkles, 
   Store, 
@@ -72,16 +72,17 @@ interface AgentTrainerProps {
 export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
   const [successMsg, setSuccessMsg] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleFieldChange = (key: keyof AgentConfig, value: any) => {
     setIsSaving(true);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     onChange({ ...config, [key]: value });
-    // The parent debounces saves; show visual feedback
-    setTimeout(() => {
+    saveTimerRef.current = setTimeout(() => {
       setIsSaving(false);
       setSuccessMsg("Configuración guardada.");
       setTimeout(() => setSuccessMsg(""), 2000);
-    }, 900);
+    }, 1000);
   };
 
   const loadPreset = (preset: typeof BUSINESS_PRESETS[0]) => {
@@ -169,6 +170,23 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
               placeholder="Ej: Indumentaria Masculina"
             />
           </div>
+        </div>
+
+        {/* Logo URL */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-medium text-slate-500">Logo del Negocio (URL)</label>
+            {config.logoUrl && (
+              <img src={config.logoUrl} alt="Logo preview" className="w-6 h-6 rounded object-cover border border-slate-200" onError={(e) => (e.currentTarget.style.display = "none")} />
+            )}
+          </div>
+          <input
+            type="url"
+            value={config.logoUrl || ""}
+            onChange={(e) => handleFieldChange("logoUrl", e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+            placeholder="https://mi-tienda.com/logo.png"
+          />
         </div>
 
         {/* Row 2: Tone & Store Sync */}
