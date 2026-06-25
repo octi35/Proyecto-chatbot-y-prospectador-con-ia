@@ -58,5 +58,6 @@ export interface AnalyticsData {
   totalMessages: number;
   totalEvents: number;
   channelCounts: Record<string, number>;
+  leadsPerDay?: { date: string; label: string; count: number }[];
 }
 export const getAnalytics = () => request<AnalyticsData>("/api/analytics");

@@ -14,6 +14,18 @@ dotenv.config();
 // ---------------------------------------------------------------------------
 // HELPERS
 // ---------------------------------------------------------------------------
+
+// Compute lead score from conversation depth + purchase-intent keywords
+function computeLeadScore(conversationLength: number, userMessages: string): number {
+  const HIGH_INTENT = ["precio","cuánto","costo","comprar","reservar","disponible","quiero","necesito","envío","delivery","talle","color","stock","modelo","foto","medida"];
+  const VERY_HIGH_INTENT = ["pago","transferencia","confirmar","efectivo","tarjeta","cuotas","link de pago","pagar","saldo","factura"];
+  const msgLower = userMessages.toLowerCase();
+  const highMatches = HIGH_INTENT.filter((kw) => msgLower.includes(kw)).length;
+  const veryHighMatches = VERY_HIGH_INTENT.filter((kw) => msgLower.includes(kw)).length;
+  const intentBoost = Math.min(25, highMatches * 3 + veryHighMatches * 7);
+  return Math.min(98, 55 + Math.floor(conversationLength * 2.5) + intentBoost);
+}
+
 function makeAvatarUrl(name: string): string {
   const COLORS = ["#3b82f6","#8b5cf6","#ec4899","#10b981","#f59e0b","#6366f1","#ef4444","#14b8a6"];
   const initials = name.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").substring(0, 2).toUpperCase() || "?";
@@ -678,12 +690,30 @@ app.get("/api/analytics", async (_req, res) => {
       }
     }
 
+    // Leads per day for the last 7 days
+    const todayDate = new Date();
+    const leadsPerDay: { date: string; label: string; count: number }[] = [];
+    const DAY_LABELS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(todayDate);
+      d.setDate(d.getDate() - i);
+      leadsPerDay.push({ date: d.toISOString().split("T")[0], label: DAY_LABELS[d.getDay()], count: 0 });
+    }
+    for (const l of (leads || [])) {
+      const createdAt = (l as any).created_at;
+      if (!createdAt) continue;
+      const dateStr = new Date(createdAt).toISOString().split("T")[0];
+      const entry = leadsPerDay.find((d) => d.date === dateStr);
+      if (entry) entry.count++;
+    }
+
     res.json({
       monthlySales: months.map((m) => ({ month: m.label, sales: m.sales })),
       totalConversations,
       totalMessages,
       totalEvents: eventCount || 0,
       channelCounts,
+      leadsPerDay,
     });
   } catch (err) { handleError(res, err); }
 });
@@ -725,8 +755,8 @@ app.post("/api/chat", async (req, res) => {
             const { data: existing } = await db.from("respondo_leads").select("id")
               .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).maybeSingle();
             const validCanal = ["WhatsApp","Instagram","Facebook"].includes(canal) ? canal : "WhatsApp";
-            // Score grows with conversation depth: more messages = more engaged prospect
-            const dynamicScore = Math.min(95, 55 + Math.floor(conversationSnapshot.length * 2.5));
+            const userMsgText = conversationSnapshot.filter(m => m.role === "user").map(m => m.text).join(" ");
+            const dynamicScore = computeLeadScore(conversationSnapshot.length, userMsgText);
             if (existing) {
               await db.from("respondo_leads").update({
                 notes: interes,
@@ -863,7 +893,8 @@ async function processWhatsAppMessage(phone: string, text: string) {
     { role: "model", text: aiReply, timestamp: new Date().toISOString() },
   ];
 
-  const waScore = Math.min(95, 55 + Math.floor(newHistory.length * 2.5));
+  const waUserText = newHistory.filter((m: any) => m.role === "user").map((m: any) => m.text).join(" ");
+  const waScore = computeLeadScore(newHistory.length, waUserText);
   if (existingLead) {
     await db.from("respondo_leads").update({
       conversation_history: newHistory,

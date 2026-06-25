@@ -60,6 +60,10 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
   const channelValues: number[] = Object.values(channelCounts) as number[];
   const totalChannelLeads: number = channelValues.reduce((a, b) => a + b, 0) || 1;
 
+  // 7-day leads sparkline data
+  const leadsPerDay = analytics?.leadsPerDay ?? [];
+  const maxDayLeads = Math.max(1, ...leadsPerDay.map((d) => d.count));
+
   // Dynamic scaling for the SVG vector line chart to support any dynamic CRM values
   const maxVal = Math.max(...chartData.map(d => d.sales)) || 1;
   const points = chartData.map((data, index) => {
@@ -201,6 +205,40 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
                     />
                   </div>
                   <span className="text-[8px] text-slate-500 text-center leading-tight font-semibold">{status}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 7-day leads sparkline */}
+      {leadsPerDay.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="font-sans font-semibold text-sm text-slate-800">Leads Captados — Últimos 7 Días</h4>
+              <p className="text-xs text-slate-500">Nuevos prospectos registrados por día en el CRM</p>
+            </div>
+            <span className="text-xs font-mono font-bold text-blue-600">
+              {leadsPerDay.reduce((a, d) => a + d.count, 0)} leads
+            </span>
+          </div>
+          <div className="flex gap-1.5 items-end h-16">
+            {leadsPerDay.map((day) => {
+              const pct = maxDayLeads > 0 ? Math.round((day.count / maxDayLeads) * 100) : 0;
+              return (
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group">
+                  <span className="text-[9px] font-mono text-slate-400 group-hover:text-blue-600 transition-colors">
+                    {day.count > 0 ? day.count : ""}
+                  </span>
+                  <div className="w-full flex flex-col justify-end" style={{ height: "44px" }}>
+                    <div
+                      className="w-full rounded-t-md bg-blue-500 group-hover:bg-blue-600 transition-all"
+                      style={{ height: `${Math.max(day.count > 0 ? 12 : 3, pct)}%`, opacity: day.count === 0 ? 0.2 : 1 }}
+                    />
+                  </div>
+                  <span className="text-[8px] font-semibold text-slate-400">{day.label}</span>
                 </div>
               );
             })}

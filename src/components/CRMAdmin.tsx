@@ -15,6 +15,7 @@ import {
   Trash2,
   Search,
   Phone,
+  ChevronRight,
 } from "lucide-react";
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
@@ -431,7 +432,14 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                                   alt={lead.name}
                                   className="w-5 h-5 rounded-full object-cover shrink-0"
                                 />
-                                <span className="text-xs font-bold text-slate-800 truncate">{lead.name}</span>
+                                <span className="text-xs font-bold text-slate-800 truncate flex-1">{lead.name}</span>
+                              </div>
+                              {/* Lead score mini bar */}
+                              <div className="w-full h-0.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
+                                <div
+                                  className={`h-full rounded-full transition-all ${lead.score >= 85 ? "bg-emerald-500" : lead.score >= 70 ? "bg-amber-400" : "bg-slate-300"}`}
+                                  style={{ width: `${lead.score}%` }}
+                                />
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className={`text-[8px] font-semibold border px-1.5 py-0.5 rounded-full ${getOriginColor(lead.origin)}`}>
@@ -439,13 +447,27 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                                 </span>
                                 <span className="text-[9px] text-slate-400">{timeAgo(lead.lastInteraction)}</span>
                               </div>
-                              <div className="mt-1.5 flex justify-between items-center">
-                                <span className="text-[8px] text-slate-500 font-mono block truncate max-w-[70%]">
+                              <div className="mt-1.5 flex justify-between items-center gap-1">
+                                <span className="text-[8px] text-slate-500 font-mono block truncate flex-1">
                                   {lead.notes}
                                 </span>
-                                <span className={`text-[8px] font-mono font-bold ${lead.score >= 85 ? "text-emerald-600" : lead.score >= 70 ? "text-amber-600" : "text-slate-500"}`}>
-                                  {lead.score}% Lead
+                                <span className={`text-[8px] font-mono font-bold shrink-0 ${lead.score >= 85 ? "text-emerald-600" : lead.score >= 70 ? "text-amber-600" : "text-slate-500"}`}>
+                                  {lead.score}%
                                 </span>
+                                {/* Quick advance to next stage */}
+                                {col !== "Cerrado" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const nextStage = COLUMNS[COLUMNS.indexOf(col) + 1];
+                                      if (nextStage) handleMoveLead(lead.id, nextStage);
+                                    }}
+                                    className="p-0.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all shrink-0"
+                                    title={`Mover a ${COLUMNS[COLUMNS.indexOf(col) + 1]}`}
+                                  >
+                                    <ChevronRight size={11} />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}
