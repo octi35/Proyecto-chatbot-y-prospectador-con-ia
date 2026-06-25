@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
+import { timeAgo } from "../lib/timeAgo";
 
 interface CRMAdminProps {
   leads: CRMLead[];
@@ -66,7 +67,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
         phone: newLeadPhone.trim(),
         status: "Nuevo",
         origin: newLeadOrigin,
-        lastInteraction: "Ahora",
+        lastInteraction: new Date().toISOString(),
         score: 65,
         notes: "",
         avatar: makeAvatarUrl(newLeadName.trim()),
@@ -159,7 +160,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   };
 
   const handleMoveLead = async (leadId: string, nextStatus: CRMLead["status"]) => {
-    const patch = { status: nextStatus, lastInteraction: "Ahora" };
+    const patch = { status: nextStatus, lastInteraction: new Date().toISOString() };
     setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...patch } : l)));
     if (selectedLead?.id === leadId) setSelectedLead((prev) => prev ? { ...prev, ...patch } : prev);
     if (onLeadUpdate) {
@@ -399,7 +400,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                                 <span className={`text-[8px] font-semibold border px-1.5 py-0.5 rounded-full ${getOriginColor(lead.origin)}`}>
                                   {lead.origin}
                                 </span>
-                                <span className="text-[9px] text-slate-400">{lead.lastInteraction}</span>
+                                <span className="text-[9px] text-slate-400">{timeAgo(lead.lastInteraction)}</span>
                               </div>
                               <div className="mt-1.5 flex justify-between items-center">
                                 <span className="text-[8px] text-slate-500 font-mono block truncate max-w-[70%]">

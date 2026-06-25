@@ -647,7 +647,7 @@ app.post("/api/chat", async (req, res) => {
               .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).maybeSingle();
             const validCanal = ["WhatsApp","Instagram","Facebook"].includes(canal) ? canal : "WhatsApp";
             if (existing) {
-              await db.from("respondo_leads").update({ notes: interes, last_interaction: "Ahora" }).eq("id", existing.id);
+              await db.from("respondo_leads").update({ notes: interes, last_interaction: new Date().toISOString() }).eq("id", existing.id);
             } else {
               await db.from("respondo_leads").insert({
                 name: nombre || "Cliente sin identificar",
@@ -664,7 +664,7 @@ app.post("/api/chat", async (req, res) => {
             const { nombre, estado, nota } = action.payload;
             const { data: lead } = await db.from("respondo_leads").select("id").ilike("name", nombre).limit(1).maybeSingle();
             if (lead) {
-              const patch: any = { status: estado, last_interaction: "Ahora" };
+              const patch: any = { status: estado, last_interaction: new Date().toISOString() };
               if (nota) patch.notes = nota;
               await db.from("respondo_leads").update(patch).eq("id", lead.id);
             }
@@ -770,7 +770,7 @@ async function processWhatsAppMessage(phone: string, text: string) {
   if (existingLead) {
     await db.from("respondo_leads").update({
       conversation_history: newHistory,
-      last_interaction: "Ahora",
+      last_interaction: new Date().toISOString(),
       status: existingLead.status === "Nuevo" ? "Contactado" : existingLead.status,
     }).eq("id", existingLead.id);
   } else {

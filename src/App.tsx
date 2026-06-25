@@ -240,7 +240,7 @@ export default function App() {
               l.name.toLowerCase() === String(nombre || "").toLowerCase()
           );
           if (existing) {
-            const patch = { notes: interes || existing.notes, lastInteraction: "Ahora" };
+            const patch = { notes: interes || existing.notes, lastInteraction: new Date().toISOString() };
             updateLead(existing.id, patch).catch(() => {});
             return prev.map((l) => l.id === existing.id ? { ...l, ...patch } : l);
           }
@@ -250,7 +250,7 @@ export default function App() {
             phone: telefono || "",
             status: "Nuevo",
             origin,
-            lastInteraction: "Ahora",
+            lastInteraction: new Date().toISOString(),
             score: 70,
             notes: interes || "",
             avatar: makeAvatarUrl(nombre || "?"),
@@ -270,7 +270,7 @@ export default function App() {
           if (!target) return prev;
           const patch: Partial<CRMLead> = {
             status: estado as CRMLead["status"],
-            lastInteraction: "Ahora",
+            lastInteraction: new Date().toISOString(),
             ...(nota ? { notes: nota } : {}),
           };
           updateLead(target.id, patch).catch(() => {});
