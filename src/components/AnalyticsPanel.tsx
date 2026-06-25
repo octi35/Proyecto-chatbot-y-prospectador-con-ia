@@ -173,6 +173,41 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
         ))}
       </div>
 
+      {/* Pipeline health mini-chart */}
+      {totalLeads > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-sans font-semibold text-sm text-slate-800">Salud del Embudo de Ventas</h4>
+              <p className="text-xs text-slate-500">Distribución de {totalLeads} leads por etapa del pipeline</p>
+            </div>
+            <span className="text-xs font-mono font-bold text-blue-600">{conversionRate}% conv.</span>
+          </div>
+          <div className="flex gap-2 items-end h-16">
+            {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((status) => {
+              const count = leads.filter((l) => l.status === status).length;
+              const pct = Math.round((count / totalLeads) * 100);
+              const colors: Record<string, string> = {
+                Nuevo: "bg-sky-400", Contactado: "bg-amber-400",
+                Presupuestado: "bg-purple-500", Cerrado: "bg-emerald-500",
+              };
+              return (
+                <div key={status} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-[9px] font-mono text-slate-500">{count}</span>
+                  <div className="w-full flex flex-col justify-end" style={{ height: "48px" }}>
+                    <div
+                      className={`w-full rounded-t-lg transition-all ${colors[status]}`}
+                      style={{ height: `${Math.max(4, pct)}%`, minHeight: count > 0 ? "8px" : "0" }}
+                    />
+                  </div>
+                  <span className="text-[8px] text-slate-500 text-center leading-tight font-semibold">{status}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Dynamic SVG Graph Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         

@@ -768,15 +768,31 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
 
                   <div className="space-y-1">
                     <div className="flex justify-between items-center">
-                      <label className="text-xs font-medium text-slate-500">Plantilla de Mensaje (Habilitada por Meta)</label>
+                      <label className="text-xs font-medium text-slate-500">Plantilla de Mensaje</label>
                       <span className="text-[9px] text-slate-400 font-mono font-bold">Use {"{{nombre}}"} y {"{{empresa}}"}</span>
                     </div>
                     <textarea
                       value={newCampTemplate}
                       onChange={(e) => setNewCampTemplate(e.target.value)}
-                      rows={5}
+                      rows={4}
                       className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors resize-none font-mono leading-relaxed"
                     />
+                    {/* Live preview with sample data */}
+                    {newCampTemplate && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Vista previa (con datos reales)</span>
+                        <div className="flex justify-end">
+                          <div className="bg-[#DCF8C6] text-slate-800 text-[11px] leading-relaxed rounded-2xl rounded-tr-none px-3 py-2 max-w-[85%] border border-[#c2e7af] whitespace-pre-wrap">
+                            {newCampTemplate
+                              .replace(/\{\{nombre\}\}/gi, leads[0]?.name || "María García")
+                              .replace(/\{\{empresa\}\}/gi, "Tu Negocio")}
+                          </div>
+                        </div>
+                        <p className="text-[8px] text-slate-400 text-right">
+                          Muestra con {leads[0] ? `datos de "${leads[0].name}"` : "datos de ejemplo"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
