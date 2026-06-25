@@ -20,7 +20,7 @@ import {
 import { CRMLead, Campaign } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
 import { timeAgo } from "../lib/timeAgo";
-import { sendLeadMessage, sendCampaign } from "../lib/api";
+import { sendLeadMessage, sendCampaign, runFollowups } from "../lib/api";
 
 interface CRMAdminProps {
   leads: CRMLead[];
@@ -40,6 +40,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState<CRMLead["origin"] | "Todos">("Todos");
+  const [sortBy, setSortBy] = useState<"score" | "date" | "name">("date");
+  const [followupResult, setFollowupResult] = useState<string | null>(null);
   const [isDeletingLead, setIsDeletingLead] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null); // null = not editing
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -152,14 +154,21 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
     URL.revokeObjectURL(url);
   };
 
-  const filteredLeads = leads.filter((l) => {
-    const matchesSearch = !searchQuery.trim() ||
-      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.phone.includes(searchQuery) ||
-      l.notes.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesChannel = channelFilter === "Todos" || l.origin === channelFilter;
-    return matchesSearch && matchesChannel;
-  });
+  const filteredLeads = leads
+    .filter((l) => {
+      const matchesSearch = !searchQuery.trim() ||
+        l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        l.phone.includes(searchQuery) ||
+        l.notes.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesChannel = channelFilter === "Todos" || l.origin === channelFilter;
+      return matchesSearch && matchesChannel;
+    })
+    .sort((a, b) => {
+      if (sortBy === "score") return b.score - a.score;
+      if (sortBy === "name") return a.name.localeCompare(b.name, "es");
+      // date: most recent first
+      return new Date(b.lastInteraction).getTime() - new Date(a.lastInteraction).getTime();
+    });
 
   // Status Column list
   const COLUMNS: CRMLead["status"][] = ["Nuevo", "Contactado", "Presupuestado", "Cerrado"];
@@ -263,6 +272,21 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
 
         <div className="flex items-center gap-2">
           <button
+            onClick={async () => {
+              try {
+                const result = await runFollowups();
+                setFollowupResult(`✅ ${result.contacted} seguimiento${result.contacted !== 1 ? "s" : ""} enviado${result.contacted !== 1 ? "s" : ""} de ${result.totalStale} leads inactivos`);
+              } catch {
+                setFollowupResult("⚠️ Error al ejecutar seguimientos");
+              }
+              setTimeout(() => setFollowupResult(null), 5000);
+            }}
+            className="px-3 py-1.5 text-xs rounded-lg font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Enviar seguimientos automáticos a leads sin respuesta"
+          >
+            <Zap size={13} /> Seguimientos
+          </button>
+          <button
             onClick={exportCSV}
             className="px-3 py-1.5 text-xs rounded-lg font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 transition-all cursor-pointer"
             title="Exportar leads a CSV"
@@ -293,6 +317,20 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
           </div>
         </div>
       </div>
+
+      {/* Follow-up result toast */}
+      <AnimatePresence>
+        {followupResult && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800 font-medium"
+          >
+            {followupResult}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main CRM Workspace */}
       <div className="flex-1 overflow-hidden">
@@ -331,6 +369,16 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                     <option value="WhatsApp">WhatsApp</option>
                     <option value="Instagram">Instagram</option>
                     <option value="Facebook">Facebook</option>
+                  </select>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs text-slate-700 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                    title="Ordenar leads"
+                  >
+                    <option value="date">↓ Fecha</option>
+                    <option value="score">↓ Score</option>
+                    <option value="name">A-Z Nombre</option>
                   </select>
                   {onLeadCreate && (
                     <button
@@ -600,6 +648,27 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                           </p>
                         )}
                       </div>
+
+                      {/* Category / Tag */}
+                      {onLeadUpdate && (
+                        <div className="py-2 border-b border-slate-100 flex items-center gap-2">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Categoría</span>
+                          <input
+                            type="text"
+                            defaultValue={selectedLead.category || ""}
+                            placeholder="Ej: Ropa, Calzado, VIP…"
+                            onBlur={async (e) => {
+                              const val = e.target.value.trim();
+                              if (val !== (selectedLead.category || "")) {
+                                const updated = await onLeadUpdate(selectedLead.id, { category: val || undefined });
+                                setSelectedLead(updated);
+                                setLeads((prev) => prev.map((l) => l.id === updated.id ? updated : l));
+                              }
+                            }}
+                            className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-blue-500 min-w-0"
+                          />
+                        </div>
+                      )}
 
                       {/* Register sale amount */}
                       {selectedLead.status === "Cerrado" && onLeadUpdate && (

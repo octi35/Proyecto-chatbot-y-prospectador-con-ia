@@ -651,6 +651,47 @@ app.put("/api/campaigns/:id", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// AUTO FOLLOW-UPS
+// ---------------------------------------------------------------------------
+app.post("/api/followups/run", async (_req, res) => {
+  try {
+    const db = getDB();
+    const { data: configRow } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
+    const config = configRow ? mapConfigFromDB(configRow) : null;
+    const followUpMinutes = config?.autoFollowUpMinutes ?? 30;
+    const cutoff = new Date(Date.now() - followUpMinutes * 60 * 1000).toISOString();
+
+    // Find leads with no recent interaction, not yet closed
+    const { data: stale, error } = await db.from("respondo_leads")
+      .select("id,name,phone,status,conversation_history")
+      .neq("status", "Cerrado")
+      .lt("last_interaction", cutoff)
+      .limit(50);
+    if (error) throw error;
+
+    let contacted = 0;
+    const followUpMsg = `¡Hola de nuevo! 😊 Por acá te hacemos el seguimiento de tu consulta. ¿Seguís interesado/a o necesitás más información?`;
+    for (const lead of (stale || [])) {
+      if (!lead.phone) continue;
+      try {
+        const now = new Date().toISOString();
+        const history = Array.isArray(lead.conversation_history) ? lead.conversation_history : [];
+        history.push({ role: "model", text: followUpMsg, timestamp: now });
+        await db.from("respondo_leads").update({
+          last_interaction: now,
+          conversation_history: history,
+        }).eq("id", lead.id);
+        if (WA_TOKEN && WA_PHONE_ID) {
+          await sendWhatsAppMessage(lead.phone, followUpMsg);
+        }
+        contacted++;
+      } catch { /* skip individual failures */ }
+    }
+    res.json({ ok: true, contacted, totalStale: (stale || []).length, followUpMinutes });
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
 // ANALYTICS (real aggregation from DB)
 // ---------------------------------------------------------------------------
 app.get("/api/analytics", async (_req, res) => {

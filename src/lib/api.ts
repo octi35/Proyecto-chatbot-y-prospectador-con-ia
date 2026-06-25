@@ -51,6 +51,10 @@ export const updateCampaign = (id: string, patch: Partial<Campaign>) =>
 export const sendCampaign = (id: string) =>
   request<Campaign & { waConfigured: boolean; totalTargeted: number }>(`/api/campaigns/${id}/send`, { method: "POST" });
 
+// Follow-ups
+export const runFollowups = () =>
+  request<{ ok: boolean; contacted: number; totalStale: number; followUpMinutes: number }>("/api/followups/run", { method: "POST" });
+
 // Analytics
 export interface AnalyticsData {
   monthlySales: { month: string; sales: number }[];
