@@ -459,6 +459,7 @@ export default function App() {
                   setLeads={setLeadsCompat}
                   campaigns={campaigns}
                   setCampaigns={setCampaignsCompat}
+                  config={config}
                   onLeadCreate={handleCreateLead}
                   onLeadUpdate={handleUpdateLead}
                   onLeadDelete={handleDeleteLead}

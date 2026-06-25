@@ -20,7 +20,7 @@ import {
   TrendingUp,
   Upload,
 } from "lucide-react";
-import { CRMLead, Campaign } from "../types";
+import { CRMLead, Campaign, AgentConfig } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
 import { timeAgo } from "../lib/timeAgo";
 import { sendLeadMessage, sendCampaign, runFollowups } from "../lib/api";
@@ -30,13 +30,14 @@ interface CRMAdminProps {
   setLeads: React.Dispatch<React.SetStateAction<CRMLead[]>>;
   campaigns: Campaign[];
   setCampaigns: React.Dispatch<React.SetStateAction<Campaign[]>>;
+  config: AgentConfig;
   onLeadUpdate?: (id: string, patch: Partial<CRMLead>) => Promise<CRMLead>;
   onLeadDelete?: (id: string) => Promise<void>;
   onLeadCreate?: (lead: Omit<CRMLead, "id">) => Promise<CRMLead>;
   onCampaignCreate?: (campaign: Omit<Campaign, "id">) => Promise<Campaign>;
 }
 
-export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onLeadUpdate, onLeadDelete, onLeadCreate, onCampaignCreate }: CRMAdminProps) {
+export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, config, onLeadUpdate, onLeadDelete, onLeadCreate, onCampaignCreate }: CRMAdminProps) {
   // Selection States
   const [activeTab, setActiveTab] = useState<"pipeline" | "broadcast">("pipeline");
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(leads[0] || null);
@@ -1097,7 +1098,10 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                           </p>
                           {/* Quick reply chips for human agent */}
                           <div className="flex flex-wrap gap-1">
-                            {["¿En qué más te ayudo?","Te paso el precio","¿Coordinamos el envío?","Muchas gracias por tu consulta"].map((r) => (
+                            {(config.quickReplies?.length
+                              ? config.quickReplies
+                              : ["¿En qué más te ayudo?","Te paso el precio","¿Coordinamos el envío?","Muchas gracias por tu consulta"]
+                            ).map((r) => (
                               <button
                                 key={r}
                                 type="button"

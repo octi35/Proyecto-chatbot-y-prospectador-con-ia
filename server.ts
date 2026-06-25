@@ -92,6 +92,7 @@ const AgentConfigSchema = z.object({
   forbiddenTopics: z.string().max(1000).optional(),
   workingHoursStart: z.number().int().min(0).max(23).optional(),
   workingHoursEnd: z.number().int().min(0).max(23).optional(),
+  quickReplies: z.array(z.string().max(200)).max(20).optional(),
 });
 
 const ChatSchema = z.object({
@@ -221,6 +222,7 @@ function mapConfigFromDB(row: any) {
     forbiddenTopics: row.forbidden_topics ?? undefined,
     workingHoursStart: row.working_hours_start ?? undefined,
     workingHoursEnd: row.working_hours_end ?? undefined,
+    quickReplies: row.quick_replies?.length ? row.quick_replies : undefined,
   };
 }
 
@@ -238,6 +240,7 @@ function mapConfigToDB(data: any) {
   if (data.forbiddenTopics !== undefined) out.forbidden_topics = data.forbiddenTopics || null;
   if (data.workingHoursStart !== undefined) out.working_hours_start = data.workingHoursStart;
   if (data.workingHoursEnd !== undefined) out.working_hours_end = data.workingHoursEnd;
+  if (data.quickReplies !== undefined) out.quick_replies = data.quickReplies;
   return out;
 }
 

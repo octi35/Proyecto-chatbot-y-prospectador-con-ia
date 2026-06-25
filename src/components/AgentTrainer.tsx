@@ -12,6 +12,8 @@ import {
   Sun,
   CheckCircle2,
   Circle,
+  Plus,
+  X,
 } from "lucide-react";
 import { AgentConfig } from "../types";
 
@@ -75,6 +77,7 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
   const [successMsg, setSuccessMsg] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showPromptPreview, setShowPromptPreview] = useState(false);
+  const [quickReplyInput, setQuickReplyInput] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildSystemPromptPreview = (cfg: AgentConfig): string => {
@@ -401,6 +404,63 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
             className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
           />
           <p className="text-[9px] text-slate-400">Separados por comas. El agente IA se negará a discutir estos temas.</p>
+        </div>
+
+        {/* Quick Reply Templates */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-slate-500 flex items-center gap-1">
+            <MessageSquare size={12} className="text-blue-500" /> Respuestas Rápidas (para agentes humanos en CRM)
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {(config.quickReplies || []).map((r, i) => (
+              <span key={i} className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-medium px-2 py-1 rounded-full">
+                {r}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = (config.quickReplies || []).filter((_, j) => j !== i);
+                    handleFieldChange("quickReplies", next);
+                  }}
+                  className="text-blue-400 hover:text-red-500 transition-colors cursor-pointer ml-0.5"
+                >
+                  <X size={9} />
+                </button>
+              </span>
+            ))}
+            {(config.quickReplies || []).length === 0 && (
+              <span className="text-[10px] text-slate-400 italic">Sin respuestas rápidas configuradas.</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={quickReplyInput}
+              onChange={(e) => setQuickReplyInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && quickReplyInput.trim()) {
+                  e.preventDefault();
+                  const next = [...(config.quickReplies || []), quickReplyInput.trim()];
+                  handleFieldChange("quickReplies", next);
+                  setQuickReplyInput("");
+                }
+              }}
+              placeholder="Escribí una respuesta y presioná Enter…"
+              className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (!quickReplyInput.trim()) return;
+                const next = [...(config.quickReplies || []), quickReplyInput.trim()];
+                handleFieldChange("quickReplies", next);
+                setQuickReplyInput("");
+              }}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-all"
+            >
+              <Plus size={12} /> Agregar
+            </button>
+          </div>
+          <p className="text-[9px] text-slate-400">Aparecen como chips clicables en el panel CRM cuando un agente toma control del chat.</p>
         </div>
 
         {/* System Prompt Preview */}
