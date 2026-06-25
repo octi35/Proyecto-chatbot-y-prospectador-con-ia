@@ -31,17 +31,19 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   // Map from message id → HTMLAudioElement so each voice note has its own player
   const audioMapRef = useRef<Map<string, HTMLAudioElement>>(new Map());
 
-  // Greeting message from config
+  // Set initial greeting only once on mount (or when chat is manually cleared)
+  const greetingText = config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`;
   useEffect(() => {
-    const greeting: ChatMessage = {
+    setMessages([{
       id: "initial-1",
       role: "model",
-      text: config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`,
+      text: greetingText,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       status: "read",
-    };
-    setMessages([greeting]);
-  }, [config.customGreeting, config.businessName]);
+    }]);
+  // We intentionally only run this on mount; config changes don't reset an ongoing chat
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -169,6 +171,8 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   };
 
   const clearChat = () => {
+    audioMapRef.current.clear();
+    setPlayingAudioId(null);
     setMessages([{
       id: "initial-1",
       role: "model",

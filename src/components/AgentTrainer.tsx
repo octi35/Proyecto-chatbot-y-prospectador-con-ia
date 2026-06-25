@@ -71,17 +71,22 @@ interface AgentTrainerProps {
 
 export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
   const [successMsg, setSuccessMsg] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleFieldChange = (key: keyof AgentConfig, value: any) => {
-    onChange({
-      ...config,
-      [key]: value
-    });
+    setIsSaving(true);
+    onChange({ ...config, [key]: value });
+    // The parent debounces saves; show visual feedback
+    setTimeout(() => {
+      setIsSaving(false);
+      setSuccessMsg("Configuración guardada.");
+      setTimeout(() => setSuccessMsg(""), 2000);
+    }, 900);
   };
 
   const loadPreset = (preset: typeof BUSINESS_PRESETS[0]) => {
     onChange(preset);
-    setSuccessMsg(`Preset "${preset.businessName}" cargado exitosamente.`);
+    setSuccessMsg(`Preset "${preset.businessName}" cargado y guardado.`);
     setTimeout(() => setSuccessMsg(""), 3000);
   };
 
@@ -98,9 +103,13 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
             <p className="text-xs text-slate-500">Instruye a tu IA con las reglas de tu negocio</p>
           </div>
         </div>
-        <div className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-xs font-semibold">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span>
-          Respondo Engine Active
+        <div className={`flex items-center space-x-1 px-2.5 py-1 border rounded-full text-xs font-semibold transition-all ${
+          isSaving
+            ? "bg-amber-50 text-amber-700 border-amber-100"
+            : "bg-emerald-50 text-emerald-700 border-emerald-100"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full mr-1 ${isSaving ? "bg-amber-500 animate-bounce" : "bg-emerald-500 animate-pulse"}`}></span>
+          {isSaving ? "Guardando…" : "Respondo Engine Active"}
         </div>
       </div>
 

@@ -30,10 +30,11 @@ interface CRMAdminProps {
   setCampaigns: React.Dispatch<React.SetStateAction<Campaign[]>>;
   onLeadUpdate?: (id: string, patch: Partial<CRMLead>) => Promise<CRMLead>;
   onLeadDelete?: (id: string) => Promise<void>;
+  onLeadCreate?: (lead: Omit<CRMLead, "id">) => Promise<CRMLead>;
   onCampaignCreate?: (campaign: Omit<Campaign, "id">) => Promise<Campaign>;
 }
 
-export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onLeadUpdate, onLeadDelete, onCampaignCreate }: CRMAdminProps) {
+export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onLeadUpdate, onLeadDelete, onLeadCreate, onCampaignCreate }: CRMAdminProps) {
   // Selection States
   const [activeTab, setActiveTab] = useState<"pipeline" | "broadcast">("pipeline");
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(leads[0] || null);
@@ -42,6 +43,11 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [isDeletingLead, setIsDeletingLead] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null); // null = not editing
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newLeadName, setNewLeadName] = useState("");
+  const [newLeadPhone, setNewLeadPhone] = useState("");
+  const [newLeadOrigin, setNewLeadOrigin] = useState<CRMLead["origin"]>("WhatsApp");
+  const [isAddingLead, setIsAddingLead] = useState(false);
   
   // Broadcasting Campaign Form States
   const [newCampName, setNewCampName] = useState("");
@@ -49,6 +55,33 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [newCampSegment, setNewCampSegment] = useState("Todos los contactos");
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [sendingProgress, setSendingProgress] = useState(0);
+
+  const handleAddLead = async () => {
+    if (!newLeadName.trim() || !onLeadCreate) return;
+    setIsAddingLead(true);
+    try {
+      const created = await onLeadCreate({
+        name: newLeadName.trim(),
+        phone: newLeadPhone.trim(),
+        status: "Nuevo",
+        origin: newLeadOrigin,
+        lastInteraction: "Ahora",
+        score: 65,
+        notes: "",
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(newLeadName.trim())}`,
+        totalSpent: 0,
+        conversationHistory: [],
+      });
+      setSelectedLead(created);
+      setNewLeadName("");
+      setNewLeadPhone("");
+      setShowAddForm(false);
+    } catch (e) {
+      console.error("Create lead failed:", e);
+    } finally {
+      setIsAddingLead(false);
+    }
+  };
 
   const handleDeleteSelectedLead = async () => {
     if (!selectedLead || !onLeadDelete) return;
@@ -247,17 +280,85 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
             >
               {/* Funnel Columns Left (3 columns on lg grid) */}
               <div className="lg:col-span-8 p-4 border-r border-slate-200 overflow-y-auto space-y-4 max-h-[520px]">
-                {/* Search bar */}
-                <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Buscar leads por nombre, teléfono o notas…"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
-                  />
+                {/* Search + Add Lead bar */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar leads por nombre, teléfono o notas…"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
+                    />
+                  </div>
+                  {onLeadCreate && (
+                    <button
+                      onClick={() => setShowAddForm((v) => !v)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        showAddForm ? "bg-slate-200 text-slate-700" : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      <Plus size={13} /> Lead
+                    </button>
+                  )}
                 </div>
+
+                {/* Quick add lead form */}
+                <AnimatePresence>
+                  {showAddForm && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 space-y-2">
+                        <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Agregar lead manualmente</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={newLeadName}
+                            onChange={(e) => setNewLeadName(e.target.value)}
+                            placeholder="Nombre *"
+                            className="bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                          />
+                          <input
+                            type="text"
+                            value={newLeadPhone}
+                            onChange={(e) => setNewLeadPhone(e.target.value)}
+                            placeholder="Teléfono (opcional)"
+                            className="bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <select
+                            value={newLeadOrigin}
+                            onChange={(e) => setNewLeadOrigin(e.target.value as CRMLead["origin"])}
+                            className="flex-1 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none"
+                          >
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Facebook">Facebook</option>
+                          </select>
+                          <button
+                            onClick={handleAddLead}
+                            disabled={isAddingLead || !newLeadName.trim()}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {isAddingLead ? "Guardando…" : "Guardar"}
+                          </button>
+                          <button
+                            onClick={() => setShowAddForm(false)}
+                            className="px-3 py-1.5 bg-white text-slate-600 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   {COLUMNS.map((col) => {
                     const columnLeads = filteredLeads.filter((l) => l.status === col);
