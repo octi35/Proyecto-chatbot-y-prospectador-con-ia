@@ -34,8 +34,9 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
 
   const STORAGE_KEY = "respondo_chat_session";
 
+  const botName = config.botPersonaName?.trim() || "Respondo AI";
   // Restore messages from sessionStorage on mount, or show greeting if none
-  const greetingText = config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`;
+  const greetingText = config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. Soy ${botName}. ¿En qué te puedo asesorar hoy?`;
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY);
@@ -230,7 +231,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
     setMessages([{
       id: "initial-1",
       role: "model",
-      text: config.customGreeting || `¡Hola! Bienvenido a ${config.businessName}. ¿En qué te puedo asesorar hoy?`,
+      text: greetingText,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       status: "read",
     }]);
@@ -274,7 +275,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
             <h4 className="font-semibold text-sm leading-tight text-slate-900">{config.businessName}</h4>
             <div className="flex items-center space-x-1">
               <Sparkles size={10} className="text-blue-600 animate-pulse" />
-              <span className="text-[10px] text-slate-500 font-medium tracking-wide">Respondo AI · Gemini</span>
+              <span className="text-[10px] text-slate-500 font-medium tracking-wide">{botName} · Gemini AI</span>
             </div>
           </div>
         </div>

@@ -88,6 +88,10 @@ const AgentConfigSchema = z.object({
   customGreeting: z.string().max(500).optional(),
   autoFollowUpMinutes: z.number().int().positive().max(10080).optional(),
   syncStore: z.enum(["Ninguna","TiendaNube","Shopify","WooCommerce","MercadoLibre"]).optional(),
+  botPersonaName: z.string().max(100).optional(),
+  forbiddenTopics: z.string().max(1000).optional(),
+  workingHoursStart: z.number().int().min(0).max(23).optional(),
+  workingHoursEnd: z.number().int().min(0).max(23).optional(),
 });
 
 const ChatSchema = z.object({
@@ -204,6 +208,10 @@ function mapConfigFromDB(row: any) {
     customGreeting: row.custom_greeting ?? undefined,
     autoFollowUpMinutes: row.auto_follow_up_minutes,
     syncStore: row.sync_store,
+    botPersonaName: row.bot_persona_name ?? undefined,
+    forbiddenTopics: row.forbidden_topics ?? undefined,
+    workingHoursStart: row.working_hours_start ?? undefined,
+    workingHoursEnd: row.working_hours_end ?? undefined,
   };
 }
 
@@ -217,6 +225,10 @@ function mapConfigToDB(data: any) {
   if (data.customGreeting !== undefined) out.custom_greeting = data.customGreeting || null;
   if (data.autoFollowUpMinutes !== undefined) out.auto_follow_up_minutes = data.autoFollowUpMinutes;
   if (data.syncStore !== undefined) out.sync_store = data.syncStore;
+  if (data.botPersonaName !== undefined) out.bot_persona_name = data.botPersonaName || null;
+  if (data.forbiddenTopics !== undefined) out.forbidden_topics = data.forbiddenTopics || null;
+  if (data.workingHoursStart !== undefined) out.working_hours_start = data.workingHoursStart;
+  if (data.workingHoursEnd !== undefined) out.working_hours_end = data.workingHoursEnd;
   return out;
 }
 
@@ -350,7 +362,23 @@ async function runChat(
 ): Promise<{ text: string; actions: AgentAction[] }> {
   const ai = getAI();
 
-  const systemInstruction = `Eres "Respondo", un agente de IA entrenado a medida para "${config.businessName}" (Rubro: ${config.businessType}).
+  const personaName = config.botPersonaName?.trim() || "Respondo";
+
+  // Working hours check
+  let offHoursNote = "";
+  if (config.workingHoursStart !== undefined && config.workingHoursEnd !== undefined) {
+    const currentHour = new Date().getHours();
+    const inHours = currentHour >= config.workingHoursStart && currentHour < config.workingHoursEnd;
+    if (!inHours) {
+      offHoursNote = `\nIMPORTANTE: Estás FUERA DEL HORARIO DE ATENCIÓN (${config.workingHoursStart}:00 a ${config.workingHoursEnd}:00 hs). Avisá al cliente que no hay atención ahora y cuándo volverá a haber.`;
+    }
+  }
+
+  const forbiddenNote = config.forbiddenTopics
+    ? `\nTEMAS PROHIBIDOS — NUNCA los discutas: ${config.forbiddenTopics}. Si preguntan, decí que no es algo que puedas tratar.`
+    : "";
+
+  const systemInstruction = `Sos ${personaName}, el asistente de ventas IA de "${config.businessName}" (Rubro: ${config.businessType}).
 Tu objetivo: chatear naturalmente, responder consultas y cerrar ventas en WhatsApp, Instagram o Facebook.
 
 CATÁLOGO:
@@ -367,7 +395,8 @@ DIRECTIVAS:
 3. Si no está en catálogo, ofrecer alternativa cercana.
 4. Guiar hacia el cierre: "¿Te la reservo?", "¿Coordinamos el envío hoy?".
 5. Registrar leads apenas muestren interés real.
-6. NO romper el personaje. Sos del equipo humano de ${config.businessName}.
+6. NO romper el personaje. Sos ${personaName} del equipo de ${config.businessName}.
+7. Tu nombre es ${personaName}. Si te preguntan quién sos, decí tu nombre.${forbiddenNote}${offHoursNote}
 
 HERRAMIENTAS (usarlas sin avisar al cliente):
 - buscar_producto: consultar stock/precios SIEMPRE antes de afirmarlos.

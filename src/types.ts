@@ -7,6 +7,10 @@ export interface AgentConfig {
   customGreeting?: string;
   autoFollowUpMinutes?: number;
   syncStore?: "Ninguna" | "TiendaNube" | "Shopify" | "WooCommerce" | "MercadoLibre";
+  botPersonaName?: string;     // AI agent's human name, e.g. "Valentina"
+  forbiddenTopics?: string;    // Comma-separated topics the AI must never discuss
+  workingHoursStart?: number;  // 0-23 hour when bot starts (undefined = 24/7)
+  workingHoursEnd?: number;    // 0-23 hour when bot ends (undefined = 24/7)
 }
 
 // Structured action the agent performed via tool-use. The backend returns these

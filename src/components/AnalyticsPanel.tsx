@@ -71,6 +71,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
   const leadsPerDay = analytics?.leadsPerDay ?? [];
   const maxDayLeads = Math.max(1, ...leadsPerDay.map((d) => d.count));
 
+  // Hourly activity heatmap derived from lead lastInteraction timestamps
+  const hourCounts = Array.from({ length: 24 }, (_, h) => ({
+    hour: h,
+    count: leads.filter((l) => new Date(l.lastInteraction).getHours() === h).length,
+  }));
+  const maxHourCount = Math.max(1, ...hourCounts.map((h) => h.count));
+
   // Dynamic scaling for the SVG vector line chart to support any dynamic CRM values
   const maxVal = Math.max(...chartData.map(d => d.sales)) || 1;
   const points = chartData.map((data, index) => {
@@ -291,6 +298,53 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Hourly activity heatmap */}
+      {leads.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="font-sans font-semibold text-sm text-slate-800">Actividad por Hora del Día</h4>
+              <p className="text-xs text-slate-500">Cuándo tus clientes están más activos (basado en última interacción)</p>
+            </div>
+            <span className="text-xs font-mono font-bold text-blue-600">
+              {leads.length} interacciones
+            </span>
+          </div>
+          <div className="flex gap-0.5 items-end h-12">
+            {hourCounts.map(({ hour, count }) => {
+              const intensity = count / maxHourCount;
+              const isNight = hour < 7 || hour >= 22;
+              return (
+                <div key={hour} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                  <div
+                    className={`w-full rounded-sm transition-all ${count === 0 ? "bg-slate-100" : isNight ? "bg-indigo-300" : "bg-blue-500"}`}
+                    style={{ height: `${Math.max(4, intensity * 36)}px`, opacity: count === 0 ? 0.4 : 0.5 + intensity * 0.5 }}
+                    title={`${hour}:00 — ${count} lead${count !== 1 ? "s" : ""}`}
+                  />
+                  {/* Tooltip on hover */}
+                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10 transition-opacity">
+                    {hour}h: {count}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between mt-1 px-0.5">
+            <span className="text-[8px] text-slate-400 font-mono">0h</span>
+            <span className="text-[8px] text-slate-400 font-mono">6h</span>
+            <span className="text-[8px] text-slate-400 font-mono">12h</span>
+            <span className="text-[8px] text-slate-400 font-mono">18h</span>
+            <span className="text-[8px] text-slate-400 font-mono">23h</span>
+          </div>
+          {maxHourCount > 0 && (
+            <p className="text-[9px] text-slate-400 mt-1.5 text-center">
+              Pico: {hourCounts.find(h => h.count === maxHourCount)?.hour}:00 hs
+              ({maxHourCount} lead{maxHourCount !== 1 ? "s" : ""})
+            </p>
+          )}
         </div>
       )}
 
