@@ -128,12 +128,14 @@ export default function ComparisonTable() {
           <span className="font-semibold text-slate-800 block mb-0.5">Modelo de Implementación "Llave en Mano"</span>
           <p className="text-[11px] text-slate-500">No tenés que configurar nada. Nuestro equipo de ingenieros en prompts se encarga del entrenamiento y puesta en marcha completa de tu agente de IA.</p>
         </div>
-        <button
-          onClick={() => alert("¡Excelente decisión! Te enviaremos un mensaje de WhatsApp para coordinar el entrenamiento de tu IA y el setup de tu negocio.")}
-          className="shrink-0 py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+        <a
+          href="https://wa.me/5491100000000?text=Hola!%20Quiero%20activar%20Respondo%20para%20mi%20negocio."
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
         >
-          Iniciar Setup Guiado
-        </button>
+          Iniciar Setup por WhatsApp
+        </a>
       </div>
 
     </div>

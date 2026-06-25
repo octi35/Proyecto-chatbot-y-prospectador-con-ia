@@ -23,6 +23,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [micError, setMicError] = useState<string | null>(null);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -73,6 +74,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
     attachment?: { data: string; mimeType: string }
   ) => {
     setIsLoading(true);
+    setQuickReplies([]); // Clear while loading
     try {
       const history = historyList.map((m) => ({ role: m.role, text: m.text }));
       const res = await fetch("/api/chat", {
@@ -85,6 +87,8 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
       const actions: AgentAction[] = Array.isArray(data.actions) ? data.actions : [];
       addMessage("model", data.text, actions.length ? { actions } : undefined);
       if (actions.length && onAgentActions) onAgentActions(actions);
+      // Generate contextual quick replies based on the AI reply content
+      setQuickReplies(generateQuickReplies(data.text, historyList.length));
     } catch (err) {
       addMessage("model", "Se cortó la conexión por un momento. ¿Me repetís la consulta?");
     } finally {
@@ -92,11 +96,40 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
     }
   };
 
+  const generateQuickReplies = (aiReply: string, historyLength: number): string[] => {
+    const lower = aiReply.toLowerCase();
+    if (lower.includes("talle") || lower.includes("número") || lower.includes("talla")) {
+      return ["Talle 38", "Talle 40", "Talle 42"];
+    }
+    if (lower.includes("envío") || lower.includes("delivery") || lower.includes("mando")) {
+      return ["¿Hacen envíos al interior?", "¿Cuánto tarda?", "Quiero coordinar el envío"];
+    }
+    if (lower.includes("precio") || lower.includes("costo") || lower.includes("vale")) {
+      return ["¿Hay descuento por efectivo?", "¿Aceptan cuotas?", "Me interesa, lo quiero"];
+    }
+    if (lower.includes("reserv") || lower.includes("apartá") || lower.includes("separarlo")) {
+      return ["Sí, lo reservo", "¿Cómo pago?", "¿Tienen otro color?"];
+    }
+    if (historyLength === 0) {
+      return ["¿Qué tienen disponible?", "Quiero ver el catálogo", "¿Cuáles son los precios?"];
+    }
+    return [];
+  };
+
   const handleSendText = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim()) return;
     const text = inputText;
     setInputText("");
+    setQuickReplies([]);
+    const msg = addMessage("user", text);
+    setTimeout(() => updateStatus(msg.id, "sent"), 300);
+    setTimeout(() => updateStatus(msg.id, "read"), 800);
+    await callChatAPI(text, [...messages]);
+  };
+
+  const handleQuickReply = async (text: string) => {
+    setQuickReplies([]);
     const msg = addMessage("user", text);
     setTimeout(() => updateStatus(msg.id, "sent"), 300);
     setTimeout(() => updateStatus(msg.id, "read"), 800);
@@ -173,6 +206,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   const clearChat = () => {
     audioMapRef.current.clear();
     setPlayingAudioId(null);
+    setQuickReplies([]);
     setMessages([{
       id: "initial-1",
       role: "model",
@@ -377,6 +411,33 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
           {micError}
         </div>
       )}
+
+      {/* Quick reply chips */}
+      <AnimatePresence>
+        {quickReplies.length > 0 && !isLoading && !isRecording && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="px-3 pb-2 flex flex-wrap gap-1.5"
+          >
+            {quickReplies.map((reply) => (
+              <button
+                key={reply}
+                type="button"
+                onClick={() => handleQuickReply(reply)}
+                className={`text-[10px] font-medium px-3 py-1.5 rounded-full border transition-all cursor-pointer ${
+                  platform === "whatsapp"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                    : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                }`}
+              >
+                {reply}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input bar */}
       <form onSubmit={handleSendText}
