@@ -1,4 +1,4 @@
-import type { CRMLead, Campaign, AgentConfig } from "../types";
+import type { CRMLead, Campaign, AgentConfig, AutomationRule } from "../types";
 
 export interface HealthData {
   status: string;
@@ -65,3 +65,12 @@ export interface AnalyticsData {
   leadsPerDay?: { date: string; label: string; count: number }[];
 }
 export const getAnalytics = () => request<AnalyticsData>("/api/analytics");
+
+// Automations
+export const getAutomations = () => request<AutomationRule[]>("/api/automations");
+export const createAutomation = (rule: Omit<AutomationRule, "id" | "timesTriggered">) =>
+  request<AutomationRule>("/api/automations", { method: "POST", body: JSON.stringify(rule) });
+export const updateAutomation = (id: string, patch: Partial<AutomationRule>) =>
+  request<AutomationRule>(`/api/automations/${id}`, { method: "PUT", body: JSON.stringify(patch) });
+export const deleteAutomation = (id: string) =>
+  request<void>(`/api/automations/${id}`, { method: "DELETE" });

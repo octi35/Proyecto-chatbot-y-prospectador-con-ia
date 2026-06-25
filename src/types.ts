@@ -65,3 +65,15 @@ export interface Campaign {
   mediaUrl?: string;     // Optional image/video URL to attach
   mediaType?: string;    // "image" | "video" | "document"
 }
+
+// Lightweight automation rule: when a TRIGGER fires, run an ACTION.
+export interface AutomationRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  trigger: "new_lead" | "lead_stale" | "high_score" | "status_closed" | "keyword_match";
+  triggerValue?: string;   // e.g. keyword for keyword_match, score threshold, hours for stale
+  action: "send_followup" | "notify" | "move_stage" | "tag_lead";
+  actionValue?: string;    // e.g. target stage, message template, tag/category
+  timesTriggered?: number;
+}

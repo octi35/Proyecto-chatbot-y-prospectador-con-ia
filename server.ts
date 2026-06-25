@@ -138,6 +138,17 @@ const CampaignPatchSchema = z.object({
   mediaType: z.enum(["image","video","document"]).optional().nullable(),
 });
 
+const AutomationSchema = z.object({
+  name: z.string().min(1).max(200),
+  enabled: z.boolean().optional(),
+  trigger: z.enum(["new_lead","lead_stale","high_score","status_closed","keyword_match"]),
+  triggerValue: z.string().max(200).optional().nullable(),
+  action: z.enum(["send_followup","notify","move_stage","tag_lead"]),
+  actionValue: z.string().max(500).optional().nullable(),
+});
+
+const AutomationPatchSchema = AutomationSchema.partial();
+
 // ---------------------------------------------------------------------------
 // DB MAPPING HELPERS
 // ---------------------------------------------------------------------------
@@ -205,6 +216,30 @@ function mapCampaignToDB(data: any) {
   if (data.scheduledAt !== undefined) out.scheduled_at = data.scheduledAt || null;
   if (data.mediaUrl !== undefined) out.media_url = data.mediaUrl || null;
   if (data.mediaType !== undefined) out.media_type = data.mediaType || null;
+  return out;
+}
+
+function mapAutomationFromDB(row: any) {
+  return {
+    id: row.id,
+    name: row.name,
+    enabled: row.enabled,
+    trigger: row.trigger,
+    triggerValue: row.trigger_value ?? undefined,
+    action: row.action,
+    actionValue: row.action_value ?? undefined,
+    timesTriggered: row.times_triggered ?? 0,
+  };
+}
+
+function mapAutomationToDB(data: any) {
+  const out: any = {};
+  if (data.name !== undefined) out.name = data.name;
+  if (data.enabled !== undefined) out.enabled = data.enabled;
+  if (data.trigger !== undefined) out.trigger = data.trigger;
+  if (data.triggerValue !== undefined) out.trigger_value = data.triggerValue || null;
+  if (data.action !== undefined) out.action = data.action;
+  if (data.actionValue !== undefined) out.action_value = data.actionValue || null;
   return out;
 }
 
@@ -688,6 +723,48 @@ app.put("/api/campaigns/:id", async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: "Campaña no encontrada" });
     res.json(mapCampaignFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
+// AUTOMATIONS (rules engine)
+// ---------------------------------------------------------------------------
+app.get("/api/automations", async (_req, res) => {
+  try {
+    const db = getDB();
+    const { data, error } = await db.from("respondo_automations").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    res.json((data || []).map(mapAutomationFromDB));
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/automations", async (req, res) => {
+  try {
+    const body = validateBody(AutomationSchema, req.body);
+    const db = getDB();
+    const { data, error } = await db.from("respondo_automations").insert(mapAutomationToDB(body)).select().single();
+    if (error) throw error;
+    res.status(201).json(mapAutomationFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.put("/api/automations/:id", async (req, res) => {
+  try {
+    const body = validateBody(AutomationPatchSchema, req.body);
+    const db = getDB();
+    const { data, error } = await db.from("respondo_automations").update(mapAutomationToDB(body)).eq("id", req.params.id).select().single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Automatización no encontrada" });
+    res.json(mapAutomationFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.delete("/api/automations/:id", async (req, res) => {
+  try {
+    const db = getDB();
+    const { error } = await db.from("respondo_automations").delete().eq("id", req.params.id);
+    if (error) throw error;
+    res.status(204).end();
   } catch (err) { handleError(res, err); }
 });
 
