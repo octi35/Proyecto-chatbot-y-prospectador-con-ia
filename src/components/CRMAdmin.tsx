@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Users,
@@ -52,7 +52,29 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
   const [newLeadPhone, setNewLeadPhone] = useState("");
   const [newLeadOrigin, setNewLeadOrigin] = useState<CRMLead["origin"]>("WhatsApp");
   const [isAddingLead, setIsAddingLead] = useState(false);
-  
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // "/" keyboard shortcut focuses search when in pipeline view
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        activeTab === "pipeline" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        searchInputRef.current?.blur();
+        setSearchQuery("");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeTab]);
+
   // Manual message state (human override)
   const [manualMessage, setManualMessage] = useState("");
   const [isSendingManual, setIsSendingManual] = useState(false);
@@ -428,10 +450,11 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, onL
                   <div className="relative flex-1">
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     <input
+                      ref={searchInputRef}
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Buscar por nombre, teléfono o notas…"
+                      placeholder="Buscar… (presioná / para enfocar)"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
                     />
                   </div>

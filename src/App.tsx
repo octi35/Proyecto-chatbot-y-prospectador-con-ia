@@ -295,6 +295,11 @@ export default function App() {
   const totalSales = leads.reduce((a, l) => a + (l.totalSpent || 0), 0);
   const convRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
 
+  // Hot leads: score >= 85 and active in last 2h
+  const hotLeads = leads.filter(
+    (l) => l.score >= 85 && Date.now() - new Date(l.lastInteraction).getTime() < 2 * 60 * 60 * 1000
+  ).length;
+
   // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
@@ -344,6 +349,15 @@ export default function App() {
               <span className="font-mono text-sm font-bold text-slate-800">{totalLeads} activos</span>
             </div>
             <div className="h-8 w-px bg-slate-200" />
+            {hotLeads > 0 && (
+              <>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Calientes 🔥</span>
+                  <span className="font-mono text-sm font-bold text-orange-600">{hotLeads} ahora</span>
+                </div>
+                <div className="h-8 w-px bg-slate-200" />
+              </>
+            )}
             <div className="text-right">
               <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Conversión</span>
               <span className="font-mono text-sm font-bold text-blue-600">{convRate}% cierre</span>
