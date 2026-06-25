@@ -78,6 +78,21 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
   }));
   const maxHourCount = Math.max(1, ...hourCounts.map((h) => h.count));
 
+  // Average AI response time (seconds) from conversation history pairs
+  const responseTimes: number[] = [];
+  leads.forEach((lead) => {
+    const hist = lead.conversationHistory;
+    for (let i = 0; i < hist.length - 1; i++) {
+      if (hist[i].role === "user" && hist[i + 1].role === "model" && hist[i].timestamp && hist[i + 1].timestamp) {
+        const delta = (new Date(hist[i + 1].timestamp).getTime() - new Date(hist[i].timestamp).getTime()) / 1000;
+        if (delta > 0 && delta < 300) responseTimes.push(delta);
+      }
+    }
+  });
+  const avgResponseTimeSec = responseTimes.length
+    ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+    : null;
+
   // Dynamic scaling for the SVG vector line chart to support any dynamic CRM values
   const maxVal = Math.max(...chartData.map(d => d.sales)) || 1;
   const points = chartData.map((data, index) => {
@@ -531,6 +546,25 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
                 />
               </div>
             </div>
+
+            {/* Avg response time */}
+            {avgResponseTimeSec !== null && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="font-bold text-slate-700 flex items-center gap-1"><Clock size={12} className="text-amber-500" /> Tiempo Prom. de Respuesta</span>
+                  <span className="text-amber-600 font-mono font-bold">
+                    {avgResponseTimeSec < 60 ? `${avgResponseTimeSec}s` : `${Math.round(avgResponseTimeSec / 60)}m`}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${Math.min(100, 100 - (avgResponseTimeSec / 30) * 10)}%` }}
+                    className="h-full bg-amber-400 rounded-full"
+                  />
+                </div>
+                <p className="text-[8px] text-slate-400">Tiempo medido entre mensaje del cliente y respuesta del bot</p>
+              </div>
+            )}
 
             {/* Channel Breakdown */}
             {Object.keys(channelCounts).length > 0 && (

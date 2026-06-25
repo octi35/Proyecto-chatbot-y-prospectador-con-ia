@@ -1065,9 +1065,14 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                                     : "bg-white border border-slate-200 text-slate-700 rounded-tl-none"
                                 }`}>
                                   <span className={`font-bold block text-[8px] mb-0.5 ${h.role === "user" ? "text-emerald-700" : "text-blue-600"}`}>
-                                    {h.role === "user" ? "Cliente" : "Respondo AI"}
+                                    {h.role === "user" ? "Cliente" : (config.botPersonaName || "Respondo AI")}
                                   </span>
                                   {h.text}
+                                  {h.timestamp && (
+                                    <span className="block text-[7px] opacity-50 mt-0.5 text-right">
+                                      {new Date(h.timestamp).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             ))}
