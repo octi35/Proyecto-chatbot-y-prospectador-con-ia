@@ -21,7 +21,6 @@ import {
   getLeads, createLead, updateLead, deleteLead,
   getCampaigns, createCampaign, updateCampaign,
 } from "./lib/api";
-import { makeAvatarUrl } from "./lib/avatar";
 
 import AgentTrainer from "./components/AgentTrainer";
 import ChatSimulator from "./components/ChatSimulator";
@@ -233,45 +232,35 @@ export default function App() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // AGENT TOOL-USE ACTIONS → persist to DB + update local state
+  // AGENT TOOL-USE ACTIONS → optimistic UI update + short-delay refresh from DB
+  // NOTE: The server-side /api/chat handler already persists all CRM actions to DB.
+  // So here we only do optimistic local updates; the lead refresh syncs actual DB state.
   // ---------------------------------------------------------------------------
   const handleAgentActions = useCallback((actions: AgentAction[]) => {
+    let needsRefresh = false;
+
     actions.forEach((action) => {
       addNotification(action.label);
 
       if (action.type === "upsert_lead") {
-        const { nombre, telefono, interes, canal } = action.payload;
-        const validOrigins = ["WhatsApp","Instagram","Facebook"];
-        const origin: CRMLead["origin"] = validOrigins.includes(canal) ? canal : "WhatsApp";
-
+        const { nombre, telefono, interes } = action.payload;
         setLeads((prev) => {
           const existing = prev.find(
             (l) => (telefono && l.phone === telefono) ||
               l.name.toLowerCase() === String(nombre || "").toLowerCase()
           );
           if (existing) {
-            const patch = { notes: interes || existing.notes, lastInteraction: new Date().toISOString() };
-            updateLead(existing.id, patch).catch(() => {});
-            return prev.map((l) => l.id === existing.id ? { ...l, ...patch } : l);
+            // Optimistic update for known lead
+            return prev.map((l) => l.id === existing.id ? {
+              ...l,
+              notes: interes || l.notes,
+              lastInteraction: new Date().toISOString(),
+            } : l);
           }
-          // Create new lead via API
-          const newLeadData: Omit<CRMLead, "id"> = {
-            name: nombre || "Cliente sin identificar",
-            phone: telefono || "",
-            status: "Nuevo",
-            origin,
-            lastInteraction: new Date().toISOString(),
-            score: 70,
-            notes: interes || "",
-            avatar: makeAvatarUrl(nombre || "?"),
-            totalSpent: 0,
-            conversationHistory: [],
-          };
-          createLead(newLeadData)
-            .then((created) => setLeads((p) => [created, ...p.filter((l) => l.name !== nombre)]))
-            .catch(() => {});
-          return prev; // API response will update state
+          // New lead — server already created it; refresh will bring it in
+          return prev;
         });
+        needsRefresh = true;
 
       } else if (action.type === "update_lead_status") {
         const { nombre, estado, nota } = action.payload;
@@ -289,6 +278,13 @@ export default function App() {
       }
       // schedule_followup and payment_link appear in the activity stream only
     });
+
+    // After AI creates/updates leads in DB, fetch fresh data so our UI reflects real DB state
+    if (needsRefresh) {
+      setTimeout(() => {
+        getLeads().then((fresh) => setLeads(fresh)).catch(() => {});
+      }, 1500); // slight delay to let DB write settle
+    }
   }, []);
 
   // ---------------------------------------------------------------------------
