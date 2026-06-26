@@ -28,6 +28,7 @@ import CRMAdmin from "./components/CRMAdmin";
 import AnalyticsPanel from "./components/AnalyticsPanel";
 import ComparisonTable from "./components/ComparisonTable";
 import WhiteLabelStudio from "./components/WhiteLabelStudio";
+import ChannelConnect from "./components/ChannelConnect";
 
 type TabType = "playground" | "crm" | "analytics" | "integrations" | "compare";
 
@@ -305,98 +306,88 @@ export default function App() {
   // ---------------------------------------------------------------------------
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center gap-3">
-        <Loader2 size={32} className="text-blue-600 animate-spin" />
-        <p className="text-sm text-slate-500 font-medium">Cargando Respondo…</p>
+      <div className="min-h-screen bg-[#fbfbfd] flex flex-col items-center justify-center gap-3">
+        <Loader2 size={30} className="text-[#0071e3] animate-spin" />
+        <p className="text-sm text-[#6e6e73] font-medium tracking-tight">Cargando Respondo…</p>
       </div>
     );
   }
 
   return (
-    <div id="respondo-app" className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[1px] bg-gradient-to-r from-transparent via-blue-500/20 to-transparent pointer-events-none" />
+    <div id="respondo-app" className="min-h-screen bg-[#fbfbfd] text-[#1d1d1f] font-sans selection:bg-blue-100 selection:text-blue-900">
+      {/* Ambient Apple-style gradient glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 left-1/4 w-[36rem] h-[36rem] bg-blue-400/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/3 right-0 w-[30rem] h-[30rem] bg-indigo-300/10 rounded-full blur-[120px]" />
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
         {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 gap-4 shadow-sm">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center glass border border-white/60 rounded-[28px] p-4 sm:p-6 gap-4 shadow-apple sticky top-4 z-30">
           <div className="flex items-center space-x-4">
-            <div className="w-11 h-11 rounded-xl bg-blue-600 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="w-11 h-11 rounded-[14px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] shadow-apple-sm flex items-center justify-center shrink-0 overflow-hidden">
               {config.logoUrl ? (
                 <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
               ) : (
-                <span className="font-black text-xl tracking-tighter text-white">R</span>
+                <span className="font-bold text-xl tracking-tighter text-white">R</span>
               )}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-black text-2xl tracking-tight text-slate-900">
+                <h1 className="font-bold text-[1.7rem] leading-none tracking-[-0.03em] text-[#1d1d1f]">
                   {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
                 </h1>
-                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-[10px] font-mono font-bold">
-                  v3.0 Real
+                <span className="px-2 py-0.5 bg-blue-50 text-[#0071e3] rounded-full text-[10px] font-semibold tracking-tight">
+                  v3.0
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Chatea menos, <strong className="text-blue-600 font-semibold">Vendé más.</strong>
+              <p className="text-[13px] text-[#6e6e73] font-medium mt-1">
+                Chatea menos, <strong className="text-[#0071e3] font-semibold">Vendé más.</strong>
               </p>
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center space-x-6">
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Prospectos</span>
-              <span className="font-mono text-sm font-bold text-slate-800">{totalLeads} activos</span>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            {hotLeads > 0 && (
-              <>
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Calientes 🔥</span>
-                  <span className="font-mono text-sm font-bold text-orange-600">{hotLeads} ahora</span>
-                </div>
-                <div className="h-8 w-px bg-slate-200" />
-              </>
-            )}
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Conversión</span>
-              <span className="font-mono text-sm font-bold text-blue-600">{convRate}% cierre</span>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Ventas</span>
-              <span className="font-mono text-sm font-bold text-emerald-600">${totalSales.toLocaleString("es-AR")} ARS</span>
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Base de datos</span>
-              <span className={`text-xs font-bold px-2.5 py-1 border rounded-lg flex items-center gap-1.5 ${apiError ? "text-red-600 bg-red-50 border-red-200" : "text-slate-700 bg-slate-50 border-slate-200"}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${apiError ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
-                {apiError ? "Local" : "Supabase"}
-              </span>
-            </div>
+          <div className="hidden lg:flex items-center gap-3">
+            {[
+              { label: "Prospectos", value: `${totalLeads}`, color: "text-[#1d1d1f]" },
+              ...(hotLeads > 0 ? [{ label: "Calientes 🔥", value: `${hotLeads}`, color: "text-orange-600" }] : []),
+              { label: "Conversión", value: `${convRate}%`, color: "text-[#0071e3]" },
+              { label: "Ventas ARS", value: `$${totalSales.toLocaleString("es-AR")}`, color: "text-emerald-600" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center px-3.5 py-2 rounded-2xl bg-white/60 border border-white/80 shadow-apple-sm min-w-[78px]">
+                <span className={`block text-base font-semibold tracking-tight ${stat.color}`}>{stat.value}</span>
+                <span className="block text-[9px] text-[#86868b] font-medium uppercase tracking-wide mt-0.5">{stat.label}</span>
+              </div>
+            ))}
+            <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 ${apiError ? "text-red-600 bg-red-50" : "text-emerald-700 bg-emerald-50"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${apiError ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
+              {apiError ? "Local" : "Supabase"}
+            </span>
           </div>
         </header>
 
-        {/* Navigation */}
-        <nav className="flex bg-white p-1 border border-slate-200 rounded-2xl overflow-x-auto gap-1 shadow-sm">
+        {/* Navigation — iOS segmented control */}
+        <nav className="flex glass p-1.5 border border-white/60 rounded-2xl overflow-x-auto gap-1 shadow-apple-sm">
           {([
-            ["playground",   <MessageSquare size={14} />, "Estudio IA (Entrenamiento y Chat)", 0],
-            ["crm",          <Users size={14} />,         "CRM de Ventas & Meta API",          newLeadsBadge],
-            ["analytics",    <BarChart3 size={14} />,     "Métricas & Analíticas",              0],
-            ["integrations", <Layers size={14} />,        "Integraciones & White Label",        0],
-            ["compare",      <HelpCircle size={14} />,    "Comparativa Chatbots",               0],
+            ["playground",   <MessageSquare size={15} />, "Estudio IA",       0],
+            ["crm",          <Users size={15} />,         "CRM de Ventas",    newLeadsBadge],
+            ["analytics",    <BarChart3 size={15} />,     "Métricas",         0],
+            ["integrations", <Layers size={15} />,        "Integraciones",    0],
+            ["compare",      <HelpCircle size={15} />,    "Comparativa",      0],
           ] as [TabType, React.ReactNode, string, number][]).map(([tab, icon, label, badge]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 relative ${
-                activeTab === tab ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+              className={`px-4 py-2.5 text-[13px] font-medium rounded-[13px] transition-all duration-300 shrink-0 flex items-center gap-2 relative ${
+                activeTab === tab
+                  ? "bg-white text-[#1d1d1f] shadow-apple-sm font-semibold"
+                  : "text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-white/40"
               }`}
             >
-              {icon}{label}
+              <span className={activeTab === tab ? "text-[#0071e3]" : ""}>{icon}</span>{label}
               {badge > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                   {badge > 9 ? "9+" : badge}
                 </span>
               )}
@@ -406,19 +397,19 @@ export default function App() {
 
         {/* Activity Stream */}
         {notifications.length > 0 && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-start gap-3 shadow-sm">
-            <Bell size={15} className="text-blue-600 shrink-0 mt-0.5" />
+          <div className="glass border border-white/60 rounded-2xl p-3.5 flex items-start gap-3 shadow-apple-sm">
+            <Bell size={15} className="text-[#0071e3] shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Actividad en Vivo</span>
+              <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider block mb-1">Actividad en Vivo</span>
               <div className="space-y-1 max-h-[80px] overflow-y-auto pr-2">
                 {notifications.map((n, i) => (
-                  <p key={i} className="text-[11px] text-slate-600 truncate leading-relaxed">• {n}</p>
+                  <p key={i} className="text-[12px] text-[#1d1d1f] truncate leading-relaxed">• {n}</p>
                 ))}
               </div>
             </div>
             <button
               onClick={() => setNotifications([])}
-              className="text-[9px] text-slate-500 hover:text-slate-800 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50 shrink-0"
+              className="text-[10px] text-[#6e6e73] hover:text-[#1d1d1f] bg-white/60 px-3 py-1.5 rounded-full hover:bg-white shrink-0 transition-colors"
             >
               Limpiar
             </button>
@@ -427,7 +418,7 @@ export default function App() {
 
         {/* API error banner */}
         {apiError && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-2 text-xs text-amber-800">
+          <div className="bg-amber-50/80 border border-amber-200/60 rounded-2xl p-3.5 flex items-center gap-2 text-[13px] text-amber-800">
             <AlertTriangle size={14} className="shrink-0" />
             <span><strong>API no disponible:</strong> {apiError}. Revisá que SUPABASE_URL y SUPABASE_ANON_KEY estén configurados en el .env.</span>
           </div>
@@ -475,8 +466,11 @@ export default function App() {
             )}
 
             {activeTab === "integrations" && (
-              <motion.div key="integrations" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                <WhiteLabelStudio />
+              <motion.div key="integrations" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="space-y-8">
+                <ChannelConnect />
+                <div className="pt-2 border-t border-slate-150">
+                  <WhiteLabelStudio />
+                </div>
               </motion.div>
             )}
 
