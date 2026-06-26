@@ -56,6 +56,22 @@ const CHANNELS = [
     docUrl: "https://developers.facebook.com/docs/messenger-platform",
     envVars: ["FB_PAGE_TOKEN", "FB_PAGE_ID"],
   },
+  {
+    id: "email" as const,
+    name: "Email",
+    tagline: "Recibí consultas por correo y que el agente responda solo",
+    gradient: "from-slate-500 to-slate-700",
+    soft: "bg-slate-100 text-slate-700",
+    initials: "@",
+    steps: [
+      "Creá una cuenta en Resend (resend.com) y verificá tu dominio de envío.",
+      "Copiá tu API key y cargá RESEND_API_KEY y EMAIL_USER (tu correo) en el .env.",
+      "En tu proveedor configurá el reenvío entrante (Inbound Parse) hacia la URL de abajo.",
+      "Listo: cada correo que llegue será respondido por el agente automáticamente.",
+    ],
+    docUrl: "https://resend.com/docs/dashboard/emails/introduction",
+    envVars: ["RESEND_API_KEY", "EMAIL_USER"],
+  },
 ];
 
 export default function ChannelConnect() {
@@ -73,7 +89,9 @@ export default function ChannelConnect() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const waWebhook = health?.webhookUrl || `${origin}/webhook/whatsapp`;
   const messengerWebhook = health?.messengerWebhookUrl || `${origin}/webhook/messenger`;
-  const webhookFor = (id: string) => (id === "whatsapp" ? waWebhook : messengerWebhook);
+  const emailWebhook = `${origin}/webhook/email`;
+  const webhookFor = (id: string) =>
+    id === "whatsapp" ? waWebhook : id === "email" ? emailWebhook : messengerWebhook;
 
   const copy = (text: string, field: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -89,6 +107,7 @@ export default function ChannelConnect() {
     if (id === "whatsapp") return !!ig.whatsapp;
     if (id === "instagram") return !!ig.instagram;
     if (id === "facebook") return !!ig.facebook;
+    if (id === "email") return !!ig.email;
     return false;
   };
 
@@ -129,7 +148,7 @@ export default function ChannelConnect() {
           Seguí los pasos guiados de cada uno — no necesitás saber programar.
         </p>
         <div className="inline-flex items-center gap-2 mt-4 text-[13px] text-[#6e6e73]">
-          <span className="font-semibold text-[#1d1d1f]">{connectedCount}/3</span> canales conectados
+          <span className="font-semibold text-[#1d1d1f]">{connectedCount}/{CHANNELS.length}</span> canales conectados
           <div className="flex gap-1 ml-1">
             {CHANNELS.map((c) => (
               <span key={c.id} className={`w-1.5 h-1.5 rounded-full ${isConnected(c.id) ? "bg-emerald-500" : "bg-slate-300"}`} />

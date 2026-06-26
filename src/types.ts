@@ -41,7 +41,7 @@ export interface CRMLead {
   name: string;
   phone: string;
   status: "Nuevo" | "Contactado" | "Presupuestado" | "Cerrado";
-  origin: "WhatsApp" | "Instagram" | "Facebook";
+  origin: "WhatsApp" | "Instagram" | "Facebook" | "Email";
   lastInteraction: string;
   createdAt?: string;
   score: number; // 0-100 lead score

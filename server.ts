@@ -59,6 +59,9 @@ const WA_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "respondo-verify-sec
 // Facebook Messenger + Instagram Direct (Meta Graph API, page-based)
 const FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN || "";
 const IG_TOKEN = process.env.IG_TOKEN || "";
+// Email channel (outbound via Resend API — dependency-free)
+const EMAIL_USER = process.env.EMAIL_USER || "";          // the "from" address shown to clients
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";  // outbound transactional email
 
 // ---------------------------------------------------------------------------
 // CLIENTS (lazy)
@@ -111,7 +114,7 @@ const LeadPatchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   phone: z.string().max(50).optional(),
   status: z.enum(["Nuevo","Contactado","Presupuestado","Cerrado"]).optional(),
-  origin: z.enum(["WhatsApp","Instagram","Facebook"]).optional(),
+  origin: z.enum(["WhatsApp","Instagram","Facebook","Email"]).optional(),
   lastInteraction: z.string().max(100).optional(),
   score: z.number().int().min(0).max(100).optional(),
   notes: z.string().max(2000).optional(),
@@ -1028,7 +1031,7 @@ app.post("/api/chat", async (req, res) => {
             const { nombre, telefono, interes, canal } = action.payload;
             const { data: existing } = await db.from("respondo_leads").select("id")
               .or(`phone.eq.${telefono || ""},name.ilike.${nombre}`).limit(1).maybeSingle();
-            const validCanal = ["WhatsApp","Instagram","Facebook"].includes(canal) ? canal : "WhatsApp";
+            const validCanal = ["WhatsApp","Instagram","Facebook","Email"].includes(canal) ? canal : "WhatsApp";
             const userMsgText = conversationSnapshot.filter(m => m.role === "user").map(m => m.text).join(" ");
             const dynamicScore = computeLeadScore(conversationSnapshot.length, userMsgText);
             if (existing) {
@@ -1146,7 +1149,7 @@ app.post("/webhook/whatsapp", async (req, res) => {
   }
 });
 
-type Channel = "WhatsApp" | "Instagram" | "Facebook";
+type Channel = "WhatsApp" | "Instagram" | "Facebook" | "Email";
 
 // Unified inbound-message handler for every Meta channel. Looks the lead up
 // by its per-channel external id (phone for WhatsApp, PSID for Messenger/IG),
@@ -1340,6 +1343,64 @@ app.post("/webhook/messenger", async (req, res) => {
       }).catch((e) => logger.error({ err: e.message, channel }, "Messenger processing error"));
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// EMAIL CHANNEL (inbound webhook + outbound via Resend API)
+// ---------------------------------------------------------------------------
+// Send an email reply. Uses Resend's HTTP API so no SMTP dependency is needed.
+async function sendEmail(to: string, subject: string, text: string) {
+  if (!RESEND_API_KEY || !EMAIL_USER) {
+    logger.warn("RESEND_API_KEY/EMAIL_USER not set — email reply not sent");
+    return;
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: EMAIL_USER,
+      to,
+      subject,
+      text,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    logger.error({ status: res.status, err: err.slice(0, 200) }, "Resend email send failed");
+  } else {
+    logger.info({ to }, "Email reply sent");
+  }
+}
+
+// Inbound email webhook. Compatible with common inbound-parse providers
+// (SendGrid, Mailgun, Resend, Postmark) — we read sender, subject and text
+// from the most common field names.
+app.post("/webhook/email", async (req, res) => {
+  res.status(200).json({ status: "received" }); // ack immediately
+
+  const b = req.body as any;
+  const from: string = b.from || b.sender || b.From || b["from_email"] || "";
+  const subjectIn: string = b.subject || b.Subject || "Tu consulta";
+  const text: string = b.text || b["body-plain"] || b.plain || b.TextBody || b.html || "";
+
+  // Extract a bare email address from a "Name <email>" header
+  const emailMatch = String(from).match(/[\w.+-]+@[\w.-]+\.\w+/);
+  const senderEmail = emailMatch ? emailMatch[0] : String(from).trim();
+  if (!senderEmail || !text) {
+    logger.warn({ from }, "Email webhook missing sender or text");
+    return;
+  }
+
+  logger.info({ senderEmail }, "Email message received");
+  processInboundMessage({
+    channel: "Email",
+    externalId: senderEmail,
+    text: String(text).slice(0, 4000),
+    send: async (reply) => {
+      const subject = subjectIn.toLowerCase().startsWith("re:") ? subjectIn : `Re: ${subjectIn}`;
+      await sendEmail(senderEmail, subject, reply);
+    },
+  }).catch((e) => logger.error({ err: e.message }, "Email processing error"));
 });
 
 // ---------------------------------------------------------------------------

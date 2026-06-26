@@ -224,7 +224,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
       const validStatuses = ["Nuevo","Contactado","Presupuestado","Cerrado"] as const;
       const status = validStatuses.includes(rawStatus as typeof validStatuses[number]) ? rawStatus as CRMLead["status"] : "Nuevo";
       const rawOrigin = row["canal"] || row["origin"] || "WhatsApp";
-      const validOrigins = ["WhatsApp","Instagram","Facebook"] as const;
+      const validOrigins = ["WhatsApp","Instagram","Facebook","Email"] as const;
       const origin = validOrigins.includes(rawOrigin as typeof validOrigins[number]) ? rawOrigin as CRMLead["origin"] : "WhatsApp";
       try {
         await onLeadCreate({
@@ -320,6 +320,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
       case "WhatsApp": return "bg-emerald-50 text-emerald-700 border-emerald-100";
       case "Instagram": return "bg-pink-50 text-pink-700 border-pink-100";
       case "Facebook": return "bg-blue-50 text-blue-700 border-blue-100";
+      case "Email": return "bg-slate-100 text-slate-700 border-slate-200";
     }
   };
 
@@ -649,6 +650,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                     <option value="WhatsApp">WhatsApp</option>
                     <option value="Instagram">Instagram</option>
                     <option value="Facebook">Facebook</option>
+                    <option value="Email">Email</option>
                   </select>
                   <select
                     value={sortBy}
@@ -754,6 +756,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                             <option value="WhatsApp">WhatsApp</option>
                             <option value="Instagram">Instagram</option>
                             <option value="Facebook">Facebook</option>
+                            <option value="Email">Email</option>
                           </select>
                           <button
                             onClick={handleAddLead}

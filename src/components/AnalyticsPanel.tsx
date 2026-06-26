@@ -614,7 +614,7 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             {Object.keys(channelCounts).length > 0 && (
               <div className="space-y-1.5 pt-1 border-t border-slate-100">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Leads por Canal</span>
-                {(["WhatsApp","Instagram","Facebook"] as const).map((ch) => {
+                {(["WhatsApp","Instagram","Facebook","Email"] as const).map((ch) => {
                   const count: number = (channelCounts[ch] as number | undefined) ?? 0;
                   const pct: number = Math.round((count / totalChannelLeads) * 100);
                   return count > 0 ? (
@@ -626,7 +626,7 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
                       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           style={{ width: `${pct}%` }}
-                          className={`h-full rounded-full transition-all ${ch === "WhatsApp" ? "bg-emerald-500" : ch === "Instagram" ? "bg-pink-500" : "bg-blue-500"}`}
+                          className={`h-full rounded-full transition-all ${ch === "WhatsApp" ? "bg-emerald-500" : ch === "Instagram" ? "bg-pink-500" : ch === "Email" ? "bg-slate-500" : "bg-blue-500"}`}
                         />
                       </div>
                     </div>
