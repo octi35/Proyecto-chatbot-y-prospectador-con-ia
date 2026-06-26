@@ -165,11 +165,13 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
       const base64 = (reader.result as string).split(",")[1];
       const objectUrl = URL.createObjectURL(file);
       setShowImagePanel(false);
-      const msg = addMessage("user", "Te mando una imagen para que me asesores.", { isImage: true, imageUrl: objectUrl });
+      const caption = inputText.trim();
+      setInputText("");
+      const msg = addMessage("user", caption || "📷 Foto enviada", { isImage: true, imageUrl: objectUrl });
       setTimeout(() => updateStatus(msg.id, "sent"), 300);
       setTimeout(() => updateStatus(msg.id, "read"), 800);
       await callChatAPI(
-        "Te mando esta imagen. Decime si tenés algo parecido, el precio o cómo me podés ayudar.",
+        caption, // optional caption; empty lets the server's image instruction guide analysis
         [...messages],
         { data: base64, mimeType: file.type }
       );
@@ -178,30 +180,49 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
     e.target.value = "";
   };
 
+  // Pick the best recording format the browser supports AND Gemini accepts.
+  // Gemini understands ogg/mp3/wav/aac/flac (not webm), so we prefer ogg.
+  const pickAudioMime = (): { recorderMime: string; geminiMime: string } => {
+    const candidates: { recorderMime: string; geminiMime: string }[] = [
+      { recorderMime: "audio/ogg;codecs=opus", geminiMime: "audio/ogg" },
+      { recorderMime: "audio/ogg", geminiMime: "audio/ogg" },
+      { recorderMime: "audio/mp4", geminiMime: "audio/mp4" },
+      { recorderMime: "audio/webm;codecs=opus", geminiMime: "audio/ogg" }, // webm/opus ≈ ogg/opus payload
+      { recorderMime: "audio/webm", geminiMime: "audio/ogg" },
+    ];
+    for (const c of candidates) {
+      if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c.recorderMime)) return c;
+    }
+    return { recorderMime: "", geminiMime: "audio/ogg" }; // let the browser choose its default
+  };
+
   // Real microphone recording with MediaRecorder
   const startRecording = async () => {
     setMicError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const { recorderMime, geminiMime } = pickAudioMime();
+      const recorder = recorderMime
+        ? new MediaRecorder(stream, { mimeType: recorderMime })
+        : new MediaRecorder(stream);
       audioChunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || recorderMime || "audio/ogg" });
         const durationStr = `${Math.floor(recordingSeconds / 60)}:${String(recordingSeconds % 60).padStart(2, "0")}`;
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64 = (reader.result as string).split(",")[1];
           const url = URL.createObjectURL(blob);
-          const msg = addMessage("user", "[Nota de voz]", { isAudio: true, audioDuration: durationStr });
+          const msg = addMessage("user", "🎤 Nota de voz", { isAudio: true, audioDuration: durationStr });
           audioMapRef.current.set(msg.id, new Audio(url));
           setTimeout(() => updateStatus(msg.id, "sent"), 300);
           setTimeout(() => updateStatus(msg.id, "read"), 800);
           await callChatAPI(
-            "[Nota de voz del cliente. Procesa el audio adjunto y responde naturalmente.]",
+            "", // let the server's audio-specific instruction guide Gemini
             [...messages],
-            { data: base64, mimeType: "audio/webm" }
+            { data: base64, mimeType: geminiMime }
           );
         };
         reader.readAsDataURL(blob);
