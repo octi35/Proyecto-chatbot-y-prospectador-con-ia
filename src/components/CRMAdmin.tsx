@@ -452,15 +452,18 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm flex flex-col h-full min-h-[600px]">
-      
+    <div className="bg-white border border-slate-150 rounded-[28px] overflow-hidden shadow-apple flex flex-col h-full min-h-[600px]">
+
       {/* CRM Dashboard Tabs */}
-      <div className="bg-slate-50 p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h3 className="font-sans font-semibold text-lg text-slate-900 flex items-center">
-            <Users size={18} className="text-blue-600 mr-2" /> Panel de Control CRM Nativo
-          </h3>
-          <p className="text-xs text-slate-500">Gestiona prospectos, asume chats de la IA y lanza difusiones masivas</p>
+      <div className="glass p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center text-white shadow-apple-sm shrink-0">
+            <Users size={18} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-[18px] tracking-tight text-[#1d1d1f]">Panel de Control CRM</h3>
+            <p className="text-[12.5px] text-[#6e6e73]">Gestioná prospectos, tomá chats de la IA y lanzá difusiones</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -496,23 +499,23 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
           >
             <FileSpreadsheet size={13} /> Exportar CSV
           </button>
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <div className="flex bg-slate-100/80 p-1 rounded-[13px]">
             <button
               onClick={() => setActiveTab("pipeline")}
-              className={`px-4 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
+              className={`px-4 py-1.5 text-[12px] rounded-[10px] font-medium transition-all duration-300 cursor-pointer ${
                 activeTab === "pipeline"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "bg-white text-[#1d1d1f] shadow-apple-sm font-semibold"
+                  : "text-[#6e6e73] hover:text-[#1d1d1f]"
               }`}
             >
               Embudo de Ventas
             </button>
             <button
               onClick={() => setActiveTab("broadcast")}
-              className={`px-4 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
+              className={`px-4 py-1.5 text-[12px] rounded-[10px] font-medium transition-all duration-300 cursor-pointer ${
                 activeTab === "broadcast"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "bg-white text-[#1d1d1f] shadow-apple-sm font-semibold"
+                  : "text-[#6e6e73] hover:text-[#1d1d1f]"
               }`}
             >
               Envíos Masivos (Meta API)
@@ -774,7 +777,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   {COLUMNS.map((col) => {
                     const columnLeads = filteredLeads.filter((l) => l.status === col);
                     return (
-                      <div key={col} className="bg-slate-50 rounded-2xl p-3 border border-slate-200 flex flex-col h-[320px]">
+                      <div key={col} className="bg-slate-50/70 rounded-[18px] p-3 border border-slate-150 flex flex-col h-[320px]">
                         <div className="flex justify-between items-center mb-3">
                           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                             {col}
@@ -790,10 +793,10 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                             <div
                               key={lead.id}
                               onClick={() => { setSelectedLead(lead); setEditingNotes(null); }}
-                              className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                              className={`p-2.5 rounded-[14px] border text-left cursor-pointer transition-all duration-300 ${
                                 selectedLead?.id === lead.id
-                                  ? "bg-blue-50 border-blue-500 shadow-sm"
-                                  : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                                  ? "bg-[#0071e3]/5 border-[#0071e3]/40 shadow-apple-sm"
+                                  : "bg-white border-slate-150 hover:border-slate-250 hover:shadow-apple-sm"
                               }`}
                             >
                               <div className="flex items-center space-x-2 mb-1.5">
