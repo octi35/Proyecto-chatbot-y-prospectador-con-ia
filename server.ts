@@ -418,6 +418,8 @@ async function runChat(
   attachment?: { data: string; mimeType: string }
 ): Promise<{ text: string; actions: AgentAction[]; engine?: string }> {
   const personaName = config.botPersonaName?.trim() || "Respondo";
+  // Strip visual-editor photo markers so the model doesn't waste tokens on URLs
+  const catalogText = String(config.catalog || "").replace(/\s*\{foto:[^}]+\}/gi, "");
 
   // Working hours check
   let offHoursNote = "";
@@ -460,7 +462,7 @@ Sos una persona real del equipo: cálida, perspicaz y genuinamente útil. Pensá
 - AUDIOS: escuchá la nota de voz, entendé el pedido y respondé como si te lo hubieran hablado. Si no se entiende algo puntual, pedí que lo aclare con amabilidad.
 
 # CATÁLOGO (tu fuente de verdad para precios y stock)
-${config.catalog || "(sin catálogo cargado: si preguntan precios/stock puntuales, pedí el dato o ofrecé tomar la consulta)"}
+${catalogText || "(sin catálogo cargado: si preguntan precios/stock puntuales, pedí el dato o ofrecé tomar la consulta)"}
 
 # TONO: "${config.tone}"
 - Argentino/Cercano: vos, modismos argentinos, cálido y directo.

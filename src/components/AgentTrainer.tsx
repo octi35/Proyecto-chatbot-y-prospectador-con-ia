@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { AgentConfig } from "../types";
+import CatalogEditor from "./CatalogEditor";
 
 // Predefined business presets for instant loading
 const BUSINESS_PRESETS = [
@@ -328,22 +329,11 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
           />
         </div>
 
-        {/* Catalog and Knowledge Database */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <label className="text-xs font-medium text-slate-500 flex items-center">
-              <ShoppingBag size={13} className="mr-1 text-blue-600" /> Catálogo de Productos y Reglas de Negocio
-            </label>
-            <span className="text-[10px] text-slate-400">El núcleo de respuestas del bot</span>
-          </div>
-          <textarea
-            value={config.catalog}
-            onChange={(e) => handleFieldChange("catalog", e.target.value)}
-            rows={7}
-            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-y leading-relaxed"
-            placeholder="Define aquí tus productos, precios, stock, políticas de envío, métodos de pago aceptados y cualquier otra regla relevante."
-          />
-        </div>
+        {/* Catalog — visual product editor */}
+        <CatalogEditor
+          value={config.catalog || ""}
+          onChange={(catalog) => handleFieldChange("catalog", catalog)}
+        />
 
         {/* Auto Follow-up Settings */}
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">

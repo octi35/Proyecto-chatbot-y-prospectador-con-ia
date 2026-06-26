@@ -44,6 +44,7 @@ interface Product {
 // ---------------------------------------------------------------------------
 export function parseCatalog(catalog: string): Product[] {
   const lines = (catalog || "")
+    .replace(/\s*\{foto:[^}]+\}/gi, "") // drop visual-editor photo markers
     .split("\n")
     .map((l) => l.trim().replace(/^[-*•]\s*/, ""))
     .filter(Boolean);
