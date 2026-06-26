@@ -30,6 +30,7 @@ import ComparisonTable from "./components/ComparisonTable";
 import WhiteLabelStudio from "./components/WhiteLabelStudio";
 import ChannelConnect from "./components/ChannelConnect";
 import AutomationRules from "./components/AutomationRules";
+import WaTemplateManager from "./components/WaTemplateManager";
 
 type TabType = "playground" | "crm" | "analytics" | "integrations" | "compare";
 
@@ -470,6 +471,7 @@ export default function App() {
               <motion.div key="integrations" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="space-y-8">
                 <ChannelConnect />
                 <AutomationRules />
+                <WaTemplateManager />
                 <div className="pt-2 border-t border-slate-150">
                   <WhiteLabelStudio />
                 </div>

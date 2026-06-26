@@ -889,6 +889,73 @@ app.delete("/api/automations/:id", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// WHATSAPP TEMPLATES (Meta-approved message templates)
+// ---------------------------------------------------------------------------
+const TemplateSchema = z.object({
+  name: z.string().min(1).max(200),
+  language: z.string().max(10).optional(),
+  category: z.enum(["MARKETING", "UTILITY", "AUTHENTICATION"]).optional(),
+  body: z.string().min(1).max(2000),
+  status: z.enum(["PENDIENTE", "APROBADA", "RECHAZADA"]).optional(),
+});
+
+function mapTemplateFromDB(r: any) {
+  return {
+    id: r.id, name: r.name, language: r.language, category: r.category,
+    body: r.body, status: r.status, createdAt: r.created_at,
+  };
+}
+
+app.get("/api/templates", async (_req, res) => {
+  try {
+    const db = getDB();
+    const { data, error } = await db.from("respondo_wa_templates").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    res.json((data || []).map(mapTemplateFromDB));
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/templates", async (req, res) => {
+  try {
+    const body = validateBody(TemplateSchema, req.body);
+    const db = getDB();
+    const { data, error } = await db.from("respondo_wa_templates").insert({
+      name: body.name, language: body.language || "es_AR",
+      category: body.category || "MARKETING", body: body.body,
+      status: body.status || "PENDIENTE",
+    }).select().single();
+    if (error) throw error;
+    res.status(201).json(mapTemplateFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.put("/api/templates/:id", async (req, res) => {
+  try {
+    const body = validateBody(TemplateSchema.partial(), req.body);
+    const db = getDB();
+    const patch: any = {};
+    if (body.name !== undefined) patch.name = body.name;
+    if (body.language !== undefined) patch.language = body.language;
+    if (body.category !== undefined) patch.category = body.category;
+    if (body.body !== undefined) patch.body = body.body;
+    if (body.status !== undefined) patch.status = body.status;
+    const { data, error } = await db.from("respondo_wa_templates").update(patch).eq("id", req.params.id).select().single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Plantilla no encontrada" });
+    res.json(mapTemplateFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.delete("/api/templates/:id", async (req, res) => {
+  try {
+    const db = getDB();
+    const { error } = await db.from("respondo_wa_templates").delete().eq("id", req.params.id);
+    if (error) throw error;
+    res.status(204).end();
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
 // AUTO FOLLOW-UPS
 // ---------------------------------------------------------------------------
 app.post("/api/followups/run", async (_req, res) => {

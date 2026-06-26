@@ -67,6 +67,17 @@ export interface Campaign {
   mediaType?: string;    // "image" | "video" | "document"
 }
 
+// WhatsApp message template (Meta-approved for outbound campaigns).
+export interface WaTemplate {
+  id: string;
+  name: string;
+  language: string;   // e.g. es_AR, es_MX, en_US
+  category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+  body: string;       // may include {{1}}, {{2}} variables
+  status: "PENDIENTE" | "APROBADA" | "RECHAZADA";
+  createdAt?: string;
+}
+
 // Lightweight automation rule: when a TRIGGER fires, run an ACTION.
 export interface AutomationRule {
   id: string;

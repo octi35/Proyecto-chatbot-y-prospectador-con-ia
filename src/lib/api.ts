@@ -1,4 +1,4 @@
-import type { CRMLead, Campaign, AgentConfig, AutomationRule } from "../types";
+import type { CRMLead, Campaign, AgentConfig, AutomationRule, WaTemplate } from "../types";
 
 export interface HealthData {
   status: string;
@@ -79,3 +79,12 @@ export const updateAutomation = (id: string, patch: Partial<AutomationRule>) =>
   request<AutomationRule>(`/api/automations/${id}`, { method: "PUT", body: JSON.stringify(patch) });
 export const deleteAutomation = (id: string) =>
   request<void>(`/api/automations/${id}`, { method: "DELETE" });
+
+// WhatsApp templates
+export const getTemplates = () => request<WaTemplate[]>("/api/templates");
+export const createTemplate = (tpl: Omit<WaTemplate, "id" | "createdAt">) =>
+  request<WaTemplate>("/api/templates", { method: "POST", body: JSON.stringify(tpl) });
+export const updateTemplate = (id: string, patch: Partial<WaTemplate>) =>
+  request<WaTemplate>(`/api/templates/${id}`, { method: "PUT", body: JSON.stringify(patch) });
+export const deleteTemplate = (id: string) =>
+  request<void>(`/api/templates/${id}`, { method: "DELETE" });
