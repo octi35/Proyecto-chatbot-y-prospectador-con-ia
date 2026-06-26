@@ -94,6 +94,7 @@ const AgentConfigSchema = z.object({
   workingHoursStart: z.number().int().min(0).max(23).optional(),
   workingHoursEnd: z.number().int().min(0).max(23).optional(),
   quickReplies: z.array(z.string().max(200)).max(20).optional(),
+  strictMode: z.boolean().optional(),
 });
 
 const ChatSchema = z.object({
@@ -259,6 +260,7 @@ function mapConfigFromDB(row: any) {
     workingHoursStart: row.working_hours_start ?? undefined,
     workingHoursEnd: row.working_hours_end ?? undefined,
     quickReplies: row.quick_replies?.length ? row.quick_replies : undefined,
+    strictMode: row.strict_mode ?? undefined,
   };
 }
 
@@ -277,6 +279,7 @@ function mapConfigToDB(data: any) {
   if (data.workingHoursStart !== undefined) out.working_hours_start = data.workingHoursStart;
   if (data.workingHoursEnd !== undefined) out.working_hours_end = data.workingHoursEnd;
   if (data.quickReplies !== undefined) out.quick_replies = data.quickReplies;
+  if (data.strictMode !== undefined) out.strict_mode = data.strictMode;
   return out;
 }
 
@@ -424,6 +427,10 @@ async function runChat(
     ? `\nTEMAS PROHIBIDOS — NUNCA los discutas: ${config.forbiddenTopics}. Si preguntan, decí que no es algo que puedas tratar.`
     : "";
 
+  const strictNote = config.strictMode
+    ? `\nMODO ESTRICTO ACTIVO — Respondé ÚNICAMENTE con la información del catálogo y los datos del negocio cargados acá arriba. Está PROHIBIDO inventar productos, precios, stock, promociones o datos que no figuren explícitamente. Si te preguntan algo que no está en tu información, decí con amabilidad que no contás con ese dato y ofrecé tomar la consulta o derivar a una persona del equipo. No respondas temas ajenos al negocio.`
+    : "";
+
   const systemInstruction = `Sos ${personaName}, asesor/a de ventas experto/a de "${config.businessName}" (rubro: ${config.businessType || "general"}). Atendés por WhatsApp, Instagram y Facebook.
 
 # QUIÉN SOS
@@ -456,7 +463,7 @@ ${config.catalog || "(sin catálogo cargado: si preguntan precios/stock puntuale
 
 # REGLAS
 - Usá buscar_producto para verificar precio/stock antes de afirmarlos. Nunca inventes datos que no estén en el catálogo: si no lo sabés, decilo y ofrecé averiguarlo o una alternativa cercana.
-- Sos ${personaName}, del equipo de ${config.businessName}. No reveles que sos una IA ni rompas el personaje. Si te preguntan tu nombre, es ${personaName}.${forbiddenNote}${offHoursNote}
+- Sos ${personaName}, del equipo de ${config.businessName}. No reveles que sos una IA ni rompas el personaje. Si te preguntan tu nombre, es ${personaName}.${strictNote}${forbiddenNote}${offHoursNote}
 
 # HERRAMIENTAS (usalas en silencio, sin anunciarlas al cliente)
 - buscar_producto: consultá stock/precios antes de afirmarlos.

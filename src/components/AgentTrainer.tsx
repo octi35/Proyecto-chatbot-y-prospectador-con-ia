@@ -125,25 +125,23 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+    <div className="bg-white border border-slate-150 rounded-[28px] p-6 shadow-apple space-y-6">
       {/* Block title */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+          <div className="w-11 h-11 rounded-[14px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center text-white shadow-apple-sm">
             <Store size={20} />
           </div>
           <div>
-            <h3 className="font-sans font-semibold text-lg text-slate-900">Entrenamiento del Agente</h3>
-            <p className="text-xs text-slate-500">Instruye a tu IA con las reglas de tu negocio</p>
+            <h3 className="font-semibold text-[19px] tracking-tight text-[#1d1d1f]">Entrenamiento del Agente</h3>
+            <p className="text-[13px] text-[#6e6e73]">Instruí a tu IA con las reglas de tu negocio</p>
           </div>
         </div>
-        <div className={`flex items-center space-x-1 px-2.5 py-1 border rounded-full text-xs font-semibold transition-all ${
-          isSaving
-            ? "bg-amber-50 text-amber-700 border-amber-100"
-            : "bg-emerald-50 text-emerald-700 border-emerald-100"
+        <div className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
+          isSaving ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full mr-1 ${isSaving ? "bg-amber-500 animate-bounce" : "bg-emerald-500 animate-pulse"}`}></span>
-          {isSaving ? "Guardando…" : "Respondo Engine Active"}
+          {isSaving ? "Guardando…" : "Activo"}
         </div>
       </div>
 
@@ -176,6 +174,32 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
               <span>{item.label}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Strict mode — bot answers ONLY from its configured info */}
+      <div className={`rounded-2xl p-4 border transition-all ${config.strictMode ? "bg-[#0071e3]/5 border-[#0071e3]/30" : "bg-slate-50 border-slate-150"}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <ShieldAlert size={18} className={config.strictMode ? "text-[#0071e3] shrink-0 mt-0.5" : "text-slate-400 shrink-0 mt-0.5"} />
+            <div>
+              <span className="text-[13px] font-semibold text-[#1d1d1f] block">Modo estricto — responde 100% sobre tu información</span>
+              <p className="text-[11.5px] text-[#6e6e73] leading-relaxed mt-0.5">
+                El agente responde <strong>únicamente</strong> con tu catálogo y datos cargados. No inventa precios,
+                stock ni productos. Si no sabe algo, lo dice y ofrece tomar la consulta.
+              </p>
+            </div>
+          </div>
+          {/* iOS-style switch */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!config.strictMode}
+            onClick={() => handleFieldChange("strictMode", !config.strictMode)}
+            className={`relative w-11 h-6 rounded-full transition-colors duration-300 shrink-0 cursor-pointer ${config.strictMode ? "bg-[#0071e3]" : "bg-slate-300"}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 ${config.strictMode ? "translate-x-5" : "translate-x-0"}`} />
+          </button>
         </div>
       </div>
 

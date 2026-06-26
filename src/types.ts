@@ -12,6 +12,7 @@ export interface AgentConfig {
   workingHoursStart?: number;  // 0-23 hour when bot starts (undefined = 24/7)
   workingHoursEnd?: number;    // 0-23 hour when bot ends (undefined = 24/7)
   quickReplies?: string[];     // Preset quick-reply chips shown to human agents in CRM
+  strictMode?: boolean;        // When true, the bot answers ONLY from the configured catalog/info
 }
 
 // Structured action the agent performed via tool-use. The backend returns these
