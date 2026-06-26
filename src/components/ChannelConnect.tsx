@@ -70,7 +70,10 @@ export default function ChannelConnect() {
     getHealth().then(setHealth).catch(() => {});
   }, []);
 
-  const webhookUrl = health?.webhookUrl || `${typeof window !== "undefined" ? window.location.origin : ""}/webhook/whatsapp`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const waWebhook = health?.webhookUrl || `${origin}/webhook/whatsapp`;
+  const messengerWebhook = health?.messengerWebhookUrl || `${origin}/webhook/messenger`;
+  const webhookFor = (id: string) => (id === "whatsapp" ? waWebhook : messengerWebhook);
 
   const copy = (text: string, field: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -79,8 +82,15 @@ export default function ChannelConnect() {
     });
   };
 
-  // WhatsApp is the only channel with a server-side status flag today
-  const isConnected = (id: string) => (id === "whatsapp" ? !!health?.integrations.whatsapp : false);
+  // Real per-channel status from the server health check
+  const isConnected = (id: string) => {
+    const ig = health?.integrations;
+    if (!ig) return false;
+    if (id === "whatsapp") return !!ig.whatsapp;
+    if (id === "instagram") return !!ig.instagram;
+    if (id === "facebook") return !!ig.facebook;
+    return false;
+  };
 
   const connectedCount = CHANNELS.filter((c) => isConnected(c.id)).length;
 
@@ -192,10 +202,10 @@ export default function ChannelConnect() {
                         <label className="text-[11px] font-semibold text-[#86868b] uppercase tracking-wide">URL del Webhook (pegar en Meta)</label>
                         <div className="flex gap-2">
                           <code className="flex-1 bg-[#1d1d1f] text-emerald-300 text-[11px] font-mono px-3 py-2.5 rounded-xl overflow-x-auto whitespace-nowrap">
-                            {webhookUrl}
+                            {webhookFor(ch.id)}
                           </code>
                           <button
-                            onClick={() => copy(webhookUrl, `${ch.id}-url`)}
+                            onClick={() => copy(webhookFor(ch.id), `${ch.id}-url`)}
                             className="px-3.5 py-2.5 bg-[#1d1d1f] hover:bg-[#000] text-white text-[12px] font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
                           >
                             {copiedField === `${ch.id}-url` ? <Check size={13} /> : <Copy size={13} />}

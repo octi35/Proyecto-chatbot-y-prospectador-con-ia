@@ -56,6 +56,9 @@ const WA_TOKEN = process.env.WHATSAPP_TOKEN || "";
 const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
 const WA_APP_SECRET = process.env.WHATSAPP_APP_SECRET || "";
 const WA_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "respondo-verify-secret";
+// Facebook Messenger + Instagram Direct (Meta Graph API, page-based)
+const FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN || "";
+const IG_TOKEN = process.env.IG_TOKEN || "";
 
 // ---------------------------------------------------------------------------
 // CLIENTS (lazy)
@@ -650,8 +653,12 @@ app.get("/api/health", (_req, res) => {
       openrouter: !!process.env.OPENROUTER_API_KEY,
       supabase: !!(SUPABASE_URL && SUPABASE_ANON_KEY),
       whatsapp: !!(WA_TOKEN && WA_PHONE_ID),
+      facebook: !!FB_PAGE_TOKEN,
+      instagram: !!(IG_TOKEN || FB_PAGE_TOKEN),
+      email: !!process.env.EMAIL_USER,
     },
     webhookUrl: process.env.APP_URL ? `${process.env.APP_URL}/webhook/whatsapp` : null,
+    messengerWebhookUrl: process.env.APP_URL ? `${process.env.APP_URL}/webhook/messenger` : null,
   });
 });
 
@@ -1139,64 +1146,101 @@ app.post("/webhook/whatsapp", async (req, res) => {
   }
 });
 
-async function processWhatsAppMessage(phone: string, text: string) {
+type Channel = "WhatsApp" | "Instagram" | "Facebook";
+
+// Unified inbound-message handler for every Meta channel. Looks the lead up
+// by its per-channel external id (phone for WhatsApp, PSID for Messenger/IG),
+// runs the AI, persists the conversation, and sends the reply back.
+async function processInboundMessage(opts: {
+  channel: Channel;
+  externalId: string;
+  text: string;
+  send: (text: string) => Promise<void>;
+}) {
+  const { channel, externalId, text, send } = opts;
   const db = getDB();
 
-  // Get config
+  // Config
   const { data: configRow } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
   const config = configRow ? mapConfigFromDB(configRow) : { businessName: "Respondo", businessType: "", catalog: "", tone: "Argentino/Cercano" };
 
-  // Get or create lead and conversation history
-  const { data: existingLead } = await db.from("respondo_leads").select("*").eq("phone", phone).limit(1).maybeSingle();
-  const history: any[] = (existingLead?.conversation_history || []).slice(-20); // keep last 20 msgs
+  // Find the lead by external id within the same channel. WhatsApp also matches
+  // by phone for backwards compatibility with leads created before external_id.
+  let existingLead: any = null;
+  {
+    const { data } = await db.from("respondo_leads").select("*")
+      .eq("external_id", externalId).eq("origin", channel).limit(1).maybeSingle();
+    existingLead = data;
+  }
+  if (!existingLead && channel === "WhatsApp") {
+    const { data } = await db.from("respondo_leads").select("*").eq("phone", externalId).limit(1).maybeSingle();
+    existingLead = data;
+  }
+
+  const history: any[] = (existingLead?.conversation_history || []).slice(-20);
 
   // Run AI
   const { text: aiReply, actions } = await runChat(text, history, config);
 
-  // Update conversation history
+  const now = new Date().toISOString();
   const newHistory = [
     ...history,
-    { role: "user", text, timestamp: new Date().toISOString() },
-    { role: "model", text: aiReply, timestamp: new Date().toISOString() },
+    { role: "user", text, timestamp: now },
+    { role: "model", text: aiReply, timestamp: now },
   ];
+  const userMsgs = newHistory.filter((m: any) => m.role === "user").map((m: any) => m.text).join(" ");
+  const score = computeLeadScore(newHistory.length, userMsgs);
 
-  const waUserText = newHistory.filter((m: any) => m.role === "user").map((m: any) => m.text).join(" ");
-  const waScore = computeLeadScore(newHistory.length, waUserText);
   if (existingLead) {
     await db.from("respondo_leads").update({
       conversation_history: newHistory,
-      last_interaction: new Date().toISOString(),
+      last_interaction: now,
       status: existingLead.status === "Nuevo" ? "Contactado" : existingLead.status,
-      score: waScore,
+      score,
+      external_id: existingLead.external_id || externalId,
     }).eq("id", existingLead.id);
   } else {
     await db.from("respondo_leads").insert({
-      name: "WhatsApp " + phone,
-      phone,
+      name: `${channel} ${externalId.slice(-6)}`,
+      phone: channel === "WhatsApp" ? externalId : "",
+      external_id: externalId,
       status: "Contactado",
-      origin: "WhatsApp",
+      origin: channel,
       conversation_history: newHistory,
-      score: waScore,
+      score,
       notes: `Primera consulta: "${text.substring(0, 100)}"`,
-      avatar: makeAvatarUrl(phone),
+      avatar: makeAvatarUrl(externalId),
     });
   }
 
-  // Log tool-use actions to events table
+  // Log tool-use actions
   for (const action of actions) {
     if (action.type === "upsert_lead" || action.type === "update_lead_status") {
       db.from("respondo_chat_events").insert({
-        event_type: action.type, channel: "WhatsApp", payload: action.payload,
+        event_type: action.type, channel, payload: action.payload,
       }).then(() => {});
     }
   }
 
-  // Send reply via Meta Graph API
-  if (WA_TOKEN && WA_PHONE_ID) {
-    await sendWhatsAppMessage(phone, aiReply);
-  } else {
-    logger.warn("WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set — reply not sent");
+  // Reply via the channel-specific sender
+  try {
+    await send(aiReply);
+  } catch (e) {
+    logger.error({ err: (e as Error).message, channel }, "channel reply failed");
   }
+}
+
+// Thin wrapper kept for the WhatsApp webhook
+async function processWhatsAppMessage(phone: string, text: string) {
+  await processInboundMessage({
+    channel: "WhatsApp",
+    externalId: phone,
+    text,
+    send: async (reply) => {
+      if (WA_TOKEN && WA_PHONE_ID) await sendWhatsAppMessage(phone, reply);
+      else logger.warn("WHATSAPP_TOKEN/PHONE_ID not set — reply not sent");
+    },
+  });
 }
 
 async function sendWhatsAppMessage(to: string, text: string) {
@@ -1221,6 +1265,82 @@ async function sendWhatsAppMessage(to: string, text: string) {
     logger.info({ to }, "WhatsApp reply sent");
   }
 }
+
+// Send a message via the Messenger Send API (used for both Facebook Messenger
+// and Instagram Direct — they share the same endpoint and token model).
+async function sendMessengerMessage(recipientId: string, text: string, token: string) {
+  const url = `https://graph.facebook.com/v21.0/me/messages?access_token=${token}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: { text },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    logger.error({ status: res.status, err }, "Messenger send failed");
+  } else {
+    logger.info({ recipientId }, "Messenger reply sent");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// FACEBOOK MESSENGER + INSTAGRAM DIRECT WEBHOOK (shared page webhook)
+// ---------------------------------------------------------------------------
+// GET: verification challenge (reuses the same verify token as WhatsApp)
+app.get("/webhook/messenger", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode === "subscribe" && token === WA_VERIFY_TOKEN) {
+    logger.info("Messenger/Instagram webhook verified");
+    return res.status(200).send(challenge);
+  }
+  res.status(403).json({ error: "Verification failed" });
+});
+
+// POST: incoming messages. Meta sends object="page" for Messenger and
+// object="instagram" for Instagram Direct, both with entry[].messaging[].
+app.post("/webhook/messenger", async (req, res) => {
+  if (WA_APP_SECRET) {
+    const sig = String(req.headers["x-hub-signature-256"] || "");
+    const expected = "sha256=" + crypto.createHmac("sha256", WA_APP_SECRET).update(JSON.stringify(req.body)).digest("hex");
+    if (sig !== expected) {
+      logger.warn("Invalid Messenger signature");
+      return res.status(403).json({ error: "Invalid signature" });
+    }
+  }
+
+  res.status(200).json({ status: "received" }); // ack immediately
+
+  const body = req.body as any;
+  const channel: Channel = body?.object === "instagram" ? "Instagram" : "Facebook";
+  const token = channel === "Instagram" ? (IG_TOKEN || FB_PAGE_TOKEN) : FB_PAGE_TOKEN;
+
+  for (const entry of (body?.entry || [])) {
+    for (const event of (entry.messaging || [])) {
+      // Ignore echoes (our own outgoing messages) and non-message events
+      if (event?.message?.is_echo) continue;
+      const senderId = event?.sender?.id;
+      const text = event?.message?.text;
+      if (!senderId || !text) continue;
+
+      logger.info({ senderId, channel }, "Messenger/IG message received");
+      processInboundMessage({
+        channel,
+        externalId: String(senderId),
+        text,
+        send: async (reply) => {
+          if (token) await sendMessengerMessage(String(senderId), reply, token);
+          else logger.warn(`${channel} token not set — reply not sent`);
+        },
+      }).catch((e) => logger.error({ err: e.message, channel }, "Messenger processing error"));
+    }
+  }
+});
 
 // ---------------------------------------------------------------------------
 // WEBHOOK TEST

@@ -4,8 +4,12 @@ export interface HealthData {
   status: string;
   model: string;
   botEngine?: "gemini" | "openrouter" | "local";
-  integrations: { gemini: boolean; openrouter?: boolean; supabase: boolean; whatsapp: boolean };
+  integrations: {
+    gemini: boolean; openrouter?: boolean; supabase: boolean;
+    whatsapp: boolean; facebook?: boolean; instagram?: boolean; email?: boolean;
+  };
   webhookUrl: string | null;
+  messengerWebhookUrl?: string | null;
 }
 
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
