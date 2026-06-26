@@ -408,15 +408,6 @@ async function runChat(
   config: any,
   attachment?: { data: string; mimeType: string }
 ): Promise<{ text: string; actions: AgentAction[]; engine?: string }> {
-  // When no LLM is configured, the built-in rule-based bot keeps the agent
-  // alive: it parses the catalog, detects intent and replies in the right tone.
-  if (!process.env.GEMINI_API_KEY) {
-    const reply = localBotReply(message, history || [], config);
-    return { text: reply.text, actions: reply.actions as AgentAction[], engine: "local" };
-  }
-
-  const ai = getAI();
-
   const personaName = config.botPersonaName?.trim() || "Respondo";
 
   // Working hours check
@@ -476,6 +467,45 @@ ${config.catalog || "(sin catálogo cargado: si preguntan precios/stock puntuale
 
 Tu misión: que cada persona se sienta bien atendida y termine comprando con ganas. Lema: "Chatea menos, Vendé más."`;
 
+  const isAudio = !!attachment?.mimeType?.startsWith("audio");
+  const defaultMediaPrompt = isAudio
+    ? "El cliente te envió esta nota de voz. Escuchala con atención, entendé qué necesita y respondé natural, como si te lo hubiera hablado."
+    : "El cliente te envió esta imagen. Analizala en detalle: identificá qué es y relacionala con el catálogo (producto parecido, precio, disponibilidad). Si es un comprobante de pago, confirmá el siguiente paso.";
+  const userText = attachment ? (message?.trim() ? message : defaultMediaPrompt) : (message || "Hola!");
+
+  // -------------------------------------------------------------------------
+  // PROVIDER CHAIN: Gemini (primary) → OpenRouter (fallback) → local bot
+  // -------------------------------------------------------------------------
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await runGemini(systemInstruction, history, userText, attachment, config);
+    } catch (err) {
+      logger.warn({ err: (err as Error).message }, "Gemini failed; trying next provider");
+    }
+  }
+
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      return await runOpenRouter(systemInstruction, history, userText, attachment);
+    } catch (err) {
+      logger.warn({ err: (err as Error).message }, "OpenRouter failed; using local bot");
+    }
+  }
+
+  // Last resort: the built-in rule-based bot keeps the agent alive.
+  const reply = localBotReply(message, history || [], config);
+  return { text: reply.text, actions: reply.actions as AgentAction[], engine: "local" };
+}
+
+// Gemini provider (with function-calling tool loop)
+async function runGemini(
+  systemInstruction: string,
+  history: { role: string; text: string }[],
+  userText: string,
+  attachment: { data: string; mimeType: string } | undefined,
+  config: any
+): Promise<{ text: string; actions: AgentAction[]; engine: string }> {
+  const ai = getAI();
   const contents: any[] = [];
   (history || []).forEach((m) => {
     contents.push({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] });
@@ -484,51 +514,86 @@ Tu misión: que cada persona se sienta bien atendida y termine comprando con gan
   const currentParts: any[] = [];
   if (attachment?.data && attachment?.mimeType) {
     currentParts.push({ inlineData: { data: attachment.data, mimeType: attachment.mimeType } });
-    const isAudio = attachment.mimeType.startsWith("audio");
-    const defaultPrompt = isAudio
-      ? "El cliente te envió esta nota de voz. Escuchala con atención, entendé qué necesita y respondé natural, como si te lo hubiera hablado."
-      : "El cliente te envió esta imagen. Analizala en detalle: identificá qué es y relacionala con el catálogo (producto parecido, precio, disponibilidad). Si es un comprobante de pago, confirmá el siguiente paso.";
-    currentParts.push({ text: message?.trim() ? message : defaultPrompt });
-  } else {
-    currentParts.push({ text: message || "Hola!" });
   }
+  currentParts.push({ text: userText });
   contents.push({ role: "user", parts: currentParts });
 
   const actions: AgentAction[] = [];
   let finalText = "";
 
-  try {
-    for (let i = 0; i < 5; i++) {
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents,
-        config: { systemInstruction, temperature: 0.8, topP: 0.95, tools: TOOL_DECLARATIONS },
-      });
+  for (let i = 0; i < 5; i++) {
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
+      config: { systemInstruction, temperature: 0.8, topP: 0.95, tools: TOOL_DECLARATIONS },
+    });
 
-      const calls = response.functionCalls;
-      if (calls && calls.length > 0) {
-        const modelContent = response.candidates?.[0]?.content;
-        if (modelContent) contents.push(modelContent);
-        const parts: any[] = [];
-        for (const call of calls) {
-          const { result, action } = executeTool(call.name as string, (call.args as any) || {}, config);
-          if (action) actions.push(action);
-          parts.push({ functionResponse: { name: call.name, response: result } });
-        }
-        contents.push({ role: "user", parts });
-        continue;
+    const calls = response.functionCalls;
+    if (calls && calls.length > 0) {
+      const modelContent = response.candidates?.[0]?.content;
+      if (modelContent) contents.push(modelContent);
+      const parts: any[] = [];
+      for (const call of calls) {
+        const { result, action } = executeTool(call.name as string, (call.args as any) || {}, config);
+        if (action) actions.push(action);
+        parts.push({ functionResponse: { name: call.name, response: result } });
       }
-      finalText = response.text || "";
-      break;
+      contents.push({ role: "user", parts });
+      continue;
     }
-  } catch (err) {
-    // LLM unavailable (quota, network, etc.) — fall back to the local bot
-    logger.warn({ err }, "LLM call failed; using local bot fallback");
-    const reply = localBotReply(message, history || [], config);
-    return { text: reply.text, actions: reply.actions as AgentAction[], engine: "local-fallback" };
+    finalText = response.text || "";
+    break;
   }
 
   return { text: finalText || "Disculpame, no pude procesar la consulta. ¿Me la repetís?", actions, engine: "gemini" };
+}
+
+// OpenRouter provider (OpenAI-compatible). Text + vision fallback; no
+// function-calling, so CRM actions are not emitted on this path.
+async function runOpenRouter(
+  systemInstruction: string,
+  history: { role: string; text: string }[],
+  userText: string,
+  attachment: { data: string; mimeType: string } | undefined
+): Promise<{ text: string; actions: AgentAction[]; engine: string }> {
+  const model = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001";
+  const messages: any[] = [{ role: "system", content: systemInstruction }];
+  (history || []).forEach((m) => {
+    messages.push({ role: m.role === "user" ? "user" : "assistant", content: m.text });
+  });
+
+  // Vision: attach images as data URIs (audio isn't supported on this path)
+  if (attachment?.data && attachment.mimeType.startsWith("image")) {
+    messages.push({
+      role: "user",
+      content: [
+        { type: "text", text: userText },
+        { type: "image_url", image_url: { url: `data:${attachment.mimeType};base64,${attachment.data}` } },
+      ],
+    });
+  } else {
+    messages.push({ role: "user", content: userText });
+  }
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "HTTP-Referer": process.env.APP_URL || "https://respondo.app",
+      "X-Title": "Respondo",
+    },
+    body: JSON.stringify({ model, messages, temperature: 0.8 }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`OpenRouter HTTP ${res.status}: ${detail.slice(0, 200)}`);
+  }
+  const data: any = await res.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  if (!text) throw new Error("OpenRouter returned empty content");
+  return { text, actions: [], engine: "openrouter" };
 }
 
 // ---------------------------------------------------------------------------
@@ -571,11 +636,11 @@ app.get("/api/health", (_req, res) => {
     status: "ok",
     time: new Date().toISOString(),
     model: GEMINI_MODEL,
-    // The bot is always alive: Gemini when a key is set, otherwise the
-    // built-in rule-based engine.
-    botEngine: process.env.GEMINI_API_KEY ? "gemini" : "local",
+    // The bot is always alive: Gemini → OpenRouter → built-in local engine.
+    botEngine: process.env.GEMINI_API_KEY ? "gemini" : process.env.OPENROUTER_API_KEY ? "openrouter" : "local",
     integrations: {
       gemini: !!process.env.GEMINI_API_KEY,
+      openrouter: !!process.env.OPENROUTER_API_KEY,
       supabase: !!(SUPABASE_URL && SUPABASE_ANON_KEY),
       whatsapp: !!(WA_TOKEN && WA_PHONE_ID),
     },
