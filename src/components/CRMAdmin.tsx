@@ -1392,28 +1392,31 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                         "{camp.template.replace("{{nombre}}", "Agustín").replace("{{empresa}}", "Respondo")}"
                       </p>
 
-                      {camp.status === "Completado" && (
-                        <div className="grid grid-cols-3 gap-3 pt-1 text-center">
-                          <div className="p-2 bg-white border border-slate-200 rounded-xl">
-                            <span className="text-xs font-bold text-slate-800 block font-mono">
-                              {camp.sentCount}
-                            </span>
-                            <span className="text-[9px] text-slate-400 block uppercase font-semibold">Enviados</span>
+                      {camp.sentCount > 0 && (() => {
+                        const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
+                        const openRate = pct(camp.readCount, camp.sentCount);
+                        const replyRate = pct(camp.repliesCount, camp.sentCount);
+                        const convRate = pct(camp.repliesCount, camp.readCount); // replied of those who read
+                        const metrics = [
+                          { label: "Enviados", value: `${camp.sentCount}`, rate: 100, color: "bg-slate-400", text: "text-[#1d1d1f]" },
+                          { label: "Apertura", value: `${openRate}%`, rate: openRate, color: "bg-sky-500", text: "text-sky-600" },
+                          { label: "Respuesta", value: `${replyRate}%`, rate: replyRate, color: "bg-emerald-500", text: "text-emerald-600" },
+                          { label: "Conversión", value: `${convRate}%`, rate: convRate, color: "bg-purple-500", text: "text-purple-600" },
+                        ];
+                        return (
+                          <div className="grid grid-cols-4 gap-2 pt-1">
+                            {metrics.map((m) => (
+                              <div key={m.label} className="p-2 bg-white border border-slate-150 rounded-xl text-center shadow-apple-sm">
+                                <span className={`text-[13px] font-bold block ${m.text}`}>{m.value}</span>
+                                <span className="text-[8px] text-[#86868b] block uppercase font-semibold tracking-wide mb-1">{m.label}</span>
+                                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${m.color}`} style={{ width: `${Math.max(2, m.rate)}%` }} />
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          <div className="p-2 bg-white border border-slate-200 rounded-xl">
-                            <span className="text-xs font-bold text-sky-600 block font-mono">
-                              {Math.round((camp.readCount / camp.sentCount) * 100)}%
-                            </span>
-                            <span className="text-[9px] text-slate-400 block uppercase font-semibold">Tasa Lectura</span>
-                          </div>
-                          <div className="p-2 bg-white border border-slate-200 rounded-xl">
-                            <span className="text-xs font-bold text-emerald-600 block font-mono">
-                              {Math.round((camp.repliesCount / camp.readCount) * 100)}%
-                            </span>
-                            <span className="text-[9px] text-slate-400 block uppercase font-semibold">Respuestas</span>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
