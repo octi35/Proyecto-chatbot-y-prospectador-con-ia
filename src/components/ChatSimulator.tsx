@@ -29,6 +29,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Map from message id → HTMLAudioElement so each voice note has its own player
   const audioMapRef = useRef<Map<string, HTMLAudioElement>>(new Map());
 
@@ -105,16 +106,45 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       const actions: AgentAction[] = Array.isArray(data.actions) ? data.actions : [];
-      addMessage("model", data.text, actions.length ? { actions } : undefined);
-      if (actions.length && onAgentActions) onAgentActions(actions);
-      // Generate contextual quick replies based on the AI reply content
-      setQuickReplies(generateQuickReplies(data.text, historyList.length));
-    } catch (err) {
-      addMessage("model", "Se cortó la conexión por un momento. ¿Me repetís la consulta?");
-    } finally {
       setIsLoading(false);
+      // Stream the reply with a live typewriter effect (like ChatGPT)
+      await typeOutModelMessage(data.text || "", actions.length ? { actions } : undefined);
+      if (actions.length && onAgentActions) onAgentActions(actions);
+      setQuickReplies(generateQuickReplies(data.text || "", historyList.length));
+    } catch (err) {
+      setIsLoading(false);
+      addMessage("model", "Se cortó la conexión por un momento. ¿Me repetís la consulta?");
     }
   };
+
+  // Reveal a model reply progressively for a real "typing live" feel.
+  const typeOutModelMessage = (fullText: string, extra?: Partial<ChatMessage>) =>
+    new Promise<void>((resolve) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const base: ChatMessage = {
+        id, role: "model", text: "",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "read",
+      };
+      setMessages((prev) => [...prev, base]);
+
+      // Reveal a few characters per tick; pace scales so long replies don't drag
+      const chars = Math.max(1, Math.round(fullText.length / 90));
+      let i = 0;
+      if (typewriterRef.current) clearInterval(typewriterRef.current);
+      typewriterRef.current = setInterval(() => {
+        i = Math.min(fullText.length, i + chars);
+        const slice = fullText.slice(0, i);
+        setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text: slice } : m)));
+        if (i >= fullText.length) {
+          if (typewriterRef.current) clearInterval(typewriterRef.current);
+          // Attach actions once fully revealed and record in the lead history
+          if (extra) setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...extra } : m)));
+          if (onLeadMessageAdded) onLeadMessageAdded(fullText, "model");
+          resolve();
+        }
+      }, 18);
+    });
 
   const generateQuickReplies = (aiReply: string, historyLength: number): string[] => {
     const lower = aiReply.toLowerCase();
@@ -245,6 +275,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   };
 
   const clearChat = () => {
+    if (typewriterRef.current) clearInterval(typewriterRef.current);
     audioMapRef.current.clear();
     setPlayingAudioId(null);
     setQuickReplies([]);
