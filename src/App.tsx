@@ -17,6 +17,7 @@ import {
 
 import { AgentConfig, CRMLead, Campaign, AgentAction } from "./types";
 import { DEFAULT_CONFIG } from "./data";
+import { DEMO_LEADS, DEMO_CAMPAIGNS } from "./demoData";
 import {
   getConfig, saveConfig,
   getLeads, createLead, updateLead, deleteLead,
@@ -47,6 +48,7 @@ export default function App() {
   // UI state
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const [notifications, setNotifications] = useState<string[]>([]);
   const [newLeadsBadge, setNewLeadsBadge] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
@@ -67,13 +69,17 @@ export default function App() {
           getCampaigns(),
         ]);
         if (serverConfig) setConfig(serverConfig);
-        setLeads(serverLeads);
-        setCampaigns(serverCampaigns);
+        // Fall back to demo data so the UI never looks empty on a fresh account
+        setLeads(serverLeads.length > 0 ? serverLeads : DEMO_LEADS);
+        setCampaigns(serverCampaigns.length > 0 ? serverCampaigns : DEMO_CAMPAIGNS);
+        if (serverLeads.length === 0) setIsDemo(true);
         addNotification("✅ Datos cargados desde la base de datos.");
       } catch (e) {
-        const msg = (e as Error).message;
-        setApiError(msg);
-        addNotification(`⚠️ Sin conexión a la API: ${msg}. Trabajando en modo local.`);
+        // API unreachable → run in demo mode with realistic sample data
+        setLeads(DEMO_LEADS);
+        setCampaigns(DEMO_CAMPAIGNS);
+        setIsDemo(true);
+        addNotification("Mostrando datos de demostración. Conectá Supabase para usar tus datos reales.");
       } finally {
         setLoading(false);
       }
@@ -376,9 +382,9 @@ export default function App() {
         <div className="mt-auto px-2 space-y-3">
           <div className="rounded-2xl bg-slate-50 border border-slate-150 p-3">
             <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wide block mb-1.5">Estado</span>
-            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${apiError ? "text-red-600" : "text-emerald-700"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${apiError ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
-              {apiError ? "Modo local" : "Supabase conectado"}
+            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isDemo ? "text-[#0071e3]" : "text-emerald-700"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-[#0071e3]" : "bg-emerald-500 animate-pulse"}`} />
+              {isDemo ? "Modo demo" : "Supabase conectado"}
             </span>
           </div>
           <p className="text-[10px] text-[#aeaeb2] px-1">Respondo · Chatea menos, vendé más</p>
@@ -487,11 +493,11 @@ export default function App() {
           </div>
         </header>
 
-        {/* API error banner */}
-        {apiError && (
-          <div className="mx-4 sm:mx-7 mt-4 bg-amber-50/80 border border-amber-200/60 rounded-2xl p-3.5 flex items-center gap-2 text-[13px] text-amber-800">
-            <AlertTriangle size={14} className="shrink-0" />
-            <span><strong>API no disponible:</strong> {apiError}.</span>
+        {/* Demo-mode pill (subtle, no scary error) */}
+        {isDemo && (
+          <div className="mx-4 sm:mx-7 mt-4 bg-blue-50/70 border border-blue-100 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-[#0071e3]">
+            <Sparkles size={13} className="shrink-0" />
+            <span><strong className="font-semibold">Modo demostración</strong> — estás viendo datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
           </div>
         )}
 
