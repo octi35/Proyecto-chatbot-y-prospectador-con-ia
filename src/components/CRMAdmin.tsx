@@ -591,19 +591,16 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   </div>
                 )}
                 {/* Quick stats strip */}
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((s) => {
                     const count = leads.filter((l) => l.status === s).length;
-                    const colors: Record<string, string> = {
-                      Nuevo: "text-sky-700 bg-sky-50 border-sky-100",
-                      Contactado: "text-amber-700 bg-amber-50 border-amber-100",
-                      Presupuestado: "text-purple-700 bg-purple-50 border-purple-100",
-                      Cerrado: "text-emerald-700 bg-emerald-50 border-emerald-100",
-                    };
+                    const dot: Record<string, string> = { Nuevo: "bg-sky-500", Contactado: "bg-amber-500", Presupuestado: "bg-violet-500", Cerrado: "bg-emerald-500" };
                     return (
-                      <div key={s} className={`text-center p-2 rounded-xl border text-xs ${colors[s]}`}>
-                        <span className="font-black text-base block leading-tight">{count}</span>
-                        <span className="font-semibold text-[9px] uppercase tracking-wide opacity-80 block leading-tight">{s}</span>
+                      <div key={s} className="bg-white rounded-2xl p-4 shadow-[0_1px_2px_rgba(24,24,27,0.04)]">
+                        <span className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 mb-1">
+                          <span className={`w-2 h-2 rounded-full ${dot[s]}`} /> {s}
+                        </span>
+                        <span className="text-[26px] font-semibold text-zinc-900 tracking-tight leading-none">{count}</span>
                       </div>
                     );
                   })}
@@ -628,22 +625,22 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   </div>
                 )}
                 {/* Search + Filter + Add Lead bar */}
-                <div className="flex gap-2">
+                <div className="flex gap-2.5">
                   <div className="relative flex-1">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                     <input
                       ref={searchInputRef}
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Buscar… (presioná / para enfocar)"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
+                      placeholder="Buscar lead…"
+                      className="w-full bg-white rounded-xl pl-10 pr-3 py-2.5 text-[13.5px] text-zinc-900 shadow-[0_1px_2px_rgba(24,24,27,0.04)] focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-zinc-400"
                     />
                   </div>
                   <select
                     value={channelFilter}
                     onChange={(e) => setChannelFilter(e.target.value as CRMLead["origin"] | "Todos")}
-                    className="bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs text-slate-700 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                    className="bg-white rounded-xl px-3 py-2.5 text-[13px] text-zinc-700 shadow-[0_1px_2px_rgba(24,24,27,0.04)] focus:outline-none cursor-pointer"
                     title="Filtrar por canal"
                   >
                     <option value="Todos">Todos</option>
@@ -655,7 +652,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="bg-white border border-slate-200 rounded-xl px-2 py-2 text-xs text-slate-700 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                    className="bg-white rounded-xl px-3 py-2.5 text-[13px] text-zinc-700 shadow-[0_1px_2px_rgba(24,24,27,0.04)] focus:outline-none cursor-pointer"
                     title="Ordenar leads"
                   >
                     <option value="date">↓ Fecha</option>
@@ -663,14 +660,15 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                     <option value="name">A-Z Nombre</option>
                   </select>
                   {onLeadCreate && (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
                       onClick={() => setShowAddForm((v) => !v)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                        showAddForm ? "bg-slate-200 text-slate-700" : "bg-blue-600 text-white hover:bg-blue-700"
+                      className={`px-4 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                        showAddForm ? "bg-zinc-200 text-zinc-700" : "bg-indigo-600 text-white hover:bg-indigo-500"
                       }`}
                     >
-                      <Plus size={13} /> Lead
-                    </button>
+                      <Plus size={15} /> Lead
+                    </motion.button>
                   )}
                 </div>
 
@@ -776,39 +774,43 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                     </motion.div>
                   )}
                 </AnimatePresence>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   {COLUMNS.map((col) => {
                     const columnLeads = filteredLeads.filter((l) => l.status === col);
+                    const dot: Record<string, string> = { Nuevo: "bg-sky-500", Contactado: "bg-amber-500", Presupuestado: "bg-violet-500", Cerrado: "bg-emerald-500" };
                     return (
-                      <div key={col} className="bg-slate-50/70 rounded-[18px] p-3 border border-slate-150 flex flex-col h-[320px]">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <div key={col} className="bg-zinc-50 rounded-2xl p-3.5 flex flex-col h-[460px]">
+                        <div className="flex justify-between items-center mb-3.5 px-1">
+                          <span className="flex items-center gap-2 text-[13px] font-semibold text-zinc-700">
+                            <span className={`w-2 h-2 rounded-full ${dot[col]}`} />
                             {col}
                           </span>
-                          <span className="px-2 py-0.5 bg-slate-200 rounded-full text-[10px] text-slate-600 font-mono border border-slate-300">
+                          <span className="px-2 py-0.5 bg-white rounded-full text-[12px] text-zinc-500 font-medium shadow-[0_1px_2px_rgba(24,24,27,0.04)]">
                             {columnLeads.length}
                           </span>
                         </div>
 
                         {/* Leads Cards Container */}
-                        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
                           {columnLeads.map((lead) => (
-                            <div
+                            <motion.div
                               key={lead.id}
                               onClick={() => { setSelectedLead(lead); setEditingNotes(null); }}
-                              className={`p-2.5 rounded-[14px] border text-left cursor-pointer transition-all duration-300 ${
+                              whileHover={{ y: -2 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                              className={`p-3.5 rounded-2xl text-left cursor-pointer bg-white ${
                                 selectedLead?.id === lead.id
-                                  ? "bg-[#0071e3]/5 border-[#0071e3]/40 shadow-apple-sm"
-                                  : "bg-white border-slate-150 hover:border-slate-250 hover:shadow-apple-sm"
+                                  ? "ring-2 ring-indigo-500 shadow-[0_8px_24px_rgba(79,70,229,0.12)]"
+                                  : "shadow-[0_1px_2px_rgba(24,24,27,0.04),0_2px_8px_rgba(24,24,27,0.04)] hover:shadow-[0_8px_24px_rgba(24,24,27,0.08)]"
                               }`}
                             >
-                              <div className="flex items-center space-x-2 mb-1.5">
+                              <div className="flex items-center gap-2.5 mb-2.5">
                                 <div
                                   onClick={(e) => toggleCheckedLead(lead.id, e)}
-                                  className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center cursor-pointer transition-all ${
+                                  className={`w-4 h-4 rounded-md border-2 shrink-0 flex items-center justify-center cursor-pointer transition-all ${
                                     checkedLeadIds.has(lead.id)
-                                      ? "bg-blue-600 border-blue-600"
-                                      : "border-slate-300 bg-white hover:border-blue-400"
+                                      ? "bg-indigo-600 border-indigo-600"
+                                      : "border-zinc-300 bg-white hover:border-indigo-400"
                                   }`}
                                 >
                                   {checkedLeadIds.has(lead.id) && (
@@ -817,80 +819,55 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                                     </svg>
                                   )}
                                 </div>
-                                <img
-                                  referrerPolicy="no-referrer"
-                                  src={lead.avatar}
-                                  alt={lead.name}
-                                  className="w-5 h-5 rounded-full object-cover shrink-0"
-                                />
-                                <span className="text-xs font-bold text-slate-800 truncate flex-1">{lead.name}</span>
-                                {isHot(lead) && (
-                                  <span title="Lead caliente — alta intención de compra, activo hace <2h" className="shrink-0 text-[10px]">🔥</span>
-                                )}
+                                <img referrerPolicy="no-referrer" src={lead.avatar} alt={lead.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                <span className="text-[14px] font-semibold text-zinc-900 truncate flex-1">{lead.name}</span>
+                                {isHot(lead) && <span title="Lead caliente" className="shrink-0 text-[14px]">🔥</span>}
                                 {!isHot(lead) && isStale(lead) && (
-                                  <span title="Sin actividad hace +24h" className="shrink-0">
-                                    <Clock size={10} className="text-amber-500" />
-                                  </span>
+                                  <span title="Sin actividad hace +24h" className="shrink-0"><Clock size={13} className="text-amber-500" /></span>
                                 )}
                               </div>
-                              {/* Lead score mini bar */}
-                              <div className="w-full h-0.5 bg-slate-100 rounded-full overflow-hidden mb-1.5" title={getScoreLabel(lead)}>
+
+                              <p className="text-[12.5px] text-zinc-500 leading-snug line-clamp-2 mb-2.5">{lead.notes || "Sin notas"}</p>
+
+                              {/* Score bar */}
+                              <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden mb-2.5" title={getScoreLabel(lead)}>
                                 <div
-                                  className={`h-full rounded-full transition-all ${lead.score >= 85 ? "bg-emerald-500" : lead.score >= 70 ? "bg-amber-400" : "bg-slate-300"}`}
+                                  className={`h-full rounded-full transition-all ${lead.score >= 85 ? "bg-emerald-500" : lead.score >= 70 ? "bg-amber-400" : "bg-zinc-300"}`}
                                   style={{ width: `${lead.score}%` }}
                                 />
                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className={`text-[8px] font-semibold border px-1.5 py-0.5 rounded-full ${getOriginColor(lead.origin)}`}>
+
+                              <div className="flex items-center justify-between gap-2">
+                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${getOriginColor(lead.origin)}`}>
                                   {lead.origin}
                                 </span>
-                                <span className="text-[9px] text-slate-400">{timeAgo(lead.lastInteraction)}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[12px] font-semibold ${lead.score >= 85 ? "text-emerald-600" : lead.score >= 70 ? "text-amber-600" : "text-zinc-400"}`}>{lead.score}%</span>
+                                  {col !== "Cerrado" && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); const next = COLUMNS[COLUMNS.indexOf(col) + 1]; if (next) handleMoveLead(lead.id, next); }}
+                                      className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all shrink-0"
+                                      title={`Mover a ${COLUMNS[COLUMNS.indexOf(col) + 1]}`}
+                                    >
+                                      <ChevronRight size={15} />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                              <div className="mt-1.5 flex justify-between items-center gap-1">
-                                <span className="text-[8px] text-slate-500 font-mono block truncate flex-1">
-                                  {lead.notes}
-                                </span>
-                                <span className={`text-[8px] font-mono font-bold shrink-0 ${lead.score >= 85 ? "text-emerald-600" : lead.score >= 70 ? "text-amber-600" : "text-slate-500"}`}>
-                                  {lead.score}%
-                                </span>
-                                {/* Quick advance to next stage */}
-                                {col !== "Cerrado" && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const nextStage = COLUMNS[COLUMNS.indexOf(col) + 1];
-                                      if (nextStage) handleMoveLead(lead.id, nextStage);
-                                    }}
-                                    className="p-0.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all shrink-0"
-                                    title={`Mover a ${COLUMNS[COLUMNS.indexOf(col) + 1]}`}
-                                  >
-                                    <ChevronRight size={11} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
+                              <span className="text-[11px] text-zinc-400 mt-2 block">{timeAgo(lead.lastInteraction)}</span>
+                            </motion.div>
                           ))}
 
                           {columnLeads.length === 0 && (
-                            <div className="h-full flex flex-col items-center justify-center text-center opacity-50 py-10">
-                              <UserCheck size={20} className="text-slate-400 mb-1" />
-                              <span className="text-[10px] text-slate-400">Sin contactos en esta etapa</span>
+                            <div className="h-full flex flex-col items-center justify-center text-center py-10">
+                              <UserCheck size={22} className="text-zinc-300 mb-1.5" />
+                              <span className="text-[12px] text-zinc-400">Sin contactos</span>
                             </div>
                           )}
                         </div>
                       </div>
                     );
                   })}
-                </div>
-
-                {/* Legend Guidelines */}
-                <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between text-xs text-slate-500 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Zap size={14} className="text-amber-500 shrink-0" />
-                    <span>
-                      <strong className="text-slate-800">Asesoramiento Inteligente:</strong> El CRM de Respondo registra automáticamente a cada prospecto tan pronto inicia el chat, asignándole un puntaje según su intención de compra e interés detectado.
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -900,56 +877,46 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   <div className="space-y-4 flex-1 flex flex-col justify-between">
                     <div>
                       {/* Avatar Profile */}
-                      <div className="flex items-start space-x-3 pb-3 border-b border-slate-100">
+                      <div className="flex items-start gap-3.5 pb-4 border-b border-zinc-100">
                         <img
                           referrerPolicy="no-referrer"
                           src={selectedLead.avatar}
                           alt={selectedLead.name}
-                          className="w-12 h-12 rounded-full object-cover border border-slate-200 shrink-0"
+                          className="w-14 h-14 rounded-full object-cover shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-sm text-slate-900">{selectedLead.name}</h4>
-                          <span className="text-xs text-slate-500 block">{selectedLead.phone || "Sin teléfono"}</span>
-                          <span className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${selectedLead.score >= 85 ? "text-emerald-600" : selectedLead.score >= 65 ? "text-amber-600" : "text-slate-500"}`} title={getScoreLabel(selectedLead)}>
-                            Score: {selectedLead.score}/100 — {selectedLead.score >= 85 ? "Muy Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
-                            {isHot(selectedLead) && <span title="Lead caliente">🔥</span>}
+                          <h4 className="font-semibold text-[16px] text-zinc-900">{selectedLead.name}</h4>
+                          <span className="text-[13px] text-zinc-500 block">{selectedLead.phone || "Sin teléfono"}</span>
+                          <span className={`mt-1 inline-flex items-center gap-1 text-[12px] font-medium px-2 py-0.5 rounded-full ${selectedLead.score >= 85 ? "text-emerald-700 bg-emerald-50" : selectedLead.score >= 65 ? "text-amber-700 bg-amber-50" : "text-zinc-600 bg-zinc-100"}`} title={getScoreLabel(selectedLead)}>
+                            Score {selectedLead.score} · {selectedLead.score >= 85 ? "Alta" : selectedLead.score >= 65 ? "Media" : "Baja"}
+                            {isHot(selectedLead) && " 🔥"}
                           </span>
-                          <span className="text-[8px] text-slate-400 italic block mt-0.5">
-                            {getScoreLabel(selectedLead)}
-                          </span>
-                          {selectedLead.createdAt && (
-                            <span className="text-[8px] text-slate-400 block mt-0.5">
-                              Alta: {new Date(selectedLead.createdAt).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
-                            </span>
-                          )}
+                          <span className="text-[11.5px] text-zinc-400 block mt-1.5">{getScoreLabel(selectedLead)}</span>
                         </div>
                         {selectedLead.phone && (
                           <a
                             href={`https://wa.me/${selectedLead.phone.replace(/\D/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl flex items-center gap-1 text-[10px] font-bold transition-all shrink-0"
+                            target="_blank" rel="noopener noreferrer"
+                            className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl flex items-center gap-1 text-[12px] font-medium transition-all shrink-0"
                             title="Abrir chat en WhatsApp"
                           >
-                            <Phone size={11} /> WA
+                            <Phone size={14} />
                           </a>
                         )}
                       </div>
 
                       {/* Lead Stage Controls */}
-                      <div className="py-3 border-b border-slate-100 space-y-2">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-                          Cambiar Etapa del Embudo
-                        </span>
-                        <div className="grid grid-cols-2 gap-1.5">
+                      <div className="py-4 border-b border-zinc-100 space-y-2.5">
+                        <span className="text-[12px] font-medium text-zinc-500 block">Etapa del embudo</span>
+                        <div className="grid grid-cols-2 gap-2">
                           {COLUMNS.map((stage) => (
                             <button
                               key={stage}
                               onClick={() => handleMoveLead(selectedLead.id, stage)}
-                              className={`py-1 px-2 rounded-lg text-[10px] font-semibold border text-center transition-all cursor-pointer ${
+                              className={`py-2 px-3 rounded-xl text-[13px] font-medium text-center transition-all cursor-pointer ${
                                 selectedLead.status === stage
-                                  ? `${getStageColor(stage)} border-blue-500`
-                                  : "bg-white border-slate-200 text-slate-500 hover:text-slate-800"
+                                  ? "bg-indigo-600 text-white"
+                                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
                               }`}
                             >
                               {stage}
@@ -959,15 +926,13 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       </div>
 
                       {/* CRM Notes — editable */}
-                      <div className="py-3 border-b border-slate-100 space-y-1.5">
+                      <div className="py-4 border-b border-zinc-100 space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                            Notas del Lead & Interés
-                          </span>
+                          <span className="text-[12px] font-medium text-zinc-500">Notas e interés</span>
                           {onLeadUpdate && editingNotes === null && (
                             <button
                               onClick={() => setEditingNotes(selectedLead.notes)}
-                              className="text-[9px] text-blue-600 hover:underline cursor-pointer"
+                              className="text-[12px] text-indigo-600 hover:underline cursor-pointer"
                             >
                               Editar
                             </button>
@@ -998,16 +963,16 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                             </div>
                           </div>
                         ) : (
-                          <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200 leading-relaxed font-mono min-h-[40px]">
-                            {selectedLead.notes || <span className="text-slate-400 italic">Sin notas</span>}
+                          <p className="text-[13.5px] text-zinc-700 bg-zinc-50 p-3 rounded-xl leading-relaxed min-h-[44px]">
+                            {selectedLead.notes || <span className="text-zinc-400 italic">Sin notas</span>}
                           </p>
                         )}
                       </div>
 
                       {/* Category / Tag */}
                       {onLeadUpdate && (
-                        <div className="py-2 border-b border-slate-100 flex items-center gap-2">
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Categoría</span>
+                        <div className="py-4 border-b border-zinc-100 flex items-center gap-3">
+                          <span className="text-[12px] font-medium text-zinc-500 shrink-0">Categoría</span>
                           <input
                             type="text"
                             defaultValue={selectedLead.category || ""}
@@ -1020,7 +985,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                                 setLeads((prev) => prev.map((l) => l.id === updated.id ? updated : l));
                               }
                             }}
-                            className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-blue-500 min-w-0"
+                            className="flex-1 bg-zinc-50 rounded-xl px-3 py-2 text-[13px] text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-w-0"
                           />
                         </div>
                       )}
@@ -1062,37 +1027,37 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       )}
 
                       {/* Conversation Monitoring history */}
-                      <div className="py-3 space-y-2">
+                      <div className="py-4 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                            Conversación IA ({selectedLead.conversationHistory.length} mensajes)
+                          <span className="text-[12px] font-medium text-zinc-500">
+                            Conversación IA · {selectedLead.conversationHistory.length} mensajes
                           </span>
                           {selectedLead.conversationHistory.length > 0 && (
-                            <span className="text-[9px] text-slate-400">{timeAgo(selectedLead.lastInteraction)}</span>
+                            <span className="text-[11px] text-zinc-400">{timeAgo(selectedLead.lastInteraction)}</span>
                           )}
                         </div>
                         {selectedLead.conversationHistory.length === 0 ? (
-                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center text-[10px] text-slate-400 italic">
-                            Sin historial aún. Iniciá una conversación en el chat simulador.
+                          <div className="bg-zinc-50 rounded-xl p-4 text-center text-[12.5px] text-zinc-400">
+                            Sin historial aún. Iniciá una conversación en Estudio IA.
                           </div>
                         ) : (
-                          <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200 max-h-[180px] overflow-y-auto">
+                          <div className="space-y-2 bg-zinc-50 p-3 rounded-xl max-h-[240px] overflow-y-auto">
                             {selectedLead.conversationHistory.map((h, index) => (
                               <div
                                 key={index}
                                 className={`flex ${h.role === "user" ? "justify-end" : "justify-start"}`}
                               >
-                                <div className={`max-w-[85%] px-2.5 py-1.5 rounded-xl text-[10px] leading-relaxed ${
+                                <div className={`max-w-[88%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${
                                   h.role === "user"
-                                    ? "bg-emerald-100 text-emerald-900 rounded-tr-none"
-                                    : "bg-white border border-slate-200 text-slate-700 rounded-tl-none"
+                                    ? "bg-emerald-100 text-emerald-900 rounded-tr-sm"
+                                    : "bg-white text-zinc-700 rounded-tl-sm shadow-[0_1px_2px_rgba(24,24,27,0.05)]"
                                 }`}>
-                                  <span className={`font-bold block text-[8px] mb-0.5 ${h.role === "user" ? "text-emerald-700" : "text-blue-600"}`}>
+                                  <span className={`font-semibold block text-[11px] mb-0.5 ${h.role === "user" ? "text-emerald-700" : "text-indigo-600"}`}>
                                     {h.role === "user" ? "Cliente" : (config.botPersonaName || "Respondo AI")}
                                   </span>
                                   {h.text}
                                   {h.timestamp && (
-                                    <span className="block text-[7px] opacity-50 mt-0.5 text-right">
+                                    <span className="block text-[10px] opacity-50 mt-1 text-right">
                                       {new Date(h.timestamp).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                                     </span>
                                   )}
@@ -1105,7 +1070,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                     </div>
 
                     {/* Human Override Controls */}
-                    <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <div className="pt-4 border-t border-zinc-100 space-y-2.5">
                       <button
                         onClick={() => { toggleManualOverride(selectedLead.id); setManualMessage(""); setManualSendFeedback(null); }}
                         className={`w-full py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
