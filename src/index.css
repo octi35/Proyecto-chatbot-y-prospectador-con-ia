@@ -2,27 +2,35 @@
 @import "tailwindcss";
 
 @theme {
-  /* Apple-style type: prefer the device's native San Francisco font, fall
-     back to Inter (a very close match) so non-Apple devices look identical. */
+  /* Apple-style type: native San Francisco, Inter fallback */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", monospace;
 
-  /* Apple system palette */
-  --color-apple-blue: #0071e3;
-  --color-apple-blue-hover: #0077ed;
-  --color-apple-gray: #1d1d1f;       /* near-black headings */
-  --color-apple-gray-2: #6e6e73;     /* secondary text */
-  --color-apple-bg: #fbfbfd;         /* signature off-white */
+  /* ---- Dark premium palette ---- */
+  --color-ink: #0a0a0f;          /* app background (near-black, blue-tinted) */
+  --color-ink-2: #101017;        /* deeper panels */
+  --color-surface: #16161f;      /* card surface */
+  --color-surface-2: #1c1c27;    /* elevated/hover surface */
+  --color-line: rgba(255,255,255,0.08);
+  --color-line-strong: rgba(255,255,255,0.14);
+  --color-text: #f5f5f7;         /* primary text */
+  --color-text-2: #a1a1aa;       /* secondary text */
+  --color-text-3: #6b6b76;       /* muted */
 
-  /* Soft, layered shadows (Apple's depth language) */
-  --shadow-apple-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-apple: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
-  --shadow-apple-lg: 0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.05);
+  /* Vivid accents */
+  --color-accent: #6366f1;       /* indigo */
+  --color-accent-2: #3b82f6;     /* blue */
+  --color-violet: #8b5cf6;
+  --color-emerald: #10b981;
+  --color-amber: #f59e0b;
+  --color-pink: #ec4899;
 
-  /* Smooth Apple easing */
-  --ease-apple: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-glow: 0 0 0 1px rgba(99,102,241,0.4), 0 8px 30px rgba(99,102,241,0.25);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html {
@@ -32,69 +40,62 @@ html {
 }
 
 body {
-  font-feature-settings: "cv11", "ss01";
-  letter-spacing: -0.01em;
+  background: var(--color-ink);
+  color: var(--color-text);
+  letter-spacing: -0.011em;
 }
 
-/* Apple-tight headings */
-h1, h2, h3, h4 {
-  letter-spacing: -0.022em;
-}
+h1, h2, h3, h4 { letter-spacing: -0.022em; }
 
-/* Thin, unobtrusive scrollbars */
-::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.14);
-  border-radius: 8px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.26);
-}
+/* Scrollbars (dark) */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-/* Frosted-glass utility (Apple's signature translucency) */
-.glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-}
+/* ---- Reusable dark utilities ---- */
+.surface { background: var(--color-surface); border: 1px solid var(--color-line); }
+.surface-2 { background: var(--color-surface-2); border: 1px solid var(--color-line); }
+
+/* Glassy panel with subtle top highlight */
 .glass-dark {
-  background: rgba(29, 29, 31, 0.72);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+  backdrop-filter: saturate(160%) blur(20px);
+  -webkit-backdrop-filter: saturate(160%) blur(20px);
+  border: 1px solid var(--color-line);
 }
 
-/* Reusable soft-shadow helpers */
-.shadow-apple-sm { box-shadow: var(--shadow-apple-sm); }
-.shadow-apple { box-shadow: var(--shadow-apple); }
-.shadow-apple-lg { box-shadow: var(--shadow-apple-lg); }
+/* Card with hairline border + soft shadow */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-card);
+}
+.card-hover { transition: transform .3s var(--ease-out), border-color .3s var(--ease-out), box-shadow .3s var(--ease-out); }
+.card-hover:hover { transform: translateY(-2px); border-color: var(--color-line-strong); }
 
-/* Subtle lift on interactive cards */
-.lift {
-  transition: transform 0.3s var(--ease-apple), box-shadow 0.3s var(--ease-apple);
-}
-.lift:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-apple-lg);
-}
+.shadow-soft { box-shadow: var(--shadow-soft); }
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-glow { box-shadow: var(--shadow-glow); }
 
-@keyframes pulse-slow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-.animate-pulse-slow {
-  animation: pulse-slow 3s infinite ease-in-out;
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, #818cf8, #6366f1 40%, #3b82f6);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-@keyframes float-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Accent gradient surfaces */
+.bg-accent-grad { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+.bg-violet-grad { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+
+@keyframes pulse-slow { 0%,100%{opacity:.4} 50%{opacity:.85} }
+.animate-pulse-slow { animation: pulse-slow 3s infinite ease-in-out; }
+
+@keyframes float-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.animate-float-in { animation: float-in .5s var(--ease-out) both; }
+
+@keyframes glow-pulse {
+  0%,100% { box-shadow: 0 0 20px rgba(99,102,241,0.15); }
+  50% { box-shadow: 0 0 30px rgba(99,102,241,0.35); }
 }
-.animate-float-in {
-  animation: float-in 0.5s var(--ease-apple) both;
-}
+.animate-glow { animation: glow-pulse 4s infinite ease-in-out; }

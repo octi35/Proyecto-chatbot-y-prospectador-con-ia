@@ -317,9 +317,9 @@ export default function App() {
   // ---------------------------------------------------------------------------
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fbfbfd] flex flex-col items-center justify-center gap-3">
-        <Loader2 size={30} className="text-[#0071e3] animate-spin" />
-        <p className="text-sm text-[#6e6e73] font-medium tracking-tight">Cargando Respondo…</p>
+      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-3">
+        <Loader2 size={30} className="text-indigo-400 animate-spin" />
+        <p className="text-sm text-[#a1a1aa] font-medium tracking-tight">Cargando Respondo…</p>
       </div>
     );
   }
@@ -338,19 +338,26 @@ export default function App() {
   };
 
   return (
-    <div id="respondo-app" className="min-h-screen bg-[#fbfbfd] text-[#1d1d1f] font-sans selection:bg-blue-100 selection:text-blue-900 flex">
+    <div id="respondo-app" className="min-h-screen bg-[#0a0a0f] text-[#f5f5f7] font-sans selection:bg-indigo-500/30 selection:text-white flex relative">
+      {/* Ambient glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-[40rem] h-[40rem] bg-indigo-600/15 rounded-full blur-[140px]" />
+        <div className="absolute top-1/2 -right-20 w-[32rem] h-[32rem] bg-blue-600/10 rounded-full blur-[140px]" />
+        <div className="absolute -bottom-40 left-1/3 w-[36rem] h-[36rem] bg-violet-600/10 rounded-full blur-[140px]" />
+      </div>
+
       {/* ===================== SIDEBAR ===================== */}
-      <aside className="hidden md:flex flex-col w-[248px] shrink-0 h-screen sticky top-0 bg-white border-r border-slate-150 px-4 py-5">
+      <aside className="hidden md:flex flex-col w-[248px] shrink-0 h-screen sticky top-0 glass-dark border-r border-white/8 px-4 py-5 z-20">
         {/* Brand */}
         <div className="flex items-center gap-2.5 px-2 mb-7">
-          <div className="w-9 h-9 rounded-[11px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center shrink-0 overflow-hidden shadow-apple-sm">
+          <div className="w-9 h-9 rounded-[11px] bg-violet-grad flex items-center justify-center shrink-0 overflow-hidden shadow-glow">
             {config.logoUrl ? (
               <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
             ) : (
               <span className="font-bold text-base text-white">R</span>
             )}
           </div>
-          <span className="font-semibold text-[15px] tracking-tight text-[#1d1d1f] truncate">
+          <span className="font-semibold text-[15px] tracking-tight text-white truncate">
             {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
           </span>
         </div>
@@ -363,11 +370,12 @@ export default function App() {
               onClick={() => setActiveTab(tab)}
               className={`group flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[13.5px] font-medium transition-all duration-200 relative ${
                 activeTab === tab
-                  ? "bg-[#0071e3]/8 text-[#0071e3] font-semibold"
-                  : "text-[#6e6e73] hover:bg-slate-50 hover:text-[#1d1d1f]"
+                  ? "bg-white/10 text-white font-semibold shadow-soft"
+                  : "text-[#a1a1aa] hover:bg-white/5 hover:text-white"
               }`}
             >
-              <span className={activeTab === tab ? "text-[#0071e3]" : "text-[#86868b] group-hover:text-[#1d1d1f]"}>{icon}</span>
+              {activeTab === tab && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-blue-500" />}
+              <span className={activeTab === tab ? "text-indigo-400" : "text-[#6b6b76] group-hover:text-white"}>{icon}</span>
               {label}
               {badge > 0 && (
                 <span className="ml-auto min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -380,40 +388,40 @@ export default function App() {
 
         {/* Bottom: status */}
         <div className="mt-auto px-2 space-y-3">
-          <div className="rounded-2xl bg-slate-50 border border-slate-150 p-3">
-            <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wide block mb-1.5">Estado</span>
-            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isDemo ? "text-[#0071e3]" : "text-emerald-700"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-[#0071e3]" : "bg-emerald-500 animate-pulse"}`} />
+          <div className="rounded-2xl bg-white/5 border border-white/8 p-3">
+            <span className="text-[10px] font-semibold text-[#6b6b76] uppercase tracking-wide block mb-1.5">Estado</span>
+            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isDemo ? "text-indigo-400" : "text-emerald-400"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-indigo-400" : "bg-emerald-400 animate-pulse"}`} />
               {isDemo ? "Modo demo" : "Supabase conectado"}
             </span>
           </div>
-          <p className="text-[10px] text-[#aeaeb2] px-1">Respondo · Chatea menos, vendé más</p>
+          <p className="text-[10px] text-[#6b6b76] px-1">Respondo · Chatea menos, vendé más</p>
         </div>
       </aside>
 
       {/* ===================== MAIN ===================== */}
-      <div className="flex-1 min-w-0 flex flex-col h-screen">
+      <div className="flex-1 min-w-0 flex flex-col h-screen relative z-10">
         {/* Top bar */}
-        <header className="shrink-0 glass border-b border-slate-150 px-4 sm:px-7 py-3.5 flex items-center gap-4 sticky top-0 z-30">
+        <header className="shrink-0 glass-dark border-b border-white/8 px-4 sm:px-7 py-3.5 flex items-center gap-4 sticky top-0 z-30">
           {/* Mobile tab selector */}
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value as TabType)}
-            className="md:hidden bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 text-[13px] font-semibold text-[#1d1d1f] focus:outline-none cursor-pointer"
+            className="md:hidden bg-white/10 border border-white/10 rounded-xl px-2 py-1.5 text-[13px] font-semibold text-white focus:outline-none cursor-pointer"
           >
-            {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab}>{label}</option>)}
+            {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab} className="bg-[#16161f]">{label}</option>)}
           </select>
-          <h1 className="hidden md:block text-[20px] font-semibold tracking-tight text-[#1d1d1f]">{pageTitle[activeTab]}</h1>
+          <h1 className="hidden md:block text-[20px] font-semibold tracking-tight text-white">{pageTitle[activeTab]}</h1>
 
           <div className="flex-1" />
 
           {/* Quick stats pills (desktop) */}
           <div className="hidden xl:flex items-center gap-2 mr-1">
-            <span className="text-[12px] font-medium text-[#6e6e73] px-3 py-1.5 rounded-full bg-slate-50">
-              <strong className="text-[#1d1d1f] font-semibold">{totalLeads}</strong> leads
+            <span className="text-[12px] font-medium text-[#a1a1aa] px-3 py-1.5 rounded-full bg-white/5 border border-white/8">
+              <strong className="text-white font-semibold">{totalLeads}</strong> leads
             </span>
             {hotLeads > 0 && (
-              <span className="text-[12px] font-medium text-orange-600 px-3 py-1.5 rounded-full bg-orange-50">
+              <span className="text-[12px] font-medium text-orange-400 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20">
                 🔥 {hotLeads} calientes
               </span>
             )}
@@ -422,7 +430,7 @@ export default function App() {
           {/* Create → goes to chat playground */}
           <button
             onClick={() => setActiveTab("playground")}
-            className="bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-apple-sm"
+            className="bg-accent-grad hover:opacity-90 text-white text-[13px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-glow"
           >
             <Sparkles size={14} /> <span className="hidden sm:inline">Probar IA</span>
           </button>
@@ -431,7 +439,7 @@ export default function App() {
           <div className="relative">
             <button
               onClick={() => setShowNotifPanel((v) => !v)}
-              className="relative w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-[#6e6e73] transition-colors cursor-pointer"
+              className="relative w-9 h-9 rounded-full bg-white/5 border border-white/8 hover:bg-white/10 flex items-center justify-center text-[#a1a1aa] transition-colors cursor-pointer"
               title="Notificaciones"
             >
               <Bell size={16} />
@@ -450,33 +458,33 @@ export default function App() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.98 }}
                     transition={{ duration: 0.18 }}
-                    className="absolute right-0 mt-2 w-80 bg-white border border-slate-150 rounded-2xl shadow-apple-lg z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-80 surface-2 rounded-2xl shadow-card z-50 overflow-hidden"
                   >
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                      <span className="text-[13px] font-semibold text-[#1d1d1f]">Notificaciones</span>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+                      <span className="text-[13px] font-semibold text-white">Notificaciones</span>
                       {notifications.length > 0 && (
-                        <button onClick={() => setNotifications([])} className="text-[11px] text-[#0071e3] hover:underline">Limpiar</button>
+                        <button onClick={() => setNotifications([])} className="text-[11px] text-indigo-400 hover:underline">Limpiar</button>
                       )}
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {hotLeads > 0 && (
-                        <div className="px-4 py-3 bg-orange-50/60 border-b border-orange-100 flex items-center gap-2">
+                        <div className="px-4 py-3 bg-orange-500/10 border-b border-orange-500/20 flex items-center gap-2">
                           <span className="text-base">🔥</span>
                           <div className="flex-1">
-                            <p className="text-[12.5px] font-semibold text-orange-800">{hotLeads} lead{hotLeads !== 1 ? "s" : ""} caliente{hotLeads !== 1 ? "s" : ""} ahora</p>
-                            <button onClick={() => { setActiveTab("crm"); setShowNotifPanel(false); }} className="text-[11px] text-orange-700 hover:underline">Ver en el CRM →</button>
+                            <p className="text-[12.5px] font-semibold text-orange-300">{hotLeads} lead{hotLeads !== 1 ? "s" : ""} caliente{hotLeads !== 1 ? "s" : ""} ahora</p>
+                            <button onClick={() => { setActiveTab("crm"); setShowNotifPanel(false); }} className="text-[11px] text-orange-400 hover:underline">Ver en el CRM →</button>
                           </div>
                         </div>
                       )}
                       {notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center">
-                          <Bell size={22} className="text-slate-300 mx-auto mb-1.5" />
-                          <p className="text-[12px] text-[#86868b]">Sin notificaciones nuevas</p>
+                          <Bell size={22} className="text-[#3a3a44] mx-auto mb-1.5" />
+                          <p className="text-[12px] text-[#6b6b76]">Sin notificaciones nuevas</p>
                         </div>
                       ) : (
                         notifications.map((n, i) => (
-                          <div key={i} className="px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                            <p className="text-[12px] text-[#1d1d1f] leading-snug">{n}</p>
+                          <div key={i} className="px-4 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                            <p className="text-[12px] text-[#e4e4e7] leading-snug">{n}</p>
                           </div>
                         ))
                       )}
@@ -488,14 +496,14 @@ export default function App() {
           </div>
 
           {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center text-white text-[13px] font-bold shrink-0">
+          <div className="w-9 h-9 rounded-full bg-violet-grad flex items-center justify-center text-white text-[13px] font-bold shrink-0 shadow-soft">
             {(config.businessName || "R").charAt(0).toUpperCase()}
           </div>
         </header>
 
         {/* Demo-mode pill (subtle, no scary error) */}
         {isDemo && (
-          <div className="mx-4 sm:mx-7 mt-4 bg-blue-50/70 border border-blue-100 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-[#0071e3]">
+          <div className="mx-4 sm:mx-7 mt-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-indigo-300">
             <Sparkles size={13} className="shrink-0" />
             <span><strong className="font-semibold">Modo demostración</strong> — estás viendo datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
           </div>
@@ -566,10 +574,10 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <footer className="text-center mt-10 pt-6 border-t border-slate-150 text-[11px] text-[#aeaeb2] flex items-center justify-center gap-3">
-            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-emerald-600" /> Supabase</span>
+          <footer className="text-center mt-10 pt-6 border-t border-white/8 text-[11px] text-[#6b6b76] flex items-center justify-center gap-3">
+            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-emerald-400" /> Supabase</span>
             <span>·</span>
-            <span className="flex items-center gap-1"><Zap size={11} className="text-[#0071e3]" /> Gemini AI</span>
+            <span className="flex items-center gap-1"><Zap size={11} className="text-indigo-400" /> Gemini AI</span>
           </footer>
         </main>
       </div>
