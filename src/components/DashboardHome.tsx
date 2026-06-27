@@ -45,82 +45,82 @@ export default function DashboardHome({ leads, campaigns, config, onNavigate }: 
     .slice(0, 4);
 
   const metrics = [
-    { label: "Prospectos", value: totalLeads.toLocaleString("es-AR"), delta: newToday.length, up: true, icon: <Users size={16} />, grad: "from-indigo-500 to-blue-600", glow: "shadow-[0_0_24px_-6px_rgba(99,102,241,0.6)]" },
-    { label: "Ventas ARS", value: `$${(totalSales / 1000).toFixed(totalSales >= 1000 ? 0 : 1)}k`, delta: closed, up: true, icon: <DollarSign size={16} />, grad: "from-emerald-500 to-teal-600", glow: "shadow-[0_0_24px_-6px_rgba(16,185,129,0.6)]" },
-    { label: "Conversión", value: `${convRate}%`, delta: convRate, up: convRate >= 20, icon: <TrendingUp size={16} />, grad: "from-violet-500 to-purple-600", glow: "shadow-[0_0_24px_-6px_rgba(139,92,246,0.6)]" },
-    { label: "Calientes", value: `${hotLeads.length}`, delta: hotLeads.length, up: true, icon: <Flame size={16} />, grad: "from-orange-500 to-amber-600", glow: "shadow-[0_0_24px_-6px_rgba(245,158,11,0.6)]" },
+    { label: "Prospectos", value: totalLeads.toLocaleString("es-AR"), delta: newToday.length, up: true, icon: <Users size={16} />, tint: "text-[#0071e3]" },
+    { label: "Ventas ARS", value: `$${(totalSales / 1000).toFixed(totalSales >= 1000 ? 0 : 1)}k`, delta: closed, up: true, icon: <DollarSign size={16} />, tint: "text-emerald-600" },
+    { label: "Conversión", value: `${convRate}%`, delta: convRate, up: convRate >= 20, icon: <TrendingUp size={16} />, tint: "text-purple-600" },
+    { label: "Calientes", value: `${hotLeads.length}`, delta: hotLeads.length, up: true, icon: <Flame size={16} />, tint: "text-orange-500" },
   ];
 
   const statusTint = (s: CRMLead["status"]) =>
-    s === "Cerrado" ? "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20"
-    : s === "Presupuestado" ? "text-violet-300 bg-violet-500/10 border border-violet-500/20"
-    : s === "Contactado" ? "text-amber-300 bg-amber-500/10 border border-amber-500/20"
-    : "text-sky-300 bg-sky-500/10 border border-sky-500/20";
+    s === "Cerrado" ? "text-emerald-700 bg-emerald-50"
+    : s === "Presupuestado" ? "text-purple-700 bg-purple-50"
+    : s === "Contactado" ? "text-amber-700 bg-amber-50"
+    : "text-sky-700 bg-sky-50";
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
       {/* LEFT / MAIN (2 cols) */}
       <div className="xl:col-span-2 space-y-5">
         {/* Overview metric cards */}
-        <section className="card rounded-[24px] p-5">
+        <section className="bg-white border border-slate-150 rounded-[24px] p-5 shadow-apple-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[17px] font-semibold tracking-tight text-white">Resumen</h2>
-            <span className="text-[12px] text-[#6b6b76]">En tiempo real</span>
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">Resumen</h2>
+            <span className="text-[12px] text-[#86868b]">En tiempo real</span>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {metrics.map((m, i) => (
               <motion.div
                 key={m.label}
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className="relative rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 overflow-hidden card-hover"
+                className="rounded-2xl border border-slate-150 bg-slate-50/50 p-3.5"
               >
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className={`w-9 h-9 rounded-xl bg-gradient-to-br ${m.grad} flex items-center justify-center text-white ${m.glow}`}>{m.icon}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-apple-sm ${m.tint}`}>{m.icon}</span>
                   {m.delta > 0 && (
-                    <span className={`flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${m.up ? "text-emerald-300 bg-emerald-500/10" : "text-red-400 bg-red-500/10"}`}>
+                    <span className={`flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${m.up ? "text-emerald-600 bg-emerald-50" : "text-red-500 bg-red-50"}`}>
                       {m.up ? <ArrowUpRight size={9} /> : <ArrowDownRight size={9} />}+{m.delta}
                     </span>
                   )}
                 </div>
-                <span className="block text-[27px] font-bold tracking-[-0.03em] text-white leading-none">{m.value}</span>
-                <span className="block text-[11px] text-[#8e8e96] font-medium mt-1.5">{m.label}</span>
+                <span className="block text-[26px] font-bold tracking-[-0.03em] text-[#1d1d1f] leading-none">{m.value}</span>
+                <span className="block text-[11px] text-[#86868b] font-medium mt-1">{m.label}</span>
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* New leads today + avatars */}
-        <section className="card rounded-[24px] p-5">
+        <section className="bg-white border border-slate-150 rounded-[24px] p-5 shadow-apple-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-[15px] font-semibold tracking-tight text-white">
+              <h3 className="text-[15px] font-semibold tracking-tight text-[#1d1d1f]">
                 {newToday.length > 0 ? `${newToday.length} ${newToday.length === 1 ? "lead nuevo" : "leads nuevos"} hoy` : "Sin leads nuevos hoy"}
               </h3>
-              <p className="text-[12.5px] text-[#8e8e96] mt-0.5">Tu agente los captó y registró automáticamente.</p>
+              <p className="text-[12.5px] text-[#6e6e73] mt-0.5">Tu agente los captó y registró automáticamente.</p>
             </div>
-            <button onClick={() => onNavigate("crm")} className="text-[12px] font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+            <button onClick={() => onNavigate("crm")} className="text-[12px] font-semibold text-[#0071e3] hover:underline flex items-center gap-1">
               Ver todos <ArrowRight size={13} />
             </button>
           </div>
           <div className="flex items-center gap-3 mt-4">
             {(newToday.length > 0 ? newToday : leads).slice(0, 6).map((l) => (
               <div key={l.id} className="flex flex-col items-center gap-1 group cursor-pointer" onClick={() => onNavigate("crm")}>
-                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-indigo-400/50 group-hover:scale-105 transition-all" />
-                <span className="text-[10px] text-[#8e8e96] font-medium truncate max-w-[52px]">{l.name.split(" ")[0]}</span>
+                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-apple-sm group-hover:scale-105 transition-transform" />
+                <span className="text-[10px] text-[#6e6e73] font-medium truncate max-w-[52px]">{l.name.split(" ")[0]}</span>
               </div>
             ))}
-            {leads.length === 0 && <p className="text-[12px] text-[#6b6b76]">Todavía no hay leads. Probá el chat en Estudio IA.</p>}
+            {leads.length === 0 && <p className="text-[12px] text-[#86868b]">Todavía no hay leads. Probá el chat en Estudio IA.</p>}
           </div>
         </section>
 
         {/* Activity chart */}
-        <section className="card rounded-[24px] p-5">
+        <section className="bg-white border border-slate-150 rounded-[24px] p-5 shadow-apple-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-[15px] font-semibold tracking-tight text-white">Actividad de la semana</h3>
-              <p className="text-[12.5px] text-[#8e8e96] mt-0.5">Interacciones por día (últimos 7 días)</p>
+              <h3 className="text-[15px] font-semibold tracking-tight text-[#1d1d1f]">Actividad de la semana</h3>
+              <p className="text-[12.5px] text-[#6e6e73] mt-0.5">Interacciones por día (últimos 7 días)</p>
             </div>
-            <span className="text-[20px] font-bold tracking-tight text-white">{days.reduce((a, d) => a + d.count, 0)}</span>
+            <span className="text-[20px] font-bold tracking-tight text-[#1d1d1f]">{days.reduce((a, d) => a + d.count, 0)}</span>
           </div>
           <div className="flex items-end gap-2 h-32">
             {days.map((d, i) => (
@@ -129,10 +129,10 @@ export default function DashboardHome({ leads, campaigns, config, onNavigate }: 
                   <motion.div
                     initial={{ height: 0 }} animate={{ height: `${Math.max(6, (d.count / maxDay) * 100)}%` }}
                     transition={{ delay: i * 0.06, ease: [0.25, 0.1, 0.25, 1] }}
-                    className={`w-full rounded-lg ${i === days.length - 1 ? "bg-gradient-to-t from-indigo-500 to-blue-400 shadow-[0_0_20px_-4px_rgba(99,102,241,0.8)]" : "bg-white/10"}`}
+                    className={`w-full rounded-lg ${i === days.length - 1 ? "bg-gradient-to-t from-[#0071e3] to-[#3b9bff]" : "bg-slate-200"}`}
                   />
                 </div>
-                <span className="text-[10px] text-[#6b6b76] font-medium">{d.label}</span>
+                <span className="text-[10px] text-[#86868b] font-medium">{d.label}</span>
               </div>
             ))}
           </div>
@@ -142,46 +142,46 @@ export default function DashboardHome({ leads, campaigns, config, onNavigate }: 
       {/* RIGHT column */}
       <div className="space-y-5">
         {/* Top leads */}
-        <section className="card rounded-[24px] p-5">
+        <section className="bg-white border border-slate-150 rounded-[24px] p-5 shadow-apple-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[15px] font-semibold tracking-tight text-white">Mejores leads</h3>
-            <button onClick={() => onNavigate("crm")} className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300">Ver CRM</button>
+            <h3 className="text-[15px] font-semibold tracking-tight text-[#1d1d1f]">Mejores leads</h3>
+            <button onClick={() => onNavigate("crm")} className="text-[11px] font-semibold text-[#0071e3] hover:underline">Ver CRM</button>
           </div>
           <div className="space-y-1">
             {topLeads.map((l) => (
-              <div key={l.id} onClick={() => onNavigate("crm")} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors">
-                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-white/10" />
+              <div key={l.id} onClick={() => onNavigate("crm")} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="text-[13px] font-semibold text-white block truncate">{l.name}</span>
-                  <span className="text-[11px] text-[#8e8e96]">Score {l.score}</span>
+                  <span className="text-[13px] font-semibold text-[#1d1d1f] block truncate">{l.name}</span>
+                  <span className="text-[11px] text-[#86868b]">Score {l.score}</span>
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${statusTint(l.status)}`}>{l.status}</span>
               </div>
             ))}
-            {topLeads.length === 0 && <p className="text-[12px] text-[#6b6b76] py-4 text-center">Sin leads todavía</p>}
+            {topLeads.length === 0 && <p className="text-[12px] text-[#86868b] py-4 text-center">Sin leads todavía</p>}
           </div>
         </section>
 
         {/* Recent activity */}
-        <section className="card rounded-[24px] p-5">
-          <h3 className="text-[15px] font-semibold tracking-tight text-white mb-3">Actividad reciente</h3>
+        <section className="bg-white border border-slate-150 rounded-[24px] p-5 shadow-apple-sm">
+          <h3 className="text-[15px] font-semibold tracking-tight text-[#1d1d1f] mb-3">Actividad reciente</h3>
           <div className="space-y-3">
             {recent.map((l) => (
               <div key={l.id} className="flex gap-3">
-                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-white/10" />
+                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] text-[#e4e4e7] leading-snug">
-                    <strong className="font-semibold text-white">{l.name}</strong>{" "}
-                    <span className="text-[#8e8e96]">{l.status === "Cerrado" ? "concretó una compra" : "interactuó por " + l.origin}</span>
+                  <p className="text-[12.5px] text-[#1d1d1f] leading-snug">
+                    <strong className="font-semibold">{l.name}</strong>{" "}
+                    <span className="text-[#6e6e73]">{l.status === "Cerrado" ? "concretó una compra" : "interactuó por " + l.origin}</span>
                   </p>
-                  <span className="text-[10px] text-[#6b6b76] flex items-center gap-1 mt-0.5"><Clock size={9} /> {timeAgo(l.lastInteraction)}</span>
+                  <span className="text-[10px] text-[#86868b] flex items-center gap-1 mt-0.5"><Clock size={9} /> {timeAgo(l.lastInteraction)}</span>
                 </div>
               </div>
             ))}
             {recent.length === 0 && (
               <div className="text-center py-4">
-                <MessageSquare size={22} className="text-[#3a3a44] mx-auto mb-1.5" />
-                <p className="text-[12px] text-[#6b6b76]">La actividad aparecerá acá</p>
+                <MessageSquare size={22} className="text-slate-300 mx-auto mb-1.5" />
+                <p className="text-[12px] text-[#86868b]">La actividad aparecerá acá</p>
               </div>
             )}
           </div>
