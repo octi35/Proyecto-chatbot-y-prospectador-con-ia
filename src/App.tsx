@@ -13,6 +13,7 @@ import {
   Loader2,
   AlertTriangle,
   LayoutGrid,
+  Search,
 } from "lucide-react";
 
 import { AgentConfig, CRMLead, Campaign, AgentAction } from "./types";
@@ -338,19 +339,21 @@ export default function App() {
   };
 
   return (
-    <div id="respondo-app" className="min-h-screen bg-[#fbfbfd] text-[#1d1d1f] font-sans selection:bg-blue-100 selection:text-blue-900 flex">
+    <div id="respondo-app" className="min-h-screen bg-[#f5f6fa] text-[#101828] font-sans selection:bg-blue-100 selection:text-blue-900 flex relative">
+      {/* Subtle blue ambient decoration (Invo-style) */}
+      <div className="fixed top-0 right-0 w-[40rem] h-[26rem] bg-gradient-to-bl from-blue-200/30 via-indigo-100/20 to-transparent rounded-full blur-[100px] pointer-events-none" />
       {/* ===================== SIDEBAR ===================== */}
-      <aside className="hidden md:flex flex-col w-[248px] shrink-0 h-screen sticky top-0 bg-white border-r border-slate-150 px-4 py-5">
+      <aside className="hidden md:flex flex-col w-[248px] shrink-0 h-screen sticky top-0 bg-white border-r border-slate-100 px-4 py-5 z-20">
         {/* Brand */}
         <div className="flex items-center gap-2.5 px-2 mb-7">
-          <div className="w-9 h-9 rounded-[11px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center shrink-0 overflow-hidden shadow-apple-sm">
+          <div className="w-9 h-9 rounded-[11px] bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 overflow-hidden shadow-[0_6px_16px_-4px_rgba(37,99,235,0.5)]">
             {config.logoUrl ? (
               <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
             ) : (
               <span className="font-bold text-base text-white">R</span>
             )}
           </div>
-          <span className="font-semibold text-[15px] tracking-tight text-[#1d1d1f] truncate">
+          <span className="font-semibold text-[15px] tracking-tight text-[#101828] truncate">
             {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
           </span>
         </div>
@@ -361,13 +364,13 @@ export default function App() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`group flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[13.5px] font-medium transition-all duration-200 relative ${
+              className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13.5px] font-medium transition-all duration-200 relative ${
                 activeTab === tab
-                  ? "bg-[#0071e3]/8 text-[#0071e3] font-semibold"
-                  : "text-[#6e6e73] hover:bg-slate-50 hover:text-[#1d1d1f]"
+                  ? "bg-blue-600 text-white font-semibold shadow-[0_6px_16px_-4px_rgba(37,99,235,0.5)]"
+                  : "text-[#667085] hover:bg-slate-50 hover:text-[#101828]"
               }`}
             >
-              <span className={activeTab === tab ? "text-[#0071e3]" : "text-[#86868b] group-hover:text-[#1d1d1f]"}>{icon}</span>
+              <span className={activeTab === tab ? "text-white" : "text-[#98a2b3] group-hover:text-[#101828]"}>{icon}</span>
               {label}
               {badge > 0 && (
                 <span className="ml-auto min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -380,38 +383,47 @@ export default function App() {
 
         {/* Bottom: status */}
         <div className="mt-auto px-2 space-y-3">
-          <div className="rounded-2xl bg-slate-50 border border-slate-150 p-3">
-            <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wide block mb-1.5">Estado</span>
-            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isDemo ? "text-[#0071e3]" : "text-emerald-700"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-[#0071e3]" : "bg-emerald-500 animate-pulse"}`} />
+          <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3">
+            <span className="text-[10px] font-semibold text-[#98a2b3] uppercase tracking-wide block mb-1.5">Estado</span>
+            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isDemo ? "text-blue-600" : "text-emerald-700"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-blue-600" : "bg-emerald-500 animate-pulse"}`} />
               {isDemo ? "Modo demo" : "Supabase conectado"}
             </span>
           </div>
-          <p className="text-[10px] text-[#aeaeb2] px-1">Respondo · Chatea menos, vendé más</p>
+          <p className="text-[10px] text-[#cbd2dc] px-1">Respondo · Chatea menos, vendé más</p>
         </div>
       </aside>
 
       {/* ===================== MAIN ===================== */}
-      <div className="flex-1 min-w-0 flex flex-col h-screen">
+      <div className="flex-1 min-w-0 flex flex-col h-screen relative z-10">
         {/* Top bar */}
-        <header className="shrink-0 glass border-b border-slate-150 px-4 sm:px-7 py-3.5 flex items-center gap-4 sticky top-0 z-30">
+        <header className="shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 sm:px-7 py-3.5 flex items-center gap-4 sticky top-0 z-30">
           {/* Mobile tab selector */}
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value as TabType)}
-            className="md:hidden bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 text-[13px] font-semibold text-[#1d1d1f] focus:outline-none cursor-pointer"
+            className="md:hidden bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 text-[13px] font-semibold text-[#101828] focus:outline-none cursor-pointer"
           >
             {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab}>{label}</option>)}
           </select>
-          <h1 className="hidden md:block text-[20px] font-semibold tracking-tight text-[#1d1d1f]">{pageTitle[activeTab]}</h1>
+          <h1 className="hidden md:block text-[20px] font-semibold tracking-tight text-[#101828] shrink-0">{pageTitle[activeTab]}</h1>
 
-          <div className="flex-1" />
+          {/* Search bar (Invo style) */}
+          <div className="hidden md:flex flex-1 max-w-md mx-2">
+            <div className="relative w-full">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#98a2b3] pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Buscar leads, campañas…"
+                className="w-full bg-slate-50 border border-slate-100 rounded-full pl-10 pr-4 py-2 text-[13px] text-[#101828] placeholder:text-[#98a2b3] focus:outline-none focus:border-blue-300 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 md:hidden" />
 
           {/* Quick stats pills (desktop) */}
-          <div className="hidden xl:flex items-center gap-2 mr-1">
-            <span className="text-[12px] font-medium text-[#6e6e73] px-3 py-1.5 rounded-full bg-slate-50">
-              <strong className="text-[#1d1d1f] font-semibold">{totalLeads}</strong> leads
-            </span>
+          <div className="hidden 2xl:flex items-center gap-2 mr-1">
             {hotLeads > 0 && (
               <span className="text-[12px] font-medium text-orange-600 px-3 py-1.5 rounded-full bg-orange-50">
                 🔥 {hotLeads} calientes
@@ -422,7 +434,7 @@ export default function App() {
           {/* Create → goes to chat playground */}
           <button
             onClick={() => setActiveTab("playground")}
-            className="bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-apple-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-[0_6px_16px_-4px_rgba(37,99,235,0.5)]"
           >
             <Sparkles size={14} /> <span className="hidden sm:inline">Probar IA</span>
           </button>
@@ -431,7 +443,7 @@ export default function App() {
           <div className="relative">
             <button
               onClick={() => setShowNotifPanel((v) => !v)}
-              className="relative w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-[#6e6e73] transition-colors cursor-pointer"
+              className="relative w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-[#667085] transition-colors cursor-pointer"
               title="Notificaciones"
             >
               <Bell size={16} />
@@ -488,7 +500,7 @@ export default function App() {
           </div>
 
           {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center text-white text-[13px] font-bold shrink-0">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[13px] font-bold shrink-0">
             {(config.businessName || "R").charAt(0).toUpperCase()}
           </div>
         </header>
