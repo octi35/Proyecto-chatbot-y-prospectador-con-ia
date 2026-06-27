@@ -49,6 +49,7 @@ export default function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<string[]>([]);
   const [newLeadsBadge, setNewLeadsBadge] = useState(0);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
 
   // Ref to avoid stale closure in pending config saves
   const pendingConfigSave = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -420,36 +421,71 @@ export default function App() {
             <Sparkles size={14} /> <span className="hidden sm:inline">Probar IA</span>
           </button>
 
-          {/* Notifications bell */}
-          <button
-            onClick={() => setActiveTab("crm")}
-            className="relative w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-[#6e6e73] transition-colors cursor-pointer"
-            title="Notificaciones"
-          >
-            <Bell size={16} />
-            {newLeadsBadge > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
-          </button>
+          {/* Notifications bell + dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifPanel((v) => !v)}
+              className="relative w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-[#6e6e73] transition-colors cursor-pointer"
+              title="Notificaciones"
+            >
+              <Bell size={16} />
+              {notifications.length > 0 && (
+                <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                  {notifications.length > 9 ? "9+" : notifications.length}
+                </span>
+              )}
+            </button>
+            <AnimatePresence>
+              {showNotifPanel && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifPanel(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute right-0 mt-2 w-80 bg-white border border-slate-150 rounded-2xl shadow-apple-lg z-50 overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                      <span className="text-[13px] font-semibold text-[#1d1d1f]">Notificaciones</span>
+                      {notifications.length > 0 && (
+                        <button onClick={() => setNotifications([])} className="text-[11px] text-[#0071e3] hover:underline">Limpiar</button>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {hotLeads > 0 && (
+                        <div className="px-4 py-3 bg-orange-50/60 border-b border-orange-100 flex items-center gap-2">
+                          <span className="text-base">🔥</span>
+                          <div className="flex-1">
+                            <p className="text-[12.5px] font-semibold text-orange-800">{hotLeads} lead{hotLeads !== 1 ? "s" : ""} caliente{hotLeads !== 1 ? "s" : ""} ahora</p>
+                            <button onClick={() => { setActiveTab("crm"); setShowNotifPanel(false); }} className="text-[11px] text-orange-700 hover:underline">Ver en el CRM →</button>
+                          </div>
+                        </div>
+                      )}
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-8 text-center">
+                          <Bell size={22} className="text-slate-300 mx-auto mb-1.5" />
+                          <p className="text-[12px] text-[#86868b]">Sin notificaciones nuevas</p>
+                        </div>
+                      ) : (
+                        notifications.map((n, i) => (
+                          <div key={i} className="px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                            <p className="text-[12px] text-[#1d1d1f] leading-snug">{n}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Avatar */}
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center text-white text-[13px] font-bold shrink-0">
             {(config.businessName || "R").charAt(0).toUpperCase()}
           </div>
         </header>
-
-        {/* Activity stream (compact, under topbar) */}
-        {notifications.length > 0 && (
-          <div className="mx-4 sm:mx-7 mt-4 bg-white border border-slate-150 rounded-2xl p-3 flex items-start gap-3 shadow-apple-sm">
-            <Bell size={14} className="text-[#0071e3] shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="space-y-0.5 max-h-[64px] overflow-y-auto pr-2">
-                {notifications.map((n, i) => (
-                  <p key={i} className="text-[11.5px] text-[#1d1d1f] truncate leading-relaxed">• {n}</p>
-                ))}
-              </div>
-            </div>
-            <button onClick={() => setNotifications([])} className="text-[10px] text-[#6e6e73] hover:text-[#1d1d1f] bg-slate-50 px-3 py-1.5 rounded-full shrink-0 transition-colors">Limpiar</button>
-          </div>
-        )}
 
         {/* API error banner */}
         {apiError && (
