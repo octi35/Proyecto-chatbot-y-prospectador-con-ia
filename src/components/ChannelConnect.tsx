@@ -137,18 +137,18 @@ export default function ChannelConnect() {
     <div className="space-y-5">
       {/* Hero */}
       <div className="text-center max-w-2xl mx-auto pt-2 pb-1">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[6366f1] text-[11px] font-semibold mb-3">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-indigo-600 text-[11px] font-semibold mb-3">
           <Sparkles size={12} /> Conectá en minutos
         </div>
-        <h2 className="text-[1.8rem] font-bold tracking-[-0.03em] text-[18181b]">
+        <h2 className="text-[1.8rem] font-bold tracking-[-0.03em] text-zinc-900">
           Conectá tus canales
         </h2>
-        <p className="text-[15px] text-[71717a] mt-2 leading-relaxed">
+        <p className="text-[15px] text-zinc-500 mt-2 leading-relaxed">
           Vinculá WhatsApp, Instagram y Facebook para que tu agente responda en todos lados.
           Seguí los pasos guiados de cada uno — no necesitás saber programar.
         </p>
-        <div className="inline-flex items-center gap-2 mt-4 text-[13px] text-[71717a]">
-          <span className="font-semibold text-[18181b]">{connectedCount}/{CHANNELS.length}</span> canales conectados
+        <div className="inline-flex items-center gap-2 mt-4 text-[13px] text-zinc-500">
+          <span className="font-semibold text-zinc-900">{connectedCount}/{CHANNELS.length}</span> canales conectados
           <div className="flex gap-1 ml-1">
             {CHANNELS.map((c) => (
               <span key={c.id} className={`w-1.5 h-1.5 rounded-full ${isConnected(c.id) ? "bg-emerald-500" : "bg-zinc-300"}`} />
@@ -177,20 +177,20 @@ export default function ChannelConnect() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-[15px] text-[18181b] tracking-tight">{ch.name}</h3>
+                    <h3 className="font-semibold text-[15px] text-zinc-900 tracking-tight">{ch.name}</h3>
                     {connected ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
                         <Check size={10} /> Conectado
                       </span>
                     ) : (
-                      <span className="text-[10px] font-semibold text-[a1a1aa] bg-zinc-100 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-semibold text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
                         Sin conectar
                       </span>
                     )}
                   </div>
-                  <p className="text-[12.5px] text-[71717a] mt-0.5 truncate">{ch.tagline}</p>
+                  <p className="text-[12.5px] text-zinc-500 mt-0.5 truncate">{ch.tagline}</p>
                 </div>
-                <ChevronDown size={18} className={`text-[a1a1aa] shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                <ChevronDown size={18} className={`text-zinc-400 shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
               </button>
 
               {/* Expandable guide */}
@@ -208,24 +208,24 @@ export default function ChannelConnect() {
                       <div className="space-y-2.5 pt-4">
                         {ch.steps.map((step, i) => (
                           <div key={i} className="flex gap-3 items-start">
-                            <span className="w-5 h-5 rounded-full bg-[6366f1] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                               {i + 1}
                             </span>
-                            <p className="text-[13px] text-[18181b] leading-relaxed">{step}</p>
+                            <p className="text-[13px] text-zinc-900 leading-relaxed">{step}</p>
                           </div>
                         ))}
                       </div>
 
                       {/* Webhook URL */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-[a1a1aa] uppercase tracking-wide">URL del Webhook (pegar en Meta)</label>
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">URL del Webhook (pegar en Meta)</label>
                         <div className="flex gap-2">
-                          <code className="flex-1 bg-[18181b] text-emerald-300 text-[11px] font-mono px-3 py-2.5 rounded-xl overflow-x-auto whitespace-nowrap">
+                          <code className="flex-1 bg-zinc-900 text-emerald-300 text-[11px] font-mono px-3 py-2.5 rounded-xl overflow-x-auto whitespace-nowrap">
                             {webhookFor(ch.id)}
                           </code>
                           <button
                             onClick={() => copy(webhookFor(ch.id), `${ch.id}-url`)}
-                            className="px-3.5 py-2.5 bg-[18181b] hover:bg-[#000] text-white text-[12px] font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                            className="px-3.5 py-2.5 bg-zinc-900 hover:bg-[#000] text-white text-[12px] font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
                           >
                             {copiedField === `${ch.id}-url` ? <Check size={13} /> : <Copy size={13} />}
                             {copiedField === `${ch.id}-url` ? "Copiado" : "Copiar"}
@@ -236,13 +236,13 @@ export default function ChannelConnect() {
                       {/* Env vars + verify token */}
                       <div className="grid sm:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-[a1a1aa] uppercase tracking-wide">Variables del .env</label>
+                          <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Variables del .env</label>
                           <div className="flex flex-wrap gap-1.5">
                             {ch.envVars.map((v) => (
                               <button
                                 key={v}
                                 onClick={() => copy(v, v)}
-                                className="text-[10px] font-mono font-medium bg-zinc-100 hover:bg-zinc-200 text-[18181b] px-2 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                className="text-[10px] font-mono font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-2 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                                 title="Copiar nombre de la variable"
                               >
                                 {copiedField === v ? <Check size={9} /> : <Copy size={9} />} {v}
@@ -251,9 +251,9 @@ export default function ChannelConnect() {
                           </div>
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-[a1a1aa] uppercase tracking-wide">Token de verificación</label>
+                          <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Token de verificación</label>
                           <div className="flex gap-2">
-                            <code className="flex-1 bg-zinc-100 text-[18181b] text-[11px] font-mono px-2.5 py-1.5 rounded-lg truncate">
+                            <code className="flex-1 bg-zinc-100 text-zinc-900 text-[11px] font-mono px-2.5 py-1.5 rounded-lg truncate">
                               WEBHOOK_VERIFY_TOKEN
                             </code>
                           </div>
@@ -272,7 +272,7 @@ export default function ChannelConnect() {
                               value={testPhone}
                               onChange={(e) => setTestPhone(e.target.value)}
                               placeholder="5491112345678"
-                              className="flex-1 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-[13px] text-[18181b] focus:outline-none focus:border-emerald-500"
+                              className="flex-1 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-[13px] text-zinc-900 focus:outline-none focus:border-emerald-500"
                             />
                             <button
                               onClick={runTest}
@@ -292,7 +292,7 @@ export default function ChannelConnect() {
                         href={ch.docUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[6366f1] hover:underline"
+                        className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-indigo-600 hover:underline"
                       >
                         Ver guía oficial de Meta <ExternalLink size={12} />
                       </a>
@@ -306,10 +306,10 @@ export default function ChannelConnect() {
       </div>
 
       {/* Security note */}
-      <div className="flex items-start gap-2.5 text-[12px] text-[71717a] bg-white border border-zinc-100 rounded-2xl p-4 shadow-apple-sm">
+      <div className="flex items-start gap-2.5 text-[12px] text-zinc-500 bg-white border border-zinc-100 rounded-2xl p-4 shadow-apple-sm">
         <ShieldCheck size={16} className="text-emerald-600 shrink-0 mt-0.5" />
         <span>
-          <strong className="text-[18181b]">Tus credenciales nunca tocan el navegador.</strong> Se guardan
+          <strong className="text-zinc-900">Tus credenciales nunca tocan el navegador.</strong> Se guardan
           como variables de entorno en el servidor (archivo <code className="bg-zinc-100 px-1 rounded">.env</code>),
           igual que las apps profesionales. Reiniciá el servidor después de cargarlas para activar el canal.
         </span>

@@ -158,28 +158,28 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
       {/* Live Agent Status Card — minimalist */}
       <div className="bg-white border border-zinc-100 rounded-[24px] p-6 shadow-apple-sm flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[6366f1] to-[4338ca] flex items-center justify-center shrink-0 shadow-apple-sm">
+          <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center shrink-0 shadow-apple-sm">
             <Zap className="text-white" size={24} />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold tracking-wide text-[6366f1] block mb-0.5">
+            <span className="text-[10px] uppercase font-semibold tracking-wide text-indigo-600 block mb-0.5">
               Agente en vivo
             </span>
-            <h4 className="font-semibold text-[17px] tracking-tight text-[18181b]">
+            <h4 className="font-semibold text-[17px] tracking-tight text-zinc-900">
               {config.businessName || "Respondo AI"} — operando solo
             </h4>
-            <p className="text-[12.5px] text-[71717a] max-w-xl leading-relaxed mt-1">
-              Entrenado como experto en <strong className="text-[18181b] font-semibold">{config.businessType || "tu rubro"}</strong> con tono <strong className="text-[18181b] font-semibold">{config.tone}</strong>. Responde en milisegundos y deriva al CRM.
+            <p className="text-[12.5px] text-zinc-500 max-w-xl leading-relaxed mt-1">
+              Entrenado como experto en <strong className="text-zinc-900 font-semibold">{config.businessType || "tu rubro"}</strong> con tono <strong className="text-zinc-900 font-semibold">{config.tone}</strong>. Responde en milisegundos y deriva al CRM.
             </p>
           </div>
         </div>
 
         <div className="shrink-0 bg-zinc-50 border border-zinc-100 px-5 py-3 rounded-2xl text-center min-w-[140px]">
-          <span className="text-[10px] text-[a1a1aa] block font-semibold uppercase tracking-wide">Tienda</span>
-          <span className="text-[17px] font-bold text-[6366f1] block my-0.5 tracking-tight">
+          <span className="text-[10px] text-zinc-400 block font-semibold uppercase tracking-wide">Tienda</span>
+          <span className="text-[17px] font-bold text-indigo-600 block my-0.5 tracking-tight">
             {config.syncStore || "Nativa"}
           </span>
-          <span className="text-[9px] text-[a1a1aa] block">Sincronización activa</span>
+          <span className="text-[9px] text-zinc-400 block">Sincronización activa</span>
         </div>
       </div>
 
@@ -191,7 +191,7 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             className="bg-white border border-zinc-100 rounded-[20px] p-5 hover:shadow-apple transition-all flex flex-col justify-between shadow-apple-sm"
           >
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs font-semibold text-[a1a1aa]">{m.title}</span>
+              <span className="text-xs font-semibold text-zinc-400">{m.title}</span>
               <div className="p-2 bg-zinc-50 rounded-xl shrink-0">
                 {m.icon}
               </div>

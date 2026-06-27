@@ -179,10 +179,10 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
       </div>
 
       {/* Strict mode — bot answers ONLY from its configured info */}
-      <div className={`rounded-2xl p-4 border transition-all ${config.strictMode ? "bg-[6366f1]/5 border-[6366f1]/30" : "bg-zinc-50 border-zinc-100"}`}>
+      <div className={`rounded-2xl p-4 border transition-all ${config.strictMode ? "bg-indigo-600/5 border-indigo-600/30" : "bg-zinc-50 border-zinc-100"}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5">
-            <ShieldAlert size={18} className={config.strictMode ? "text-[6366f1] shrink-0 mt-0.5" : "text-zinc-400 shrink-0 mt-0.5"} />
+            <ShieldAlert size={18} className={config.strictMode ? "text-indigo-600 shrink-0 mt-0.5" : "text-zinc-400 shrink-0 mt-0.5"} />
             <div>
               <span className="text-[13px] font-semibold text-zinc-900 block">Modo estricto — responde 100% sobre tu información</span>
               <p className="text-[11.5px] text-zinc-500 leading-relaxed mt-0.5">
@@ -197,7 +197,7 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
             role="switch"
             aria-checked={!!config.strictMode}
             onClick={() => handleFieldChange("strictMode", !config.strictMode)}
-            className={`relative w-11 h-6 rounded-full transition-colors duration-300 shrink-0 cursor-pointer ${config.strictMode ? "bg-[6366f1]" : "bg-zinc-300"}`}
+            className={`relative w-11 h-6 rounded-full transition-colors duration-300 shrink-0 cursor-pointer ${config.strictMode ? "bg-indigo-600" : "bg-zinc-300"}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 ${config.strictMode ? "translate-x-5" : "translate-x-0"}`} />
           </button>

@@ -458,12 +458,12 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
       {/* CRM Dashboard Tabs */}
       <div className="glass p-4 sm:p-5 border-b border-zinc-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-[6366f1] to-[4338ca] flex items-center justify-center text-white shadow-apple-sm shrink-0">
+          <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center text-white shadow-apple-sm shrink-0">
             <Users size={18} />
           </div>
           <div>
-            <h3 className="font-semibold text-[18px] tracking-tight text-[18181b]">Panel de Control CRM</h3>
-            <p className="text-[12.5px] text-[71717a]">Gestioná prospectos, tomá chats de la IA y lanzá difusiones</p>
+            <h3 className="font-semibold text-[18px] tracking-tight text-zinc-900">Panel de Control CRM</h3>
+            <p className="text-[12.5px] text-zinc-500">Gestioná prospectos, tomá chats de la IA y lanzá difusiones</p>
           </div>
         </div>
 
@@ -505,8 +505,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
               onClick={() => setActiveTab("pipeline")}
               className={`px-4 py-1.5 text-[12px] rounded-[10px] font-medium transition-all duration-300 cursor-pointer ${
                 activeTab === "pipeline"
-                  ? "bg-white text-[18181b] shadow-apple-sm font-semibold"
-                  : "text-[71717a] hover:text-[18181b]"
+                  ? "bg-white text-zinc-900 shadow-apple-sm font-semibold"
+                  : "text-zinc-500 hover:text-zinc-900"
               }`}
             >
               Embudo de Ventas
@@ -515,8 +515,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
               onClick={() => setActiveTab("broadcast")}
               className={`px-4 py-1.5 text-[12px] rounded-[10px] font-medium transition-all duration-300 cursor-pointer ${
                 activeTab === "broadcast"
-                  ? "bg-white text-[18181b] shadow-apple-sm font-semibold"
-                  : "text-[71717a] hover:text-[18181b]"
+                  ? "bg-white text-zinc-900 shadow-apple-sm font-semibold"
+                  : "text-zinc-500 hover:text-zinc-900"
               }`}
             >
               Envíos Masivos (Meta API)
@@ -1363,7 +1363,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                         const replyRate = pct(camp.repliesCount, camp.sentCount);
                         const convRate = pct(camp.repliesCount, camp.readCount); // replied of those who read
                         const metrics = [
-                          { label: "Enviados", value: `${camp.sentCount}`, rate: 100, color: "bg-zinc-400", text: "text-[18181b]" },
+                          { label: "Enviados", value: `${camp.sentCount}`, rate: 100, color: "bg-zinc-400", text: "text-zinc-900" },
                           { label: "Apertura", value: `${openRate}%`, rate: openRate, color: "bg-sky-500", text: "text-sky-600" },
                           { label: "Respuesta", value: `${replyRate}%`, rate: replyRate, color: "bg-emerald-500", text: "text-emerald-600" },
                           { label: "Conversión", value: `${convRate}%`, rate: convRate, color: "bg-purple-500", text: "text-purple-600" },
@@ -1373,7 +1373,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                             {metrics.map((m) => (
                               <div key={m.label} className="p-2 bg-white border border-zinc-100 rounded-xl text-center shadow-apple-sm">
                                 <span className={`text-[13px] font-bold block ${m.text}`}>{m.value}</span>
-                                <span className="text-[8px] text-[a1a1aa] block uppercase font-semibold tracking-wide mb-1">{m.label}</span>
+                                <span className="text-[8px] text-zinc-400 block uppercase font-semibold tracking-wide mb-1">{m.label}</span>
                                 <div className="w-full h-1 bg-zinc-100 rounded-full overflow-hidden">
                                   <div className={`h-full rounded-full ${m.color}`} style={{ width: `${Math.max(2, m.rate)}%` }} />
                                 </div>

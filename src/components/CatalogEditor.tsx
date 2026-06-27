@@ -69,22 +69,22 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <label className="text-xs font-medium text-[71717a] flex items-center">
-          <ShoppingBag size={13} className="mr-1 text-[6366f1]" /> Catálogo de Productos
+        <label className="text-xs font-medium text-zinc-500 flex items-center">
+          <ShoppingBag size={13} className="mr-1 text-indigo-600" /> Catálogo de Productos
         </label>
         {/* Visual / Text toggle */}
         <div className="flex bg-zinc-100 p-0.5 rounded-lg">
           <button
             type="button"
             onClick={() => setMode("visual")}
-            className={`px-2.5 py-1 text-[10px] font-semibold rounded-md flex items-center gap-1 transition-all cursor-pointer ${mode === "visual" ? "bg-white text-[18181b] shadow-apple-sm" : "text-[71717a]"}`}
+            className={`px-2.5 py-1 text-[10px] font-semibold rounded-md flex items-center gap-1 transition-all cursor-pointer ${mode === "visual" ? "bg-white text-zinc-900 shadow-apple-sm" : "text-zinc-500"}`}
           >
             <LayoutGrid size={11} /> Visual
           </button>
           <button
             type="button"
             onClick={() => setMode("text")}
-            className={`px-2.5 py-1 text-[10px] font-semibold rounded-md flex items-center gap-1 transition-all cursor-pointer ${mode === "text" ? "bg-white text-[18181b] shadow-apple-sm" : "text-[71717a]"}`}
+            className={`px-2.5 py-1 text-[10px] font-semibold rounded-md flex items-center gap-1 transition-all cursor-pointer ${mode === "text" ? "bg-white text-zinc-900 shadow-apple-sm" : "text-zinc-500"}`}
           >
             <FileText size={11} /> Texto
           </button>
@@ -96,7 +96,7 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={7}
-          className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-xs font-mono text-zinc-700 focus:outline-none focus:border-[6366f1] transition-colors resize-y leading-relaxed"
+          className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-xs font-mono text-zinc-700 focus:outline-none focus:border-indigo-600 transition-colors resize-y leading-relaxed"
           placeholder="- Producto: $precio (talles, colores, stock). Una línea por producto."
         />
       ) : (
@@ -104,7 +104,7 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
           {products.length === 0 && (
             <div className="text-center py-6 px-4 bg-zinc-50/70 border border-dashed border-zinc-200 rounded-2xl">
               <ShoppingBag size={22} className="text-zinc-300 mx-auto mb-1.5" />
-              <p className="text-[12px] text-[71717a]">Agregá tu primer producto para entrenar al bot</p>
+              <p className="text-[12px] text-zinc-500">Agregá tu primer producto para entrenar al bot</p>
             </div>
           )}
 
@@ -128,7 +128,7 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
                     value={p.name}
                     onChange={(e) => setField(i, "name", e.target.value)}
                     placeholder="Nombre del producto"
-                    className="flex-1 bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-[18181b] focus:outline-none focus:border-[6366f1]"
+                    className="flex-1 bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-zinc-900 focus:outline-none focus:border-indigo-600"
                   />
                   <div className="relative w-28 shrink-0">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400">$</span>
@@ -137,7 +137,7 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
                       value={p.price}
                       onChange={(e) => setField(i, "price", e.target.value)}
                       placeholder="Precio"
-                      className="w-full bg-zinc-50 border border-zinc-100 rounded-lg pl-5 pr-2 py-1.5 text-[12px] text-[18181b] focus:outline-none focus:border-[6366f1]"
+                      className="w-full bg-zinc-50 border border-zinc-100 rounded-lg pl-5 pr-2 py-1.5 text-[12px] text-zinc-900 focus:outline-none focus:border-indigo-600"
                     />
                   </div>
                 </div>
@@ -146,14 +146,14 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
                   value={p.attributes}
                   onChange={(e) => setField(i, "attributes", e.target.value)}
                   placeholder="Talles, colores, stock, envío…"
-                  className="w-full bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 text-[11px] text-[71717a] focus:outline-none focus:border-[6366f1]"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 text-[11px] text-zinc-500 focus:outline-none focus:border-indigo-600"
                 />
                 <input
                   type="url"
                   value={p.photo}
                   onChange={(e) => setField(i, "photo", e.target.value)}
                   placeholder="URL de la foto (opcional)"
-                  className="w-full bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-zinc-500 focus:outline-none focus:border-[6366f1]"
+                  className="w-full bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-zinc-500 focus:outline-none focus:border-indigo-600"
                 />
               </div>
               <button
@@ -170,13 +170,13 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
           <button
             type="button"
             onClick={addProduct}
-            className="w-full py-2.5 border border-dashed border-zinc-200 rounded-xl text-[12px] font-semibold text-[6366f1] hover:bg-indigo-50/40 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="w-full py-2.5 border border-dashed border-zinc-200 rounded-xl text-[12px] font-semibold text-indigo-600 hover:bg-indigo-50/40 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <Plus size={14} /> Agregar producto
           </button>
         </div>
       )}
-      <p className="text-[10px] text-[a1a1aa]">Es el núcleo de respuestas del bot. Cuantos más datos, mejor vende.</p>
+      <p className="text-[10px] text-zinc-400">Es el núcleo de respuestas del bot. Cuantos más datos, mejor vende.</p>
     </div>
   );
 }
