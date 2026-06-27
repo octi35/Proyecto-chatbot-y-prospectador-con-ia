@@ -12,6 +12,7 @@ import {
   Bell,
   Loader2,
   AlertTriangle,
+  LayoutGrid,
 } from "lucide-react";
 
 import { AgentConfig, CRMLead, Campaign, AgentAction } from "./types";
@@ -31,11 +32,12 @@ import WhiteLabelStudio from "./components/WhiteLabelStudio";
 import ChannelConnect from "./components/ChannelConnect";
 import AutomationRules from "./components/AutomationRules";
 import WaTemplateManager from "./components/WaTemplateManager";
+import DashboardHome from "./components/DashboardHome";
 
-type TabType = "playground" | "crm" | "analytics" | "integrations" | "compare";
+type TabType = "dashboard" | "playground" | "crm" | "analytics" | "integrations" | "compare";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>("playground");
+  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
 
   // Data state (loaded from API)
   const [config, setConfig] = useState<AgentConfig>(DEFAULT_CONFIG);
@@ -315,81 +317,53 @@ export default function App() {
     );
   }
 
+  const NAV_ITEMS: [TabType, React.ReactNode, string, number][] = [
+    ["dashboard",    <LayoutGrid size={18} />,     "Dashboard",      0],
+    ["playground",   <MessageSquare size={18} />,  "Estudio IA",     0],
+    ["crm",          <Users size={18} />,          "CRM de Ventas",  newLeadsBadge],
+    ["analytics",    <BarChart3 size={18} />,      "Métricas",       0],
+    ["integrations", <Layers size={18} />,         "Integraciones",  0],
+    ["compare",      <HelpCircle size={18} />,     "Comparativa",    0],
+  ];
+  const pageTitle: Record<TabType, string> = {
+    dashboard: "Dashboard", playground: "Estudio IA", crm: "CRM de Ventas",
+    analytics: "Métricas", integrations: "Integraciones", compare: "Comparativa",
+  };
+
   return (
-    <div id="respondo-app" className="min-h-screen bg-[#fbfbfd] text-[#1d1d1f] font-sans selection:bg-blue-100 selection:text-blue-900">
-      {/* Ambient Apple-style gradient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 left-1/4 w-[36rem] h-[36rem] bg-blue-400/10 rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 right-0 w-[30rem] h-[30rem] bg-indigo-300/10 rounded-full blur-[120px]" />
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center glass border border-white/60 rounded-[28px] p-4 sm:p-6 gap-4 shadow-apple sticky top-4 z-30">
-          <div className="flex items-center space-x-4">
-            <div className="w-11 h-11 rounded-[14px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] shadow-apple-sm flex items-center justify-center shrink-0 overflow-hidden">
-              {config.logoUrl ? (
-                <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
-              ) : (
-                <span className="font-bold text-xl tracking-tighter text-white">R</span>
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-[1.7rem] leading-none tracking-[-0.03em] text-[#1d1d1f]">
-                  {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
-                </h1>
-                <span className="px-2 py-0.5 bg-blue-50 text-[#0071e3] rounded-full text-[10px] font-semibold tracking-tight">
-                  v3.0
-                </span>
-              </div>
-              <p className="text-[13px] text-[#6e6e73] font-medium mt-1">
-                Chatea menos, <strong className="text-[#0071e3] font-semibold">Vendé más.</strong>
-              </p>
-            </div>
+    <div id="respondo-app" className="min-h-screen bg-[#fbfbfd] text-[#1d1d1f] font-sans selection:bg-blue-100 selection:text-blue-900 flex">
+      {/* ===================== SIDEBAR ===================== */}
+      <aside className="hidden md:flex flex-col w-[248px] shrink-0 h-screen sticky top-0 bg-white border-r border-slate-150 px-4 py-5">
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 px-2 mb-7">
+          <div className="w-9 h-9 rounded-[11px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center shrink-0 overflow-hidden shadow-apple-sm">
+            {config.logoUrl ? (
+              <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+            ) : (
+              <span className="font-bold text-base text-white">R</span>
+            )}
           </div>
+          <span className="font-semibold text-[15px] tracking-tight text-[#1d1d1f] truncate">
+            {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
+          </span>
+        </div>
 
-          <div className="hidden lg:flex items-center gap-3">
-            {[
-              { label: "Prospectos", value: `${totalLeads}`, color: "text-[#1d1d1f]" },
-              ...(hotLeads > 0 ? [{ label: "Calientes 🔥", value: `${hotLeads}`, color: "text-orange-600" }] : []),
-              { label: "Conversión", value: `${convRate}%`, color: "text-[#0071e3]" },
-              { label: "Ventas ARS", value: `$${totalSales.toLocaleString("es-AR")}`, color: "text-emerald-600" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center px-3.5 py-2 rounded-2xl bg-white/60 border border-white/80 shadow-apple-sm min-w-[78px]">
-                <span className={`block text-base font-semibold tracking-tight ${stat.color}`}>{stat.value}</span>
-                <span className="block text-[9px] text-[#86868b] font-medium uppercase tracking-wide mt-0.5">{stat.label}</span>
-              </div>
-            ))}
-            <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 ${apiError ? "text-red-600 bg-red-50" : "text-emerald-700 bg-emerald-50"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${apiError ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
-              {apiError ? "Local" : "Supabase"}
-            </span>
-          </div>
-        </header>
-
-        {/* Navigation — iOS segmented control */}
-        <nav className="flex glass p-1.5 border border-white/60 rounded-2xl overflow-x-auto gap-1 shadow-apple-sm">
-          {([
-            ["playground",   <MessageSquare size={15} />, "Estudio IA",       0],
-            ["crm",          <Users size={15} />,         "CRM de Ventas",    newLeadsBadge],
-            ["analytics",    <BarChart3 size={15} />,     "Métricas",         0],
-            ["integrations", <Layers size={15} />,        "Integraciones",    0],
-            ["compare",      <HelpCircle size={15} />,    "Comparativa",      0],
-          ] as [TabType, React.ReactNode, string, number][]).map(([tab, icon, label, badge]) => (
+        {/* Nav */}
+        <nav className="flex flex-col gap-0.5">
+          {NAV_ITEMS.map(([tab, icon, label, badge]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2.5 text-[13px] font-medium rounded-[13px] transition-all duration-300 shrink-0 flex items-center gap-2 relative ${
+              className={`group flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[13.5px] font-medium transition-all duration-200 relative ${
                 activeTab === tab
-                  ? "bg-white text-[#1d1d1f] shadow-apple-sm font-semibold"
-                  : "text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-white/40"
+                  ? "bg-[#0071e3]/8 text-[#0071e3] font-semibold"
+                  : "text-[#6e6e73] hover:bg-slate-50 hover:text-[#1d1d1f]"
               }`}
             >
-              <span className={activeTab === tab ? "text-[#0071e3]" : ""}>{icon}</span>{label}
+              <span className={activeTab === tab ? "text-[#0071e3]" : "text-[#86868b] group-hover:text-[#1d1d1f]"}>{icon}</span>
+              {label}
               {badge > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                <span className="ml-auto min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {badge > 9 ? "9+" : badge}
                 </span>
               )}
@@ -397,38 +371,103 @@ export default function App() {
           ))}
         </nav>
 
-        {/* Activity Stream */}
+        {/* Bottom: status */}
+        <div className="mt-auto px-2 space-y-3">
+          <div className="rounded-2xl bg-slate-50 border border-slate-150 p-3">
+            <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wide block mb-1.5">Estado</span>
+            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${apiError ? "text-red-600" : "text-emerald-700"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${apiError ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
+              {apiError ? "Modo local" : "Supabase conectado"}
+            </span>
+          </div>
+          <p className="text-[10px] text-[#aeaeb2] px-1">Respondo · Chatea menos, vendé más</p>
+        </div>
+      </aside>
+
+      {/* ===================== MAIN ===================== */}
+      <div className="flex-1 min-w-0 flex flex-col h-screen">
+        {/* Top bar */}
+        <header className="shrink-0 glass border-b border-slate-150 px-4 sm:px-7 py-3.5 flex items-center gap-4 sticky top-0 z-30">
+          {/* Mobile tab selector */}
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as TabType)}
+            className="md:hidden bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 text-[13px] font-semibold text-[#1d1d1f] focus:outline-none cursor-pointer"
+          >
+            {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab}>{label}</option>)}
+          </select>
+          <h1 className="hidden md:block text-[20px] font-semibold tracking-tight text-[#1d1d1f]">{pageTitle[activeTab]}</h1>
+
+          <div className="flex-1" />
+
+          {/* Quick stats pills (desktop) */}
+          <div className="hidden xl:flex items-center gap-2 mr-1">
+            <span className="text-[12px] font-medium text-[#6e6e73] px-3 py-1.5 rounded-full bg-slate-50">
+              <strong className="text-[#1d1d1f] font-semibold">{totalLeads}</strong> leads
+            </span>
+            {hotLeads > 0 && (
+              <span className="text-[12px] font-medium text-orange-600 px-3 py-1.5 rounded-full bg-orange-50">
+                🔥 {hotLeads} calientes
+              </span>
+            )}
+          </div>
+
+          {/* Create → goes to chat playground */}
+          <button
+            onClick={() => setActiveTab("playground")}
+            className="bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-apple-sm"
+          >
+            <Sparkles size={14} /> <span className="hidden sm:inline">Probar IA</span>
+          </button>
+
+          {/* Notifications bell */}
+          <button
+            onClick={() => setActiveTab("crm")}
+            className="relative w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-[#6e6e73] transition-colors cursor-pointer"
+            title="Notificaciones"
+          >
+            <Bell size={16} />
+            {newLeadsBadge > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
+          </button>
+
+          {/* Avatar */}
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center text-white text-[13px] font-bold shrink-0">
+            {(config.businessName || "R").charAt(0).toUpperCase()}
+          </div>
+        </header>
+
+        {/* Activity stream (compact, under topbar) */}
         {notifications.length > 0 && (
-          <div className="glass border border-white/60 rounded-2xl p-3.5 flex items-start gap-3 shadow-apple-sm">
-            <Bell size={15} className="text-[#0071e3] shrink-0 mt-0.5" />
+          <div className="mx-4 sm:mx-7 mt-4 bg-white border border-slate-150 rounded-2xl p-3 flex items-start gap-3 shadow-apple-sm">
+            <Bell size={14} className="text-[#0071e3] shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider block mb-1">Actividad en Vivo</span>
-              <div className="space-y-1 max-h-[80px] overflow-y-auto pr-2">
+              <div className="space-y-0.5 max-h-[64px] overflow-y-auto pr-2">
                 {notifications.map((n, i) => (
-                  <p key={i} className="text-[12px] text-[#1d1d1f] truncate leading-relaxed">• {n}</p>
+                  <p key={i} className="text-[11.5px] text-[#1d1d1f] truncate leading-relaxed">• {n}</p>
                 ))}
               </div>
             </div>
-            <button
-              onClick={() => setNotifications([])}
-              className="text-[10px] text-[#6e6e73] hover:text-[#1d1d1f] bg-white/60 px-3 py-1.5 rounded-full hover:bg-white shrink-0 transition-colors"
-            >
-              Limpiar
-            </button>
+            <button onClick={() => setNotifications([])} className="text-[10px] text-[#6e6e73] hover:text-[#1d1d1f] bg-slate-50 px-3 py-1.5 rounded-full shrink-0 transition-colors">Limpiar</button>
           </div>
         )}
 
         {/* API error banner */}
         {apiError && (
-          <div className="bg-amber-50/80 border border-amber-200/60 rounded-2xl p-3.5 flex items-center gap-2 text-[13px] text-amber-800">
+          <div className="mx-4 sm:mx-7 mt-4 bg-amber-50/80 border border-amber-200/60 rounded-2xl p-3.5 flex items-center gap-2 text-[13px] text-amber-800">
             <AlertTriangle size={14} className="shrink-0" />
-            <span><strong>API no disponible:</strong> {apiError}. Revisá que SUPABASE_URL y SUPABASE_ANON_KEY estén configurados en el .env.</span>
+            <span><strong>API no disponible:</strong> {apiError}.</span>
           </div>
         )}
 
-        {/* Main content */}
-        <main className="min-h-[500px]">
+        {/* Scrollable content */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-7 py-5">
           <AnimatePresence mode="wait">
+            {activeTab === "dashboard" && (
+              <motion.div key="dashboard" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                <DashboardHome leads={leads} campaigns={campaigns} config={config} onNavigate={(t) => setActiveTab(t as TabType)} />
+              </motion.div>
+            )}
+
             {activeTab === "playground" && (
               <motion.div key="playground" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
                 className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -484,16 +523,13 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
-        </main>
 
-        <footer className="text-center pt-8 border-t border-slate-200 text-xs text-slate-400 space-y-2">
-          <p>Respondo — Automatización de ventas inteligente y CRM en tiempo real.</p>
-          <div className="flex items-center justify-center space-x-4">
-            <span className="flex items-center gap-1"><ShieldCheck size={12} className="text-emerald-600" /> Datos en Supabase (sa-east-1)</span>
-            <span>•</span>
-            <span className="flex items-center gap-1"><Zap size={12} className="text-blue-600" /> Gemini AI — Function Calling activo</span>
-          </div>
-        </footer>
+          <footer className="text-center mt-10 pt-6 border-t border-slate-150 text-[11px] text-[#aeaeb2] flex items-center justify-center gap-3">
+            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-emerald-600" /> Supabase</span>
+            <span>·</span>
+            <span className="flex items-center gap-1"><Zap size={11} className="text-[#0071e3]" /> Gemini AI</span>
+          </footer>
+        </main>
       </div>
     </div>
   );
