@@ -36,6 +36,7 @@ import AutomationRules from "./components/AutomationRules";
 import WaTemplateManager from "./components/WaTemplateManager";
 import DashboardHome from "./components/DashboardHome";
 import Login from "./components/Login";
+import { Toaster, toast } from "./components/ui/toast";
 
 type TabType = "dashboard" | "playground" | "crm" | "analytics" | "integrations" | "help";
 
@@ -248,6 +249,11 @@ export default function App() {
   // ---------------------------------------------------------------------------
   const addNotification = (text: string) => {
     setNotifications((prev) => [text, ...prev.slice(0, 4)]);
+    // Surface a stylized toast for important events (leads, errors)
+    if (/lead|🔥|error|⚠️/i.test(text)) {
+      if (/error|⚠️/i.test(text)) toast.error(text.replace(/[⚠️]/g, "").trim());
+      else toast.info(text.replace(/[📲🔥✅]/g, "").trim());
+    }
   };
 
   const handleLeadMessageAdded = useCallback((text: string, role: "user" | "model") => {
@@ -599,6 +605,8 @@ export default function App() {
           </footer>
         </main>
       </div>
+
+      <Toaster />
     </div>
   );
 }
