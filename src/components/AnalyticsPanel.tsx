@@ -155,37 +155,31 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
   return (
     <div className="space-y-6">
       
-      {/* Real Live Agent Operational Status Card */}
-      <div className="relative bg-gradient-to-r from-slate-50 via-white to-blue-50/40 border border-slate-200 rounded-3xl p-6 overflow-hidden shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-        {/* Abstract background light */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-60 h-60 bg-indigo-500/5 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
-
-        <div className="flex items-center space-x-4 relative z-10">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-sm flex items-center justify-center shrink-0">
-            <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center">
-              <Zap className="text-blue-600" size={28} />
-            </div>
+      {/* Live Agent Status Card — minimalist */}
+      <div className="bg-white border border-slate-150 rounded-[24px] p-6 shadow-apple-sm flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center shrink-0 shadow-apple-sm">
+            <Zap className="text-white" size={24} />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-blue-600 block mb-0.5">
-              Estado de tu Agente en Vivo
+            <span className="text-[10px] uppercase font-semibold tracking-wide text-[#0071e3] block mb-0.5">
+              Agente en vivo
             </span>
-            <h4 className="font-sans font-bold text-lg md:text-xl text-slate-900">
-              {config.businessName || "Respondo AI"} — Operando de forma autónoma
+            <h4 className="font-semibold text-[17px] tracking-tight text-[#1d1d1f]">
+              {config.businessName || "Respondo AI"} — operando solo
             </h4>
-            <p className="text-xs text-slate-600 max-w-xl leading-relaxed mt-1">
-              Tu agente de inteligencia artificial está entrenado como un experto en <strong className="text-blue-600 font-semibold">{config.businessType}</strong> usando el tono <strong className="text-slate-700 font-semibold">{config.tone}</strong>. Resuelve dudas del catálogo en milisegundos y deriva automáticamente las consultas complejas al CRM.
+            <p className="text-[12.5px] text-[#6e6e73] max-w-xl leading-relaxed mt-1">
+              Entrenado como experto en <strong className="text-[#1d1d1f] font-semibold">{config.businessType || "tu rubro"}</strong> con tono <strong className="text-[#1d1d1f] font-semibold">{config.tone}</strong>. Responde en milisegundos y deriva al CRM.
             </p>
           </div>
         </div>
 
-        <div className="shrink-0 relative z-10 bg-white border border-slate-200 px-4 py-3 rounded-2xl text-center shadow-sm min-w-[150px]">
-          <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Tienda</span>
-          <span className="font-sans text-lg font-black text-blue-600 block my-0.5">
+        <div className="shrink-0 bg-slate-50 border border-slate-150 px-5 py-3 rounded-2xl text-center min-w-[140px]">
+          <span className="text-[10px] text-[#86868b] block font-semibold uppercase tracking-wide">Tienda</span>
+          <span className="text-[17px] font-bold text-[#0071e3] block my-0.5 tracking-tight">
             {config.syncStore || "Nativa"}
           </span>
-          <span className="text-[9px] text-slate-400 block">Sincronización Activa</span>
+          <span className="text-[9px] text-[#aeaeb2] block">Sincronización activa</span>
         </div>
       </div>
 
@@ -194,11 +188,11 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
         {METRICS.map((m, index) => (
           <div
             key={index}
-            className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition-all flex flex-col justify-between shadow-sm"
+            className="bg-white border border-slate-150 rounded-[20px] p-5 hover:shadow-apple transition-all flex flex-col justify-between shadow-apple-sm"
           >
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs font-semibold text-slate-500">{m.title}</span>
-              <div className="p-2 bg-slate-50 border border-slate-100 rounded-lg shrink-0">
+              <span className="text-xs font-semibold text-[#86868b]">{m.title}</span>
+              <div className="p-2 bg-slate-50 rounded-xl shrink-0">
                 {m.icon}
               </div>
             </div>
