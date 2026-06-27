@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   LayoutGrid,
   Search,
+  LogOut,
 } from "lucide-react";
 
 import { AgentConfig, CRMLead, Campaign, AgentAction } from "./types";
@@ -29,17 +30,30 @@ import AgentTrainer from "./components/AgentTrainer";
 import ChatSimulator from "./components/ChatSimulator";
 import CRMAdmin from "./components/CRMAdmin";
 import AnalyticsPanel from "./components/AnalyticsPanel";
-import ComparisonTable from "./components/ComparisonTable";
-import WhiteLabelStudio from "./components/WhiteLabelStudio";
+import HelpGuide from "./components/HelpGuide";
 import ChannelConnect from "./components/ChannelConnect";
 import AutomationRules from "./components/AutomationRules";
 import WaTemplateManager from "./components/WaTemplateManager";
 import DashboardHome from "./components/DashboardHome";
+import Login from "./components/Login";
 
-type TabType = "dashboard" | "playground" | "crm" | "analytics" | "integrations" | "compare";
+type TabType = "dashboard" | "playground" | "crm" | "analytics" | "integrations" | "help";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+
+  // Auth gate (no backend yet → persisted local session)
+  const [authedUser, setAuthedUser] = useState<string | null>(() => {
+    try { return localStorage.getItem("respondo_user"); } catch { return null; }
+  });
+  const handleLogin = useCallback((email: string) => {
+    try { localStorage.setItem("respondo_user", email); } catch { /* ignore */ }
+    setAuthedUser(email);
+  }, []);
+  const handleLogout = useCallback(() => {
+    try { localStorage.removeItem("respondo_user"); } catch { /* ignore */ }
+    setAuthedUser(null);
+  }, []);
 
   // Data state (loaded from API)
   const [config, setConfig] = useState<AgentConfig>(DEFAULT_CONFIG);
@@ -316,11 +330,16 @@ export default function App() {
   // ---------------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------------
+  // Auth gate — show the login screen until there's a session
+  if (!authedUser) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fbfbfd] flex flex-col items-center justify-center gap-3">
-        <Loader2 size={30} className="text-[#0071e3] animate-spin" />
-        <p className="text-sm text-[#6e6e73] font-medium tracking-tight">Cargando Respondo…</p>
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center gap-3">
+        <Loader2 size={30} className="text-indigo-600 animate-spin" />
+        <p className="text-sm text-zinc-500 font-medium tracking-tight">Cargando Respondo…</p>
       </div>
     );
   }
@@ -331,11 +350,11 @@ export default function App() {
     ["crm",          <Users size={18} />,          "CRM de Ventas",  newLeadsBadge],
     ["analytics",    <BarChart3 size={18} />,      "Métricas",       0],
     ["integrations", <Layers size={18} />,         "Integraciones",  0],
-    ["compare",      <HelpCircle size={18} />,     "Comparativa",    0],
+    ["help",         <HelpCircle size={18} />,     "Ayuda",          0],
   ];
   const pageTitle: Record<TabType, string> = {
     dashboard: "Dashboard", playground: "Estudio IA", crm: "CRM de Ventas",
-    analytics: "Métricas", integrations: "Integraciones", compare: "Comparativa",
+    analytics: "Métricas", integrations: "Integraciones", help: "Centro de ayuda",
   };
 
   return (
@@ -381,11 +400,20 @@ export default function App() {
           ))}
         </nav>
 
-        {/* Bottom: status */}
-        <div className="mt-auto px-1">
+        {/* Bottom: status + account */}
+        <div className="mt-auto px-1 space-y-2">
           <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-zinc-50">
             <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-indigo-500" : "bg-emerald-500 animate-pulse"}`} />
             <span className="text-[11.5px] text-zinc-500 font-medium">{isDemo ? "Modo demo" : "Conectado"}</span>
+          </div>
+          <div className="flex items-center gap-2.5 px-2 py-1.5">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[12px] font-semibold shrink-0">
+              {(authedUser || "U").charAt(0).toUpperCase()}
+            </div>
+            <span className="text-[12px] text-zinc-600 font-medium truncate flex-1">{authedUser}</span>
+            <button onClick={handleLogout} title="Cerrar sesión" className="text-zinc-400 hover:text-red-500 transition-colors cursor-pointer shrink-0">
+              <LogOut size={15} />
+            </button>
           </div>
         </div>
       </aside>
@@ -554,15 +582,12 @@ export default function App() {
                 <ChannelConnect />
                 <AutomationRules />
                 <WaTemplateManager />
-                <div className="pt-2 border-t border-slate-150">
-                  <WhiteLabelStudio />
-                </div>
               </motion.div>
             )}
 
-            {activeTab === "compare" && (
-              <motion.div key="compare" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                <ComparisonTable />
+            {activeTab === "help" && (
+              <motion.div key="help" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                <HelpGuide onNavigate={(t) => setActiveTab(t as TabType)} />
               </motion.div>
             )}
           </AnimatePresence>
