@@ -488,9 +488,9 @@ export default function App() {
                     className="absolute right-0 mt-2 w-80 bg-white border border-slate-150 rounded-2xl shadow-apple-lg z-50 overflow-hidden"
                   >
                     <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                      <span className="text-[13px] font-semibold text-[#1d1d1f]">Notificaciones</span>
+                      <span className="text-[13px] font-semibold text-[18181b]">Notificaciones</span>
                       {notifications.length > 0 && (
-                        <button onClick={() => setNotifications([])} className="text-[11px] text-[#0071e3] hover:underline">Limpiar</button>
+                        <button onClick={() => setNotifications([])} className="text-[11px] text-[6366f1] hover:underline">Limpiar</button>
                       )}
                     </div>
                     <div className="max-h-80 overflow-y-auto">
@@ -506,12 +506,12 @@ export default function App() {
                       {notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                           <Bell size={22} className="text-slate-300 mx-auto mb-1.5" />
-                          <p className="text-[12px] text-[#86868b]">Sin notificaciones nuevas</p>
+                          <p className="text-[12px] text-[a1a1aa]">Sin notificaciones nuevas</p>
                         </div>
                       ) : (
                         notifications.map((n, i) => (
                           <div key={i} className="px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                            <p className="text-[12px] text-[#1d1d1f] leading-snug">{n}</p>
+                            <p className="text-[12px] text-[18181b] leading-snug">{n}</p>
                           </div>
                         ))
                       )}

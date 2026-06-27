@@ -319,8 +319,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
     switch (origin) {
       case "WhatsApp": return "bg-emerald-50 text-emerald-700 border-emerald-100";
       case "Instagram": return "bg-pink-50 text-pink-700 border-pink-100";
-      case "Facebook": return "bg-blue-50 text-blue-700 border-blue-100";
-      case "Email": return "bg-slate-100 text-slate-700 border-slate-200";
+      case "Facebook": return "bg-indigo-50 text-indigo-700 border-indigo-100";
+      case "Email": return "bg-zinc-100 text-zinc-700 border-zinc-200";
     }
   };
 
@@ -453,17 +453,17 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
   };
 
   return (
-    <div className="bg-white border border-slate-150 rounded-[28px] overflow-hidden shadow-apple flex flex-col h-full min-h-[600px]">
+    <div className="bg-white border border-zinc-100 rounded-[28px] overflow-hidden shadow-apple flex flex-col h-full min-h-[600px]">
 
       {/* CRM Dashboard Tabs */}
-      <div className="glass p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="glass p-4 sm:p-5 border-b border-zinc-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center text-white shadow-apple-sm shrink-0">
+          <div className="w-10 h-10 rounded-[13px] bg-gradient-to-br from-[6366f1] to-[4338ca] flex items-center justify-center text-white shadow-apple-sm shrink-0">
             <Users size={18} />
           </div>
           <div>
-            <h3 className="font-semibold text-[18px] tracking-tight text-[#1d1d1f]">Panel de Control CRM</h3>
-            <p className="text-[12.5px] text-[#6e6e73]">Gestioná prospectos, tomá chats de la IA y lanzá difusiones</p>
+            <h3 className="font-semibold text-[18px] tracking-tight text-[18181b]">Panel de Control CRM</h3>
+            <p className="text-[12.5px] text-[71717a]">Gestioná prospectos, tomá chats de la IA y lanzá difusiones</p>
           </div>
         </div>
 
@@ -487,7 +487,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
           {onLeadCreate && (
             <button
               onClick={() => importCsvRef.current?.click()}
-              className="px-3 py-1.5 text-xs rounded-lg font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3 py-1.5 text-xs rounded-lg font-medium border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5 transition-all cursor-pointer"
               title="Importar leads desde CSV (columnas: nombre, teléfono, estado, canal, notas, puntaje)"
             >
               <Upload size={13} /> Importar CSV
@@ -495,18 +495,18 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
           )}
           <button
             onClick={exportCSV}
-            className="px-3 py-1.5 text-xs rounded-lg font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3 py-1.5 text-xs rounded-lg font-medium border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5 transition-all cursor-pointer"
             title="Exportar leads a CSV"
           >
             <FileSpreadsheet size={13} /> Exportar CSV
           </button>
-          <div className="flex bg-slate-100/80 p-1 rounded-[13px]">
+          <div className="flex bg-zinc-100/80 p-1 rounded-[13px]">
             <button
               onClick={() => setActiveTab("pipeline")}
               className={`px-4 py-1.5 text-[12px] rounded-[10px] font-medium transition-all duration-300 cursor-pointer ${
                 activeTab === "pipeline"
-                  ? "bg-white text-[#1d1d1f] shadow-apple-sm font-semibold"
-                  : "text-[#6e6e73] hover:text-[#1d1d1f]"
+                  ? "bg-white text-[18181b] shadow-apple-sm font-semibold"
+                  : "text-[71717a] hover:text-[18181b]"
               }`}
             >
               Embudo de Ventas
@@ -515,8 +515,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
               onClick={() => setActiveTab("broadcast")}
               className={`px-4 py-1.5 text-[12px] rounded-[10px] font-medium transition-all duration-300 cursor-pointer ${
                 activeTab === "broadcast"
-                  ? "bg-white text-[#1d1d1f] shadow-apple-sm font-semibold"
-                  : "text-[#6e6e73] hover:text-[#1d1d1f]"
+                  ? "bg-white text-[18181b] shadow-apple-sm font-semibold"
+                  : "text-[71717a] hover:text-[18181b]"
               }`}
             >
               Envíos Masivos (Meta API)
@@ -542,7 +542,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="px-4 py-2 bg-blue-50 border-b border-blue-200 text-xs text-blue-800 font-medium"
+            className="px-4 py-2 bg-indigo-50 border-b border-indigo-200 text-xs text-blue-800 font-medium"
           >
             {importResult}
           </motion.div>
@@ -563,17 +563,17 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
               className="grid grid-cols-1 lg:grid-cols-12 h-full min-h-[500px]"
             >
               {/* Funnel Columns Left (3 columns on lg grid) */}
-              <div className="lg:col-span-8 p-4 border-r border-slate-200 overflow-y-auto space-y-4 max-h-[520px]">
+              <div className="lg:col-span-8 p-4 border-r border-zinc-200 overflow-y-auto space-y-4 max-h-[520px]">
                 {/* Today's Activity card */}
                 {(newLeadsToday > 0 || activeToday > 0 || closedToday > 0) && (
-                  <div className="rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-3">
-                    <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-indigo-50 p-3">
+                    <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-2 flex items-center gap-1">
                       <TrendingUp size={11} /> Actividad de hoy
                     </p>
                     <div className="grid grid-cols-4 gap-2">
                       <div className="text-center">
-                        <span className="block text-lg font-black text-blue-700 leading-tight">{newLeadsToday}</span>
-                        <span className="block text-[9px] text-blue-500 font-semibold uppercase tracking-wide leading-tight">Nuevos</span>
+                        <span className="block text-lg font-black text-indigo-700 leading-tight">{newLeadsToday}</span>
+                        <span className="block text-[9px] text-indigo-500 font-semibold uppercase tracking-wide leading-tight">Nuevos</span>
                       </div>
                       <div className="text-center">
                         <span className="block text-lg font-black text-indigo-700 leading-tight">{activeToday}</span>
@@ -606,7 +606,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   })}
                 </div>
                 {(staleCount > 0 || totalValue > 0) && (
-                  <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                  <div className="flex items-center gap-3 text-[10px] text-zinc-500">
                     {staleCount > 0 && (
                       <span className="flex items-center gap-1 text-amber-600 font-semibold">
                         <Clock size={11} /> {staleCount} lead{staleCount > 1 ? "s" : ""} sin actividad (+24h)
@@ -618,7 +618,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       </span>
                     )}
                     {avgScore > 0 && (
-                      <span className="flex items-center gap-1 text-blue-600 font-semibold ml-auto">
+                      <span className="flex items-center gap-1 text-indigo-600 font-semibold ml-auto">
                         Score prom: {avgScore}%
                       </span>
                     )}
@@ -681,18 +681,18 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
-                        <span className="text-xs font-bold text-blue-700 shrink-0">
+                      <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2">
+                        <span className="text-xs font-bold text-indigo-700 shrink-0">
                           {checkedLeadIds.size} seleccionado{checkedLeadIds.size !== 1 ? "s" : ""}
                         </span>
-                        <span className="text-blue-300 mx-1">|</span>
-                        <span className="text-[10px] text-blue-600 font-semibold shrink-0">Mover a:</span>
+                        <span className="text-indigo-300 mx-1">|</span>
+                        <span className="text-[10px] text-indigo-600 font-semibold shrink-0">Mover a:</span>
                         {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((s) => (
                           <button
                             key={s}
                             onClick={() => handleBulkMove(s)}
                             disabled={isBulkActing}
-                            className="text-[9px] font-bold px-2 py-1 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                            className="text-[9px] font-bold px-2 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 transition-all cursor-pointer disabled:opacity-50 shrink-0"
                           >
                             {s}
                           </button>
@@ -709,7 +709,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                         )}
                         <button
                           onClick={() => setCheckedLeadIds(new Set())}
-                          className="text-[9px] text-blue-500 hover:text-blue-700 cursor-pointer shrink-0"
+                          className="text-[9px] text-indigo-500 hover:text-indigo-700 cursor-pointer shrink-0"
                         >
                           Cancelar
                         </button>
@@ -727,29 +727,29 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 space-y-2">
-                        <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Agregar lead manualmente</span>
+                      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 space-y-2">
+                        <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">Agregar lead manualmente</span>
                         <div className="grid grid-cols-2 gap-2">
                           <input
                             type="text"
                             value={newLeadName}
                             onChange={(e) => setNewLeadName(e.target.value)}
                             placeholder="Nombre *"
-                            className="bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                            className="bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500"
                           />
                           <input
                             type="text"
                             value={newLeadPhone}
                             onChange={(e) => setNewLeadPhone(e.target.value)}
                             placeholder="Teléfono (opcional)"
-                            className="bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                            className="bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500"
                           />
                         </div>
                         <div className="flex gap-2">
                           <select
                             value={newLeadOrigin}
                             onChange={(e) => setNewLeadOrigin(e.target.value as CRMLead["origin"])}
-                            className="flex-1 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none"
+                            className="flex-1 bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 focus:outline-none"
                           >
                             <option value="WhatsApp">WhatsApp</option>
                             <option value="Instagram">Instagram</option>
@@ -759,13 +759,13 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                           <button
                             onClick={handleAddLead}
                             disabled={isAddingLead || !newLeadName.trim()}
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
                           >
                             {isAddingLead ? "Guardando…" : "Guardar"}
                           </button>
                           <button
                             onClick={() => setShowAddForm(false)}
-                            className="px-3 py-1.5 bg-white text-slate-600 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
+                            className="px-3 py-1.5 bg-white text-zinc-600 text-xs font-medium border border-zinc-200 rounded-lg hover:bg-zinc-50 cursor-pointer"
                           >
                             Cancelar
                           </button>
@@ -872,7 +872,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
               </div>
 
               {/* Lead Details Right (4 columns on lg grid) */}
-              <div className="lg:col-span-4 p-4 flex flex-col h-full max-h-[520px] overflow-y-auto border-l border-slate-150">
+              <div className="lg:col-span-4 p-4 flex flex-col h-full max-h-[520px] overflow-y-auto border-l border-zinc-100">
                 {selectedLead ? (
                   <div className="space-y-4 flex-1 flex flex-col justify-between">
                     <div>
@@ -944,19 +944,19 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                               value={editingNotes}
                               onChange={(e) => setEditingNotes(e.target.value)}
                               rows={3}
-                              className="w-full bg-white border border-blue-300 rounded-xl p-2.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 resize-none font-mono"
+                              className="w-full bg-white border border-indigo-300 rounded-xl p-2.5 text-xs text-zinc-700 focus:outline-none focus:border-indigo-500 resize-none font-mono"
                             />
                             <div className="flex gap-1.5">
                               <button
                                 onClick={handleSaveNotes}
                                 disabled={isSavingNotes}
-                                className="flex-1 py-1 rounded-lg bg-blue-600 text-white text-[10px] font-bold hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50"
+                                className="flex-1 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 transition-all cursor-pointer disabled:opacity-50"
                               >
                                 {isSavingNotes ? "Guardando…" : "Guardar"}
                               </button>
                               <button
                                 onClick={() => setEditingNotes(null)}
-                                className="py-1 px-3 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold hover:bg-slate-200 transition-all cursor-pointer"
+                                className="py-1 px-3 rounded-lg bg-zinc-100 text-zinc-600 text-[10px] font-bold hover:bg-zinc-200 transition-all cursor-pointer"
                               >
                                 Cancelar
                               </button>
@@ -992,8 +992,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
 
                       {/* Register sale amount */}
                       {selectedLead.status === "Cerrado" && onLeadUpdate && (
-                        <div className="py-3 border-b border-slate-100 space-y-1.5">
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                        <div className="py-3 border-b border-zinc-100 space-y-1.5">
+                          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">
                             Monto de la Venta (ARS)
                           </span>
                           <div className="flex gap-1.5">
@@ -1002,7 +1002,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                               min={0}
                               defaultValue={selectedLead.totalSpent || 0}
                               id={`total-spent-${selectedLead.id}`}
-                              className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                              className="flex-1 bg-white border border-zinc-200 rounded-xl px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500"
                               placeholder="0"
                             />
                             <button
@@ -1099,7 +1099,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                                 key={r}
                                 type="button"
                                 onClick={() => setManualMessage(r)}
-                                className="text-[8px] font-medium px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 cursor-pointer transition-all"
+                                className="text-[8px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 cursor-pointer transition-all"
                               >
                                 {r}
                               </button>
@@ -1112,7 +1112,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                               onChange={(e) => setManualMessage(e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendManualMessage(); } }}
                               placeholder="Escribí tu mensaje…"
-                              className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                              className="flex-1 bg-white border border-zinc-200 rounded-xl px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500"
                             />
                             <button
                               onClick={handleSendManualMessage}
@@ -1123,11 +1123,11 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                             </button>
                           </div>
                           {manualSendFeedback && (
-                            <p className="text-[9px] text-center font-medium text-slate-600">{manualSendFeedback}</p>
+                            <p className="text-[9px] text-center font-medium text-zinc-600">{manualSendFeedback}</p>
                           )}
                         </div>
                       ) : (
-                        <p className="text-[9px] text-slate-400 text-center">
+                        <p className="text-[9px] text-zinc-400 text-center">
                           La IA de Respondo responde 24/7 de forma autónoma.
                         </p>
                       )}
@@ -1145,9 +1145,9 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
-                    <UserCheck size={36} className="text-slate-400 mb-2" />
-                    <span className="text-xs text-slate-700 font-semibold">Seleccioná un Lead</span>
-                    <span className="text-[10px] text-slate-400 max-w-xs mt-1">
+                    <UserCheck size={36} className="text-zinc-400 mb-2" />
+                    <span className="text-xs text-zinc-700 font-semibold">Seleccioná un Lead</span>
+                    <span className="text-[10px] text-zinc-400 max-w-xs mt-1">
                       Haz clic en cualquier tarjeta de prospecto del embudo para ver su historial completo e intervenir.
                     </span>
                   </div>
@@ -1166,35 +1166,35 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
               className="grid grid-cols-1 lg:grid-cols-12 p-6 gap-6 h-full min-h-[500px]"
             >
               {/* Campaign Composer Left (6 columns) */}
-              <div className="lg:col-span-6 bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
-                <div className="flex items-center space-x-2 pb-3 border-b border-slate-200">
+              <div className="lg:col-span-6 bg-zinc-50 p-5 rounded-2xl border border-zinc-200 space-y-4">
+                <div className="flex items-center space-x-2 pb-3 border-b border-zinc-200">
                   <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg">
                     <ShieldCheck size={16} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900">Nueva Campaña Masiva de WhatsApp</h4>
-                    <p className="text-[10px] text-slate-400">Envío 100% seguro utilizando la API Oficial de Meta</p>
+                    <h4 className="font-bold text-sm text-zinc-900">Nueva Campaña Masiva de WhatsApp</h4>
+                    <p className="text-[10px] text-zinc-400">Envío 100% seguro utilizando la API Oficial de Meta</p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Nombre de la Campaña</label>
+                    <label className="text-xs font-medium text-zinc-500">Nombre de la Campaña</label>
                     <input
                       type="text"
                       value={newCampName}
                       onChange={(e) => setNewCampName(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500 transition-colors"
                       placeholder="Ej: Hot Sale Lanzamiento"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Segmento de Audiencia Objetivo</label>
+                    <label className="text-xs font-medium text-zinc-500">Segmento de Audiencia Objetivo</label>
                     <select
                       value={newCampSegment}
                       onChange={(e) => setNewCampSegment(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500 transition-colors"
                     >
                       <option value="Todos los contactos">Todos los contactos ({leads.length} leads activos)</option>
                       <option value="Clientes con Carrito Incompleto">Carritos Abandonados (Inactivos)</option>
@@ -1205,8 +1205,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
 
                   <div className="space-y-1">
                     <div className="flex justify-between items-center">
-                      <label className="text-xs font-medium text-slate-500">Plantilla de Mensaje</label>
-                      <span className="text-[9px] text-slate-400 font-mono font-bold">Use {"{{nombre}}"} y {"{{empresa}}"}</span>
+                      <label className="text-xs font-medium text-zinc-500">Plantilla de Mensaje</label>
+                      <span className="text-[9px] text-zinc-400 font-mono font-bold">Use {"{{nombre}}"} y {"{{empresa}}"}</span>
                     </div>
                     {/* Quick template picker */}
                     <div className="flex flex-wrap gap-1.5 pb-1">
@@ -1215,7 +1215,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                           key={tpl.name}
                           type="button"
                           onClick={() => { setNewCampTemplate(tpl.text); setNewCampName(tpl.name); }}
-                          className="text-[9px] font-semibold px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all cursor-pointer"
+                          className="text-[9px] font-semibold px-2 py-1 rounded-lg bg-white border border-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all cursor-pointer"
                         >
                           {tpl.name}
                         </button>
@@ -1225,20 +1225,20 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       value={newCampTemplate}
                       onChange={(e) => setNewCampTemplate(e.target.value)}
                       rows={4}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors resize-none font-mono leading-relaxed"
+                      className="w-full bg-white border border-zinc-200 rounded-xl p-3 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500 transition-colors resize-none font-mono leading-relaxed"
                     />
                     {/* Live preview with sample data */}
                     {newCampTemplate && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Vista previa (con datos reales)</span>
+                      <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1.5">
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Vista previa (con datos reales)</span>
                         <div className="flex justify-end">
-                          <div className="bg-[#DCF8C6] text-slate-800 text-[11px] leading-relaxed rounded-2xl rounded-tr-none px-3 py-2 max-w-[85%] border border-[#c2e7af] whitespace-pre-wrap">
+                          <div className="bg-[#DCF8C6] text-zinc-800 text-[11px] leading-relaxed rounded-2xl rounded-tr-none px-3 py-2 max-w-[85%] border border-[#c2e7af] whitespace-pre-wrap">
                             {newCampTemplate
                               .replace(/\{\{nombre\}\}/gi, leads[0]?.name || "María García")
                               .replace(/\{\{empresa\}\}/gi, "Tu Negocio")}
                           </div>
                         </div>
-                        <p className="text-[8px] text-slate-400 text-right">
+                        <p className="text-[8px] text-zinc-400 text-right">
                           Muestra con {leads[0] ? `datos de "${leads[0].name}"` : "datos de ejemplo"}
                         </p>
                       </div>
@@ -1248,22 +1248,22 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
 
                   {/* Media URL (optional) */}
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500">Imagen adjunta (URL opcional)</label>
+                    <label className="text-xs font-medium text-zinc-500">Imagen adjunta (URL opcional)</label>
                     <input
                       type="url"
                       value={newCampMediaUrl}
                       onChange={(e) => setNewCampMediaUrl(e.target.value)}
                       placeholder="https://tu-tienda.com/banner-oferta.jpg"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500 transition-colors"
                     />
                     {newCampMediaUrl && (
-                      <img src={newCampMediaUrl} alt="Preview" className="w-full max-h-24 object-cover rounded-xl border border-slate-200 mt-1" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      <img src={newCampMediaUrl} alt="Preview" className="w-full max-h-24 object-cover rounded-xl border border-zinc-200 mt-1" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                     )}
                   </div>
 
                   {/* Scheduling */}
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                    <label className="text-xs font-medium text-zinc-500 flex items-center gap-1">
                       <Clock size={11} className="text-amber-500" /> Programar envío (opcional — dejá vacío para enviar ahora)
                     </label>
                     <input
@@ -1271,7 +1271,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       value={newCampScheduledAt}
                       onChange={(e) => setNewCampScheduledAt(e.target.value)}
                       min={new Date().toISOString().slice(0, 16)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-800 focus:outline-none focus:border-indigo-500 transition-colors"
                     />
                     {newCampScheduledAt && new Date(newCampScheduledAt) > new Date() && (
                       <p className="text-[10px] text-amber-700 font-medium flex items-center gap-1">
@@ -1288,13 +1288,13 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       </span>
                       <span>{sendingProgress}%</span>
                     </div>
-                    <div className="w-full h-2.5 bg-slate-200 border border-slate-300 rounded-full overflow-hidden">
+                    <div className="w-full h-2.5 bg-zinc-200 border border-zinc-300 rounded-full overflow-hidden">
                       <div
                         style={{ width: `${sendingProgress}%` }}
-                        className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all duration-300"
+                        className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 transition-all duration-300"
                       />
                     </div>
-                    <span className="text-[9px] text-slate-400 block text-center italic">
+                    <span className="text-[9px] text-zinc-400 block text-center italic">
                       Evitando baneos: Respondo realiza el envío utilizando los servidores oficiales de Meta Cloud.
                     </span>
                   </div>
@@ -1317,7 +1317,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
 
               {/* Campaigns Analytics Right (6 columns) */}
               <div className="lg:col-span-6 flex flex-col space-y-4 max-h-[460px] overflow-y-auto pr-1">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider block">
                   Campañas Recientes & Métricas de API Oficial
                 </span>
 
@@ -1325,12 +1325,12 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                   {campaigns.map((camp) => (
                     <div
                       key={camp.id}
-                      className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-sm"
+                      className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-3 shadow-sm"
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <h5 className="font-bold text-xs text-slate-800">{camp.name}</h5>
-                          <span className="text-[9px] px-2 py-0.5 bg-white text-slate-500 border border-slate-200 rounded-full font-mono">
+                          <h5 className="font-bold text-xs text-zinc-800">{camp.name}</h5>
+                          <span className="text-[9px] px-2 py-0.5 bg-white text-zinc-500 border border-zinc-200 rounded-full font-mono">
                             Segmento: {camp.segment}
                           </span>
                         </div>
@@ -1338,7 +1338,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                           <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded-full border ${
                             camp.status === "Completado"
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-slate-100 text-slate-400 border-slate-300"
+                              : "bg-zinc-100 text-zinc-400 border-zinc-300"
                           }`}>
                             {camp.status}
                           </span>
@@ -1351,9 +1351,9 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                       </div>
 
                       {camp.mediaUrl && (
-                        <img src={camp.mediaUrl} alt="Media" className="w-full h-16 object-cover rounded-lg border border-slate-200" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        <img src={camp.mediaUrl} alt="Media" className="w-full h-16 object-cover rounded-lg border border-zinc-200" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                       )}
-                      <p className="text-[10px] text-slate-600 bg-white p-2 rounded-lg italic border border-slate-200 font-mono">
+                      <p className="text-[10px] text-zinc-600 bg-white p-2 rounded-lg italic border border-zinc-200 font-mono">
                         "{camp.template.replace("{{nombre}}", "Agustín").replace("{{empresa}}", "Respondo")}"
                       </p>
 
@@ -1363,7 +1363,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                         const replyRate = pct(camp.repliesCount, camp.sentCount);
                         const convRate = pct(camp.repliesCount, camp.readCount); // replied of those who read
                         const metrics = [
-                          { label: "Enviados", value: `${camp.sentCount}`, rate: 100, color: "bg-slate-400", text: "text-[#1d1d1f]" },
+                          { label: "Enviados", value: `${camp.sentCount}`, rate: 100, color: "bg-zinc-400", text: "text-[18181b]" },
                           { label: "Apertura", value: `${openRate}%`, rate: openRate, color: "bg-sky-500", text: "text-sky-600" },
                           { label: "Respuesta", value: `${replyRate}%`, rate: replyRate, color: "bg-emerald-500", text: "text-emerald-600" },
                           { label: "Conversión", value: `${convRate}%`, rate: convRate, color: "bg-purple-500", text: "text-purple-600" },
@@ -1371,10 +1371,10 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                         return (
                           <div className="grid grid-cols-4 gap-2 pt-1">
                             {metrics.map((m) => (
-                              <div key={m.label} className="p-2 bg-white border border-slate-150 rounded-xl text-center shadow-apple-sm">
+                              <div key={m.label} className="p-2 bg-white border border-zinc-100 rounded-xl text-center shadow-apple-sm">
                                 <span className={`text-[13px] font-bold block ${m.text}`}>{m.value}</span>
-                                <span className="text-[8px] text-[#86868b] block uppercase font-semibold tracking-wide mb-1">{m.label}</span>
-                                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                                <span className="text-[8px] text-[a1a1aa] block uppercase font-semibold tracking-wide mb-1">{m.label}</span>
+                                <div className="w-full h-1 bg-zinc-100 rounded-full overflow-hidden">
                                   <div className={`h-full rounded-full ${m.color}`} style={{ width: `${Math.max(2, m.rate)}%` }} />
                                 </div>
                               </div>

@@ -81,7 +81,7 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
   const maxCategoryCount = Math.max(1, ...categoryEntries.map(([, c]) => c));
-  const CATEGORY_COLORS = ["bg-blue-500","bg-purple-500","bg-emerald-500","bg-amber-500","bg-pink-500","bg-indigo-500","bg-rose-500","bg-teal-500"];
+  const CATEGORY_COLORS = ["bg-indigo-500","bg-purple-500","bg-emerald-500","bg-amber-500","bg-pink-500","bg-indigo-500","bg-rose-500","bg-teal-500"];
 
   // Hourly activity heatmap derived from lead lastInteraction timestamps
   const hourCounts = Array.from({ length: 24 }, (_, h) => ({
@@ -123,8 +123,8 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
       value: `${totalLeads} Leads`,
       sub: "Registrados en vivo",
       desc: `Nuevos: ${newLeads} | Contactados: ${contactedLeads} | Presupuestados: ${budgetedLeads}`,
-      color: "from-blue-500 to-indigo-500",
-      icon: <Users className="text-blue-600" size={20} />
+      color: "from-indigo-500 to-indigo-500",
+      icon: <Users className="text-indigo-600" size={20} />
     },
     {
       title: "Calificación Promedio",
@@ -156,30 +156,30 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
     <div className="space-y-6">
       
       {/* Live Agent Status Card — minimalist */}
-      <div className="bg-white border border-slate-150 rounded-[24px] p-6 shadow-apple-sm flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="bg-white border border-zinc-100 rounded-[24px] p-6 shadow-apple-sm flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#0071e3] to-[#0a5fc7] flex items-center justify-center shrink-0 shadow-apple-sm">
+          <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[6366f1] to-[4338ca] flex items-center justify-center shrink-0 shadow-apple-sm">
             <Zap className="text-white" size={24} />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold tracking-wide text-[#0071e3] block mb-0.5">
+            <span className="text-[10px] uppercase font-semibold tracking-wide text-[6366f1] block mb-0.5">
               Agente en vivo
             </span>
-            <h4 className="font-semibold text-[17px] tracking-tight text-[#1d1d1f]">
+            <h4 className="font-semibold text-[17px] tracking-tight text-[18181b]">
               {config.businessName || "Respondo AI"} — operando solo
             </h4>
-            <p className="text-[12.5px] text-[#6e6e73] max-w-xl leading-relaxed mt-1">
-              Entrenado como experto en <strong className="text-[#1d1d1f] font-semibold">{config.businessType || "tu rubro"}</strong> con tono <strong className="text-[#1d1d1f] font-semibold">{config.tone}</strong>. Responde en milisegundos y deriva al CRM.
+            <p className="text-[12.5px] text-[71717a] max-w-xl leading-relaxed mt-1">
+              Entrenado como experto en <strong className="text-[18181b] font-semibold">{config.businessType || "tu rubro"}</strong> con tono <strong className="text-[18181b] font-semibold">{config.tone}</strong>. Responde en milisegundos y deriva al CRM.
             </p>
           </div>
         </div>
 
-        <div className="shrink-0 bg-slate-50 border border-slate-150 px-5 py-3 rounded-2xl text-center min-w-[140px]">
-          <span className="text-[10px] text-[#86868b] block font-semibold uppercase tracking-wide">Tienda</span>
-          <span className="text-[17px] font-bold text-[#0071e3] block my-0.5 tracking-tight">
+        <div className="shrink-0 bg-zinc-50 border border-zinc-100 px-5 py-3 rounded-2xl text-center min-w-[140px]">
+          <span className="text-[10px] text-[a1a1aa] block font-semibold uppercase tracking-wide">Tienda</span>
+          <span className="text-[17px] font-bold text-[6366f1] block my-0.5 tracking-tight">
             {config.syncStore || "Nativa"}
           </span>
-          <span className="text-[9px] text-[#aeaeb2] block">Sincronización activa</span>
+          <span className="text-[9px] text-[a1a1aa] block">Sincronización activa</span>
         </div>
       </div>
 
@@ -188,23 +188,23 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
         {METRICS.map((m, index) => (
           <div
             key={index}
-            className="bg-white border border-slate-150 rounded-[20px] p-5 hover:shadow-apple transition-all flex flex-col justify-between shadow-apple-sm"
+            className="bg-white border border-zinc-100 rounded-[20px] p-5 hover:shadow-apple transition-all flex flex-col justify-between shadow-apple-sm"
           >
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs font-semibold text-[#86868b]">{m.title}</span>
-              <div className="p-2 bg-slate-50 rounded-xl shrink-0">
+              <span className="text-xs font-semibold text-[a1a1aa]">{m.title}</span>
+              <div className="p-2 bg-zinc-50 rounded-xl shrink-0">
                 {m.icon}
               </div>
             </div>
 
             <div className="space-y-1">
-              <h4 className="font-sans font-black text-2xl text-slate-900 tracking-tight">
+              <h4 className="font-sans font-black text-2xl text-zinc-900 tracking-tight">
                 {m.value}
               </h4>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide block">
                 {m.sub}
               </span>
-              <p className="text-[10px] text-slate-500 leading-normal pt-1 border-t border-slate-100 mt-2">
+              <p className="text-[10px] text-zinc-500 leading-normal pt-1 border-t border-zinc-100 mt-2">
                 {m.desc}
               </p>
             </div>
@@ -214,13 +214,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Pipeline health mini-chart */}
       {totalLeads > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-slate-800">Salud del Embudo de Ventas</h4>
-              <p className="text-xs text-slate-500">Distribución de {totalLeads} leads por etapa del pipeline</p>
+              <h4 className="font-sans font-semibold text-sm text-zinc-800">Salud del Embudo de Ventas</h4>
+              <p className="text-xs text-zinc-500">Distribución de {totalLeads} leads por etapa del pipeline</p>
             </div>
-            <span className="text-xs font-mono font-bold text-blue-600">{conversionRate}% conv.</span>
+            <span className="text-xs font-mono font-bold text-indigo-600">{conversionRate}% conv.</span>
           </div>
           <div className="flex gap-2 items-end h-16">
             {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((status) => {
@@ -232,14 +232,14 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               };
               return (
                 <div key={status} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[9px] font-mono text-slate-500">{count}</span>
+                  <span className="text-[9px] font-mono text-zinc-500">{count}</span>
                   <div className="w-full flex flex-col justify-end" style={{ height: "48px" }}>
                     <div
                       className={`w-full rounded-t-lg transition-all ${colors[status]}`}
                       style={{ height: `${Math.max(4, pct)}%`, minHeight: count > 0 ? "8px" : "0" }}
                     />
                   </div>
-                  <span className="text-[8px] text-slate-500 text-center leading-tight font-semibold">{status}</span>
+                  <span className="text-[8px] text-zinc-500 text-center leading-tight font-semibold">{status}</span>
                 </div>
               );
             })}
@@ -249,21 +249,21 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Funnel conversion rates */}
       {totalLeads > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-slate-800">Tasas de Conversión por Etapa</h4>
-              <p className="text-xs text-slate-500">% de leads que avanzan entre cada etapa del embudo</p>
+              <h4 className="font-sans font-semibold text-sm text-zinc-800">Tasas de Conversión por Etapa</h4>
+              <p className="text-xs text-zinc-500">% de leads que avanzan entre cada etapa del embudo</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
             {[
               { label: "Nuevo", count: newLeads, color: "bg-sky-400 text-sky-700" },
-              { label: "→ Contactado", rate: funnelRates.toContactado, color: "text-slate-400" },
+              { label: "→ Contactado", rate: funnelRates.toContactado, color: "text-zinc-400" },
               { label: "Contactado", count: contactedLeads, color: "bg-amber-400 text-amber-700" },
-              { label: "→ Presupuestado", rate: funnelRates.toPresupuestado, color: "text-slate-400" },
+              { label: "→ Presupuestado", rate: funnelRates.toPresupuestado, color: "text-zinc-400" },
               { label: "Presupuestado", count: budgetedLeads, color: "bg-purple-500 text-purple-700" },
-              { label: "→ Cerrado", rate: funnelRates.toCerrado, color: "text-slate-400" },
+              { label: "→ Cerrado", rate: funnelRates.toCerrado, color: "text-zinc-400" },
               { label: "Cerrado", count: closedLeads, color: "bg-emerald-500 text-emerald-700" },
             ].map((item, i) =>
               "rate" in item ? (
@@ -271,8 +271,8 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
                   <span className={`text-[10px] font-bold font-mono ${item.rate >= 50 ? "text-emerald-600" : item.rate >= 25 ? "text-amber-600" : "text-red-500"}`}>
                     {item.rate}%
                   </span>
-                  <div className="w-full h-0.5 bg-slate-200 relative">
-                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-slate-300" />
+                  <div className="w-full h-0.5 bg-zinc-200 relative">
+                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-zinc-300" />
                   </div>
                 </div>
               ) : (
@@ -290,13 +290,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* 7-day leads sparkline */}
       {leadsPerDay.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-slate-800">Leads Captados — Últimos 7 Días</h4>
-              <p className="text-xs text-slate-500">Nuevos prospectos registrados por día en el CRM</p>
+              <h4 className="font-sans font-semibold text-sm text-zinc-800">Leads Captados — Últimos 7 Días</h4>
+              <p className="text-xs text-zinc-500">Nuevos prospectos registrados por día en el CRM</p>
             </div>
-            <span className="text-xs font-mono font-bold text-blue-600">
+            <span className="text-xs font-mono font-bold text-indigo-600">
               {leadsPerDay.reduce((a, d) => a + d.count, 0)} leads
             </span>
           </div>
@@ -305,16 +305,16 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               const pct = maxDayLeads > 0 ? Math.round((day.count / maxDayLeads) * 100) : 0;
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group">
-                  <span className="text-[9px] font-mono text-slate-400 group-hover:text-blue-600 transition-colors">
+                  <span className="text-[9px] font-mono text-zinc-400 group-hover:text-indigo-600 transition-colors">
                     {day.count > 0 ? day.count : ""}
                   </span>
                   <div className="w-full flex flex-col justify-end" style={{ height: "44px" }}>
                     <div
-                      className="w-full rounded-t-md bg-blue-500 group-hover:bg-blue-600 transition-all"
+                      className="w-full rounded-t-md bg-indigo-500 group-hover:bg-indigo-600 transition-all"
                       style={{ height: `${Math.max(day.count > 0 ? 12 : 3, pct)}%`, opacity: day.count === 0 ? 0.2 : 1 }}
                     />
                   </div>
-                  <span className="text-[8px] font-semibold text-slate-400">{day.label}</span>
+                  <span className="text-[8px] font-semibold text-zinc-400">{day.label}</span>
                 </div>
               );
             })}
@@ -324,13 +324,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Hourly activity heatmap */}
       {leads.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-slate-800">Actividad por Hora del Día</h4>
-              <p className="text-xs text-slate-500">Cuándo tus clientes están más activos (basado en última interacción)</p>
+              <h4 className="font-sans font-semibold text-sm text-zinc-800">Actividad por Hora del Día</h4>
+              <p className="text-xs text-zinc-500">Cuándo tus clientes están más activos (basado en última interacción)</p>
             </div>
-            <span className="text-xs font-mono font-bold text-blue-600">
+            <span className="text-xs font-mono font-bold text-indigo-600">
               {leads.length} interacciones
             </span>
           </div>
@@ -341,12 +341,12 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               return (
                 <div key={hour} className="flex-1 flex flex-col items-center gap-0.5 group relative">
                   <div
-                    className={`w-full rounded-sm transition-all ${count === 0 ? "bg-slate-100" : isNight ? "bg-indigo-300" : "bg-blue-500"}`}
+                    className={`w-full rounded-sm transition-all ${count === 0 ? "bg-zinc-100" : isNight ? "bg-indigo-300" : "bg-indigo-500"}`}
                     style={{ height: `${Math.max(4, intensity * 36)}px`, opacity: count === 0 ? 0.4 : 0.5 + intensity * 0.5 }}
                     title={`${hour}:00 — ${count} lead${count !== 1 ? "s" : ""}`}
                   />
                   {/* Tooltip on hover */}
-                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10 transition-opacity">
+                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-[8px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10 transition-opacity">
                     {hour}h: {count}
                   </div>
                 </div>
@@ -354,14 +354,14 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             })}
           </div>
           <div className="flex justify-between mt-1 px-0.5">
-            <span className="text-[8px] text-slate-400 font-mono">0h</span>
-            <span className="text-[8px] text-slate-400 font-mono">6h</span>
-            <span className="text-[8px] text-slate-400 font-mono">12h</span>
-            <span className="text-[8px] text-slate-400 font-mono">18h</span>
-            <span className="text-[8px] text-slate-400 font-mono">23h</span>
+            <span className="text-[8px] text-zinc-400 font-mono">0h</span>
+            <span className="text-[8px] text-zinc-400 font-mono">6h</span>
+            <span className="text-[8px] text-zinc-400 font-mono">12h</span>
+            <span className="text-[8px] text-zinc-400 font-mono">18h</span>
+            <span className="text-[8px] text-zinc-400 font-mono">23h</span>
           </div>
           {maxHourCount > 0 && (
-            <p className="text-[9px] text-slate-400 mt-1.5 text-center">
+            <p className="text-[9px] text-zinc-400 mt-1.5 text-center">
               Pico: {hourCounts.find(h => h.count === maxHourCount)?.hour}:00 hs
               ({maxHourCount} lead{maxHourCount !== 1 ? "s" : ""})
             </p>
@@ -371,13 +371,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Leads by category */}
       {categoryEntries.length > 1 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-slate-800">Distribución por Categoría / Interés</h4>
-              <p className="text-xs text-slate-500">Qué productos o servicios generan más consultas</p>
+              <h4 className="font-sans font-semibold text-sm text-zinc-800">Distribución por Categoría / Interés</h4>
+              <p className="text-xs text-zinc-500">Qué productos o servicios generan más consultas</p>
             </div>
-            <span className="text-xs font-mono font-bold text-blue-600">{categoryEntries.length} categorías</span>
+            <span className="text-xs font-mono font-bold text-indigo-600">{categoryEntries.length} categorías</span>
           </div>
           <div className="space-y-2">
             {categoryEntries.map(([cat, count], i) => {
@@ -385,10 +385,10 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               return (
                 <div key={cat} className="space-y-0.5">
                   <div className="flex justify-between text-[10px]">
-                    <span className="font-semibold text-slate-700 truncate max-w-[60%]">{cat}</span>
-                    <span className="font-mono text-slate-500">{count} lead{count !== 1 ? "s" : ""} · {pct}%</span>
+                    <span className="font-semibold text-zinc-700 truncate max-w-[60%]">{cat}</span>
+                    <span className="font-mono text-zinc-500">{count} lead{count !== 1 ? "s" : ""} · {pct}%</span>
                   </div>
-                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-zinc-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
                       style={{ width: `${Math.max(4, (count / maxCategoryCount) * 100)}%` }}
@@ -405,16 +405,16 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Chart 1: Interactive Growth Lines */}
-        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+        <div className="lg:col-span-8 bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-slate-800">Progreso de Ventas Concretadas</h4>
-              <p className="text-xs text-slate-500">Volumen mensual acumulado de ventas cobradas directamente en tu CRM</p>
+              <h4 className="font-sans font-semibold text-sm text-zinc-800">Progreso de Ventas Concretadas</h4>
+              <p className="text-xs text-zinc-500">Volumen mensual acumulado de ventas cobradas directamente en tu CRM</p>
             </div>
             <div className="flex items-center space-x-2 text-xs">
               <span className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
-                <span className="text-slate-600 font-medium">Facturación (ARS)</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" />
+                <span className="text-zinc-600 font-medium">Facturación (ARS)</span>
               </span>
             </div>
           </div>
@@ -539,32 +539,32 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
         </div>
 
         {/* Actividad real del agente */}
-        <div className="lg:col-span-4 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <h4 className="font-sans font-semibold text-sm text-slate-800">Actividad del Agente</h4>
-            <p className="text-xs text-slate-500 mb-6">Métricas reales de conversaciones procesadas por la IA</p>
+            <h4 className="font-sans font-semibold text-sm text-zinc-800">Actividad del Agente</h4>
+            <p className="text-xs text-zinc-500 mb-6">Métricas reales de conversaciones procesadas por la IA</p>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-slate-700 flex items-center gap-1"><MessageCircle size={12} className="text-blue-600" /> Conversaciones Atendidas</span>
-                <span className="text-blue-600 font-mono font-bold">{totalConversations}</span>
+                <span className="font-bold text-zinc-700 flex items-center gap-1"><MessageCircle size={12} className="text-indigo-600" /> Conversaciones Atendidas</span>
+                <span className="text-indigo-600 font-mono font-bold">{totalConversations}</span>
               </div>
-              <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-zinc-100 border border-zinc-200 rounded-full overflow-hidden">
                 <div
                   style={{ width: `${Math.min(100, totalLeads ? (totalConversations / totalLeads) * 100 : 0)}%` }}
-                  className="h-full bg-blue-500 rounded-full"
+                  className="h-full bg-indigo-500 rounded-full"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-slate-700">Mensajes Procesados</span>
+                <span className="font-bold text-zinc-700">Mensajes Procesados</span>
                 <span className="text-indigo-600 font-mono font-bold">{totalInteractions}</span>
               </div>
-              <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-zinc-100 border border-zinc-200 rounded-full overflow-hidden">
                 <div
                   style={{ width: totalInteractions > 0 ? `${Math.min(100, (totalInteractions / Math.max(totalInteractions, 200)) * 100)}%` : "0%" }}
                   className="h-full bg-indigo-500 rounded-full transition-all"
@@ -574,10 +574,10 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-slate-700">Campañas de Difusión</span>
+                <span className="font-bold text-zinc-700">Campañas de Difusión</span>
                 <span className="text-emerald-600 font-mono font-bold">{totalCampaigns}</span>
               </div>
-              <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-zinc-100 border border-zinc-200 rounded-full overflow-hidden">
                 <div
                   style={{ width: `${Math.min(100, (totalCampaigns / Math.max(totalCampaigns, 5)) * 100)}%` }}
                   className="h-full bg-emerald-500 rounded-full transition-all"
@@ -589,38 +589,38 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             {avgResponseTimeSec !== null && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="font-bold text-slate-700 flex items-center gap-1"><Clock size={12} className="text-amber-500" /> Tiempo Prom. de Respuesta</span>
+                  <span className="font-bold text-zinc-700 flex items-center gap-1"><Clock size={12} className="text-amber-500" /> Tiempo Prom. de Respuesta</span>
                   <span className="text-amber-600 font-mono font-bold">
                     {avgResponseTimeSec < 60 ? `${avgResponseTimeSec}s` : `${Math.round(avgResponseTimeSec / 60)}m`}
                   </span>
                 </div>
-                <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-zinc-100 border border-zinc-200 rounded-full overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, 100 - (avgResponseTimeSec / 30) * 10)}%` }}
                     className="h-full bg-amber-400 rounded-full"
                   />
                 </div>
-                <p className="text-[8px] text-slate-400">Tiempo medido entre mensaje del cliente y respuesta del bot</p>
+                <p className="text-[8px] text-zinc-400">Tiempo medido entre mensaje del cliente y respuesta del bot</p>
               </div>
             )}
 
             {/* Channel Breakdown */}
             {Object.keys(channelCounts).length > 0 && (
-              <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Leads por Canal</span>
+              <div className="space-y-1.5 pt-1 border-t border-zinc-100">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Leads por Canal</span>
                 {(["WhatsApp","Instagram","Facebook","Email"] as const).map((ch) => {
                   const count: number = (channelCounts[ch] as number | undefined) ?? 0;
                   const pct: number = Math.round((count / totalChannelLeads) * 100);
                   return count > 0 ? (
                     <div key={ch} className="space-y-0.5">
                       <div className="flex justify-between text-[10px]">
-                        <span className="font-semibold text-slate-600">{ch}</span>
-                        <span className="font-mono text-slate-500">{count} ({pct}%)</span>
+                        <span className="font-semibold text-zinc-600">{ch}</span>
+                        <span className="font-mono text-zinc-500">{count} ({pct}%)</span>
                       </div>
-                      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
                         <div
                           style={{ width: `${pct}%` }}
-                          className={`h-full rounded-full transition-all ${ch === "WhatsApp" ? "bg-emerald-500" : ch === "Instagram" ? "bg-pink-500" : ch === "Email" ? "bg-slate-500" : "bg-blue-500"}`}
+                          className={`h-full rounded-full transition-all ${ch === "WhatsApp" ? "bg-emerald-500" : ch === "Instagram" ? "bg-pink-500" : ch === "Email" ? "bg-zinc-500" : "bg-indigo-500"}`}
                         />
                       </div>
                     </div>
@@ -630,8 +630,8 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
-            <span className="font-semibold text-slate-800 block mb-1">💡 Datos 100% reales</span>
+          <div className="mt-6 pt-4 border-t border-zinc-100 text-xs text-zinc-500 leading-relaxed bg-zinc-50 p-3 rounded-2xl border border-zinc-200/50">
+            <span className="font-semibold text-zinc-800 block mb-1">💡 Datos 100% reales</span>
             Todas las métricas provienen de la base de datos (Supabase). El gráfico de ventas se llena a medida que el agente cierra ventas reales.
           </div>
         </div>

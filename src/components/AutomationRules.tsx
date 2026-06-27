@@ -76,7 +76,7 @@ export default function AutomationRules() {
   };
 
   return (
-    <div className="bg-white border border-slate-150 rounded-[28px] p-6 shadow-apple space-y-5">
+    <div className="bg-white border border-zinc-100 rounded-[28px] p-6 shadow-apple space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -84,14 +84,14 @@ export default function AutomationRules() {
             <Workflow size={20} />
           </div>
           <div>
-            <h3 className="font-semibold text-[18px] tracking-tight text-[#1d1d1f]">Automatizaciones</h3>
-            <p className="text-[12.5px] text-[#6e6e73]">Reglas que se ejecutan solas: si pasa X, hacé Y</p>
+            <h3 className="font-semibold text-[18px] tracking-tight text-[18181b]">Automatizaciones</h3>
+            <p className="text-[12.5px] text-[71717a]">Reglas que se ejecutan solas: si pasa X, hacé Y</p>
           </div>
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
           className={`px-4 py-2 rounded-full text-[13px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-            showForm ? "bg-slate-100 text-[#1d1d1f]" : "bg-[#0071e3] text-white hover:bg-[#0077ed]"
+            showForm ? "bg-zinc-100 text-[18181b]" : "bg-[6366f1] text-white hover:bg-[4f46e5]"
           }`}
         >
           <Plus size={15} className={showForm ? "rotate-45 transition-transform" : "transition-transform"} />
@@ -108,13 +108,13 @@ export default function AutomationRules() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-slate-50/70 border border-slate-150 rounded-2xl p-4 space-y-4">
+            <div className="bg-zinc-50/70 border border-zinc-100 rounded-2xl p-4 space-y-4">
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nombre de la regla (ej: Avisar leads calientes)"
-                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] text-[#1d1d1f] focus:outline-none focus:border-[#0071e3] transition-colors"
+                className="w-full bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 text-[13px] text-[18181b] focus:outline-none focus:border-[6366f1] transition-colors"
               />
               <div className="grid sm:grid-cols-2 gap-4">
                 {/* Trigger */}
@@ -125,7 +125,7 @@ export default function AutomationRules() {
                   <select
                     value={trigger}
                     onChange={(e) => { setTrigger(e.target.value as AutomationRule["trigger"]); setTriggerValue(""); }}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] text-[#1d1d1f] focus:outline-none focus:border-[#0071e3] cursor-pointer"
+                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2.5 text-[13px] text-[18181b] focus:outline-none focus:border-[6366f1] cursor-pointer"
                   >
                     {TRIGGERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
@@ -135,19 +135,19 @@ export default function AutomationRules() {
                       value={triggerValue}
                       onChange={(e) => setTriggerValue(e.target.value)}
                       placeholder={triggerDef.needsValue}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#0071e3]"
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-[12px] text-[18181b] focus:outline-none focus:border-[6366f1]"
                     />
                   )}
                 </div>
                 {/* Action */}
                 <div className="space-y-2">
-                  <label className="text-[11px] font-semibold text-[#0071e3] uppercase tracking-wide flex items-center gap-1">
+                  <label className="text-[11px] font-semibold text-[6366f1] uppercase tracking-wide flex items-center gap-1">
                     <ArrowRight size={11} /> Hacé esto
                   </label>
                   <select
                     value={action}
                     onChange={(e) => { setAction(e.target.value as AutomationRule["action"]); setActionValue(""); }}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-[13px] text-[#1d1d1f] focus:outline-none focus:border-[#0071e3] cursor-pointer"
+                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2.5 text-[13px] text-[18181b] focus:outline-none focus:border-[6366f1] cursor-pointer"
                   >
                     {ACTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
                   </select>
@@ -157,7 +157,7 @@ export default function AutomationRules() {
                       value={actionValue}
                       onChange={(e) => setActionValue(e.target.value)}
                       placeholder={actionDef.needsValue}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#0071e3]"
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-[12px] text-[18181b] focus:outline-none focus:border-[6366f1]"
                     />
                   )}
                 </div>
@@ -165,7 +165,7 @@ export default function AutomationRules() {
               <button
                 onClick={handleCreate}
                 disabled={saving || !name.trim()}
-                className="w-full py-2.5 bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-50 text-white text-[13px] font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
+                className="w-full py-2.5 bg-[6366f1] hover:bg-[4f46e5] disabled:opacity-50 text-white text-[13px] font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
                 Crear regla
@@ -177,16 +177,16 @@ export default function AutomationRules() {
 
       {/* Rules list */}
       {loading ? (
-        <div className="flex items-center justify-center py-10 text-[#86868b]">
+        <div className="flex items-center justify-center py-10 text-[a1a1aa]">
           <Loader2 size={20} className="animate-spin" />
         </div>
       ) : rules.length === 0 ? (
         <div className="text-center py-10 px-4">
-          <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
-            <Workflow size={26} className="text-slate-300" />
+          <div className="w-14 h-14 rounded-2xl bg-zinc-50 flex items-center justify-center mx-auto mb-3">
+            <Workflow size={26} className="text-zinc-300" />
           </div>
-          <p className="text-[14px] font-semibold text-[#1d1d1f]">Sin automatizaciones todavía</p>
-          <p className="text-[12.5px] text-[#6e6e73] mt-1 max-w-sm mx-auto">
+          <p className="text-[14px] font-semibold text-[18181b]">Sin automatizaciones todavía</p>
+          <p className="text-[12.5px] text-[71717a] mt-1 max-w-sm mx-auto">
             Creá tu primera regla para que el sistema trabaje solo: seguimientos, avisos de leads calientes, etiquetas y más.
           </p>
         </div>
@@ -196,20 +196,20 @@ export default function AutomationRules() {
             <div
               key={rule.id}
               className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
-                rule.enabled ? "bg-white border-slate-150 shadow-apple-sm" : "bg-slate-50/60 border-slate-100 opacity-70"
+                rule.enabled ? "bg-white border-zinc-100 shadow-apple-sm" : "bg-zinc-50/60 border-zinc-100 opacity-70"
               }`}
             >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${rule.enabled ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-slate-400"}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${rule.enabled ? "bg-amber-50 text-amber-600" : "bg-zinc-100 text-zinc-400"}`}>
                 <Zap size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-[13.5px] font-semibold text-[#1d1d1f] block truncate">{rule.name}</span>
-                <div className="flex items-center gap-1.5 text-[11px] text-[#6e6e73] mt-0.5 flex-wrap">
+                <span className="text-[13.5px] font-semibold text-[18181b] block truncate">{rule.name}</span>
+                <div className="flex items-center gap-1.5 text-[11px] text-[71717a] mt-0.5 flex-wrap">
                   <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md font-medium">{triggerLabel(rule.trigger)}{rule.triggerValue ? `: ${rule.triggerValue}` : ""}</span>
-                  <ArrowRight size={10} className="text-slate-400" />
-                  <span className="bg-blue-50 text-[#0071e3] px-1.5 py-0.5 rounded-md font-medium">{actionLabel(rule.action)}{rule.actionValue ? `: ${rule.actionValue}` : ""}</span>
+                  <ArrowRight size={10} className="text-zinc-400" />
+                  <span className="bg-indigo-50 text-[6366f1] px-1.5 py-0.5 rounded-md font-medium">{actionLabel(rule.action)}{rule.actionValue ? `: ${rule.actionValue}` : ""}</span>
                   {(rule.timesTriggered ?? 0) > 0 && (
-                    <span className="text-[10px] text-slate-400">· {rule.timesTriggered}× ejecutada</span>
+                    <span className="text-[10px] text-zinc-400">· {rule.timesTriggered}× ejecutada</span>
                   )}
                 </div>
               </div>
@@ -219,13 +219,13 @@ export default function AutomationRules() {
                 role="switch"
                 aria-checked={rule.enabled}
                 onClick={() => toggleRule(rule)}
-                className={`relative w-10 h-[22px] rounded-full transition-colors duration-300 shrink-0 cursor-pointer ${rule.enabled ? "bg-emerald-500" : "bg-slate-300"}`}
+                className={`relative w-10 h-[22px] rounded-full transition-colors duration-300 shrink-0 cursor-pointer ${rule.enabled ? "bg-emerald-500" : "bg-zinc-300"}`}
               >
                 <span className={`absolute top-0.5 left-0.5 w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-transform duration-300 ${rule.enabled ? "translate-x-[18px]" : "translate-x-0"}`} />
               </button>
               <button
                 onClick={() => removeRule(rule.id)}
-                className="p-1.5 text-slate-300 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                className="p-1.5 text-zinc-300 hover:text-red-500 transition-colors cursor-pointer shrink-0"
                 title="Eliminar regla"
               >
                 <Trash2 size={15} />

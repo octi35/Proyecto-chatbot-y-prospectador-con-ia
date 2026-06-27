@@ -290,11 +290,11 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border border-slate-150 rounded-[28px] overflow-hidden shadow-apple max-w-sm mx-auto w-full relative">
+    <div className="flex flex-col h-full bg-white border border-zinc-100 rounded-[28px] overflow-hidden shadow-apple max-w-sm mx-auto w-full relative">
 
       {/* Platform selector */}
-      <div className="bg-slate-50 p-3 border-b border-slate-200 flex items-center justify-between z-10">
-        <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+      <div className="bg-zinc-50 p-3 border-b border-zinc-200 flex items-center justify-between z-10">
+        <div className="flex bg-zinc-100 p-0.5 rounded-lg border border-zinc-200">
           {(["whatsapp","instagram","facebook"] as const).map((p) => (
             <button key={p} onClick={() => setPlatform(p)}
               className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
@@ -302,20 +302,20 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
                   ? p === "whatsapp" ? "bg-emerald-600 text-white shadow-sm"
                   : p === "instagram" ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm"
                   : "bg-blue-700 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
+                  : "text-zinc-500 hover:text-zinc-900"
               }`}>
               {p === "whatsapp" ? "WhatsApp" : p === "instagram" ? "Instagram" : "Facebook"}
             </button>
           ))}
         </div>
         <button onClick={clearChat} title="Reiniciar chat"
-          className="p-1 text-slate-400 hover:text-red-600 transition-colors rounded-lg hover:bg-slate-100 cursor-pointer">
+          className="p-1 text-zinc-400 hover:text-red-600 transition-colors rounded-lg hover:bg-zinc-100 cursor-pointer">
           <Trash2 size={16} />
         </button>
       </div>
 
       {/* Chat header */}
-      <div className="px-4 py-3 flex items-center justify-between text-slate-800 shadow-sm border-b border-slate-200 z-10 bg-white">
+      <div className="px-4 py-3 flex items-center justify-between text-zinc-800 shadow-sm border-b border-zinc-200 z-10 bg-white">
         <div className="flex items-center space-x-3">
           <div className="relative">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-inner ${platform === "whatsapp" ? "bg-emerald-600" : platform === "facebook" ? "bg-blue-700" : "bg-gradient-to-br from-pink-500 to-purple-600"}`}>
@@ -324,17 +324,17 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
           </div>
           <div>
-            <h4 className="font-semibold text-sm leading-tight text-slate-900">{config.businessName}</h4>
+            <h4 className="font-semibold text-sm leading-tight text-zinc-900">{config.businessName}</h4>
             <div className="flex items-center space-x-1">
               <Sparkles size={10} className="text-blue-600 animate-pulse" />
-              <span className="text-[10px] text-slate-500 font-medium tracking-wide">{botName} · Gemini AI</span>
+              <span className="text-[10px] text-zinc-500 font-medium tracking-wide">{botName} · Gemini AI</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-3.5 text-slate-400">
-          <Phone size={16} className="cursor-pointer hover:text-slate-700" />
-          <Video size={17} className="cursor-pointer hover:text-slate-700" />
-          <MoreVertical size={16} className="cursor-pointer hover:text-slate-700" />
+        <div className="flex items-center space-x-3.5 text-zinc-400">
+          <Phone size={16} className="cursor-pointer hover:text-zinc-700" />
+          <Video size={17} className="cursor-pointer hover:text-zinc-700" />
+          <MoreVertical size={16} className="cursor-pointer hover:text-zinc-700" />
         </div>
       </div>
 
@@ -361,22 +361,22 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
                 className={`flex ${isUser ? "justify-end" : "justify-start"} items-end space-x-2`}>
 
                 {!isUser && (
-                  <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
                     <Bot size={12} className="text-blue-600" />
                   </div>
                 )}
 
                 <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm relative ${
                   isUser
-                    ? platform === "whatsapp" ? "bg-[#DCF8C6] text-slate-800 rounded-tr-none border border-[#c2e7af]"
+                    ? platform === "whatsapp" ? "bg-[#DCF8C6] text-zinc-800 rounded-tr-none border border-[#c2e7af]"
                     : platform === "instagram" ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-tr-none"
                     : "bg-blue-700 text-white rounded-tr-none"
-                    : platform === "whatsapp" ? "bg-white text-slate-800 border border-slate-200 rounded-tl-none" : "bg-slate-100 text-slate-800 rounded-tl-none"
+                    : platform === "whatsapp" ? "bg-white text-zinc-800 border border-zinc-200 rounded-tl-none" : "bg-zinc-100 text-zinc-800 rounded-tl-none"
                 }`}>
 
                   {/* Image */}
                   {msg.isImage && msg.imageUrl && (
-                    <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 max-h-48 bg-slate-50">
+                    <div className="mb-2 rounded-lg overflow-hidden border border-zinc-200 max-h-48 bg-zinc-50">
                       <img src={msg.imageUrl} alt="Imagen enviada" className="object-cover w-full h-full max-h-40" />
                     </div>
                   )}
@@ -399,7 +399,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
                           }
                         }}
                         className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm cursor-pointer ${
-                          isUser ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                          isUser ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-zinc-200 hover:bg-zinc-300 text-zinc-700"
                         }`}>
                         {playingAudioId === msg.id ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
                       </button>
@@ -408,7 +408,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
                           {[...Array(14)].map((_, i) => (
                             <span key={i}
                               style={{ height: playingAudioId === msg.id ? `${20 + ((i * 7) % 80)}%` : "20%" }}
-                              className={`w-0.5 rounded-full transition-all duration-300 ${isUser ? "bg-slate-700" : "bg-blue-600"}`} />
+                              className={`w-0.5 rounded-full transition-all duration-300 ${isUser ? "bg-zinc-700" : "bg-blue-600"}`} />
                           ))}
                         </div>
                         <div className="flex justify-between items-center text-[9px] opacity-75">
@@ -423,7 +423,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
 
                   {/* Agent actions chips */}
                   {!isUser && msg.actions && msg.actions.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
+                    <div className="mt-2 pt-2 border-t border-zinc-100 space-y-1">
                       {msg.actions.map((a, i) => (
                         <div key={i} className="flex items-start gap-1 px-1.5 py-1 bg-blue-50 border border-blue-100 rounded-lg text-[9px] text-blue-700 leading-snug">
                           <Zap size={9} className="shrink-0 mt-0.5" />
@@ -438,8 +438,8 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
                     <span>{msg.timestamp}</span>
                     {isUser && (
                       <>
-                        {msg.status === "sending" && <span className="text-slate-400">···</span>}
-                        {msg.status === "sent" && <CheckCheck size={11} className="text-slate-400" />}
+                        {msg.status === "sending" && <span className="text-zinc-400">···</span>}
+                        {msg.status === "sent" && <CheckCheck size={11} className="text-zinc-400" />}
                         {msg.status === "read" && <CheckCheck size={11} className="text-blue-500" />}
                       </>
                     )}
@@ -452,10 +452,10 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
 
         {isLoading && (
           <div className="flex justify-start items-end space-x-2">
-            <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
               <Bot size={12} className="text-blue-600 animate-bounce" />
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-none p-3.5 shadow-sm flex items-center space-x-1.5">
+            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl rounded-tl-none p-3.5 shadow-sm flex items-center space-x-1.5">
               <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
               <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
               <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -469,15 +469,15 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
       <AnimatePresence>
         {showImagePanel && (
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 30 }}
-            className="absolute bottom-16 left-4 right-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-xl z-20 space-y-3">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-800">Enviar imagen</span>
-              <button onClick={() => setShowImagePanel(false)} className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer">Cerrar</button>
+            className="absolute bottom-16 left-4 right-4 bg-white border border-zinc-200 rounded-2xl p-4 shadow-xl z-20 space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-zinc-100">
+              <span className="text-xs font-semibold text-zinc-800">Enviar imagen</span>
+              <button onClick={() => setShowImagePanel(false)} className="text-[10px] text-zinc-400 hover:text-zinc-600 cursor-pointer">Cerrar</button>
             </div>
-            <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl cursor-pointer bg-slate-50 hover:bg-blue-50/30 transition-all text-center">
-              <Upload size={20} className="text-slate-400 mb-1.5" />
-              <span className="text-xs font-medium text-slate-600">Seleccionar imagen</span>
-              <span className="text-[9px] text-slate-400 mt-0.5">PNG, JPG, WEBP — la IA la analizará</span>
+            <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-zinc-200 hover:border-blue-400 rounded-xl cursor-pointer bg-zinc-50 hover:bg-blue-50/30 transition-all text-center">
+              <Upload size={20} className="text-zinc-400 mb-1.5" />
+              <span className="text-xs font-medium text-zinc-600">Seleccionar imagen</span>
+              <span className="text-[9px] text-zinc-400 mt-0.5">PNG, JPG, WEBP — la IA la analizará</span>
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
           </motion.div>
@@ -520,11 +520,11 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
 
       {/* Input bar */}
       <form onSubmit={handleSendText}
-        className={`p-3 bg-white border-t border-slate-200 flex items-center space-x-2 z-10 ${isRecording ? "bg-red-50/40" : ""}`}>
+        className={`p-3 bg-white border-t border-zinc-200 flex items-center space-x-2 z-10 ${isRecording ? "bg-red-50/40" : ""}`}>
         <div className="flex items-center space-x-1 shrink-0">
           <button type="button"
             onClick={() => { setShowImagePanel((v) => !v); setMicError(null); }}
-            className={`p-2 rounded-full text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer ${showImagePanel ? "text-blue-600 bg-blue-50" : ""}`}
+            className={`p-2 rounded-full text-zinc-400 hover:text-zinc-600 transition-colors hover:bg-zinc-100 cursor-pointer ${showImagePanel ? "text-blue-600 bg-blue-50" : ""}`}
             title="Enviar imagen">
             <ImageIcon size={17} />
           </button>
@@ -537,7 +537,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
             </button>
           ) : (
             <button type="button" onClick={startRecording}
-              className="p-2 rounded-full text-slate-400 hover:text-emerald-600 transition-colors hover:bg-emerald-50 cursor-pointer"
+              className="p-2 rounded-full text-zinc-400 hover:text-emerald-600 transition-colors hover:bg-emerald-50 cursor-pointer"
               title="Grabar nota de voz">
               <Mic size={17} />
             </button>
@@ -558,13 +558,13 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
         ) : (
           <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)}
             placeholder="Escribí un mensaje…"
-            className="flex-1 bg-slate-50 border border-slate-200 text-slate-850 text-xs rounded-full py-2 px-4 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder:text-slate-400" />
+            className="flex-1 bg-zinc-50 border border-zinc-200 text-slate-850 text-xs rounded-full py-2 px-4 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder:text-zinc-400" />
         )}
 
         <button type="submit" disabled={!inputText.trim() || isLoading || isRecording}
           className={`p-2.5 rounded-full text-white transition-all shadow-sm cursor-pointer ${
             !inputText.trim() || isLoading
-              ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+              ? "bg-zinc-100 text-zinc-300 cursor-not-allowed"
               : platform === "whatsapp" ? "bg-emerald-600 hover:bg-emerald-700 hover:scale-105 active:scale-95"
               : platform === "facebook" ? "bg-blue-700 hover:bg-blue-800 hover:scale-105 active:scale-95"
               : "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 hover:scale-105 active:scale-95"
