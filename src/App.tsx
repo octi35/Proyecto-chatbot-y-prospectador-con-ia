@@ -339,111 +339,100 @@ export default function App() {
   };
 
   return (
-    <div id="respondo-app" className="min-h-screen bg-[#f5f6fa] text-[#101828] font-sans selection:bg-blue-100 selection:text-blue-900 flex relative">
-      {/* Subtle blue ambient decoration (Invo-style) */}
-      <div className="fixed top-0 right-0 w-[40rem] h-[26rem] bg-gradient-to-bl from-blue-200/30 via-indigo-100/20 to-transparent rounded-full blur-[100px] pointer-events-none" />
+    <div id="respondo-app" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex">
       {/* ===================== SIDEBAR ===================== */}
-      <aside className="hidden md:flex flex-col w-[248px] shrink-0 h-screen sticky top-0 bg-white border-r border-slate-100 px-4 py-5 z-20">
+      <aside className="hidden md:flex flex-col w-[244px] shrink-0 h-screen sticky top-0 bg-white border-r border-zinc-100 px-3.5 py-5 z-20">
         {/* Brand */}
-        <div className="flex items-center gap-2.5 px-2 mb-7">
-          <div className="w-9 h-9 rounded-[11px] bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 overflow-hidden shadow-[0_6px_16px_-4px_rgba(37,99,235,0.5)]">
+        <div className="flex items-center gap-2.5 px-2.5 mb-8">
+          <div className="w-8 h-8 rounded-[10px] bg-indigo-600 flex items-center justify-center shrink-0 overflow-hidden">
             {config.logoUrl ? (
               <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
             ) : (
-              <span className="font-bold text-base text-white">R</span>
+              <span className="font-semibold text-[15px] text-white">R</span>
             )}
           </div>
-          <span className="font-semibold text-[15px] tracking-tight text-[#101828] truncate">
+          <span className="font-semibold text-[15px] tracking-tight text-zinc-900 truncate">
             {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
           </span>
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-col gap-0.5">
+        <nav className="flex flex-col gap-1">
           {NAV_ITEMS.map(([tab, icon, label, badge]) => (
-            <button
+            <motion.button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13.5px] font-medium transition-all duration-200 relative ${
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className={`group flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] transition-colors duration-200 ${
                 activeTab === tab
-                  ? "bg-blue-600 text-white font-semibold shadow-[0_6px_16px_-4px_rgba(37,99,235,0.5)]"
-                  : "text-[#667085] hover:bg-slate-50 hover:text-[#101828]"
+                  ? "bg-zinc-100 text-zinc-900 font-medium"
+                  : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 font-normal"
               }`}
             >
-              <span className={activeTab === tab ? "text-white" : "text-[#98a2b3] group-hover:text-[#101828]"}>{icon}</span>
+              <span className={activeTab === tab ? "text-indigo-600" : "text-zinc-400 group-hover:text-zinc-600"}>{icon}</span>
               {label}
               {badge > 0 && (
-                <span className="ml-auto min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="ml-auto min-w-5 h-5 px-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
                   {badge > 9 ? "9+" : badge}
                 </span>
               )}
-            </button>
+            </motion.button>
           ))}
         </nav>
 
         {/* Bottom: status */}
-        <div className="mt-auto px-2 space-y-3">
-          <div className="rounded-2xl bg-slate-50 border border-slate-100 p-3">
-            <span className="text-[10px] font-semibold text-[#98a2b3] uppercase tracking-wide block mb-1.5">Estado</span>
-            <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isDemo ? "text-blue-600" : "text-emerald-700"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-blue-600" : "bg-emerald-500 animate-pulse"}`} />
-              {isDemo ? "Modo demo" : "Supabase conectado"}
-            </span>
+        <div className="mt-auto px-1">
+          <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-zinc-50">
+            <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-indigo-500" : "bg-emerald-500 animate-pulse"}`} />
+            <span className="text-[11.5px] text-zinc-500 font-medium">{isDemo ? "Modo demo" : "Conectado"}</span>
           </div>
-          <p className="text-[10px] text-[#cbd2dc] px-1">Respondo · Chatea menos, vendé más</p>
         </div>
       </aside>
 
       {/* ===================== MAIN ===================== */}
       <div className="flex-1 min-w-0 flex flex-col h-screen relative z-10">
         {/* Top bar */}
-        <header className="shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 sm:px-7 py-3.5 flex items-center gap-4 sticky top-0 z-30">
+        <header className="shrink-0 bg-zinc-50/80 backdrop-blur-xl border-b border-zinc-100 px-4 sm:px-8 py-3.5 flex items-center gap-4 sticky top-0 z-30">
           {/* Mobile tab selector */}
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value as TabType)}
-            className="md:hidden bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 text-[13px] font-semibold text-[#101828] focus:outline-none cursor-pointer"
+            className="md:hidden bg-zinc-100 rounded-xl px-2 py-1.5 text-[13px] font-medium text-zinc-900 focus:outline-none cursor-pointer"
           >
             {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab}>{label}</option>)}
           </select>
-          <h1 className="hidden md:block text-[20px] font-semibold tracking-tight text-[#101828] shrink-0">{pageTitle[activeTab]}</h1>
+          <h1 className="hidden md:block text-[19px] font-semibold tracking-tight text-zinc-900 shrink-0">{pageTitle[activeTab]}</h1>
 
-          {/* Search bar (Invo style) */}
-          <div className="hidden md:flex flex-1 max-w-md mx-2">
+          {/* Search bar */}
+          <div className="hidden md:flex flex-1 max-w-sm mx-2">
             <div className="relative w-full">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#98a2b3] pointer-events-none" />
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Buscar leads, campañas…"
-                className="w-full bg-slate-50 border border-slate-100 rounded-full pl-10 pr-4 py-2 text-[13px] text-[#101828] placeholder:text-[#98a2b3] focus:outline-none focus:border-blue-300 focus:bg-white transition-all"
+                placeholder="Buscar…"
+                className="w-full bg-white rounded-full pl-10 pr-4 py-2 text-[13px] text-zinc-900 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(24,24,27,0.04)] focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
               />
             </div>
           </div>
 
           <div className="flex-1 md:hidden" />
 
-          {/* Quick stats pills (desktop) */}
-          <div className="hidden 2xl:flex items-center gap-2 mr-1">
-            {hotLeads > 0 && (
-              <span className="text-[12px] font-medium text-orange-600 px-3 py-1.5 rounded-full bg-orange-50">
-                🔥 {hotLeads} calientes
-              </span>
-            )}
-          </div>
-
           {/* Create → goes to chat playground */}
-          <button
+          <motion.button
             onClick={() => setActiveTab("playground")}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold px-4 py-2 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-[0_6px_16px_-4px_rgba(37,99,235,0.5)]"
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium px-4 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-[0_6px_16px_-6px_rgba(79,70,229,0.6)]"
           >
             <Sparkles size={14} /> <span className="hidden sm:inline">Probar IA</span>
-          </button>
+          </motion.button>
 
           {/* Notifications bell + dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowNotifPanel((v) => !v)}
-              className="relative w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-[#667085] transition-colors cursor-pointer"
+              className="relative w-9 h-9 rounded-full bg-white hover:bg-zinc-100 shadow-[0_1px_2px_rgba(24,24,27,0.04)] flex items-center justify-center text-zinc-500 transition-colors cursor-pointer"
               title="Notificaciones"
             >
               <Bell size={16} />
@@ -500,21 +489,21 @@ export default function App() {
           </div>
 
           {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[13px] font-bold shrink-0">
+          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[13px] font-semibold shrink-0">
             {(config.businessName || "R").charAt(0).toUpperCase()}
           </div>
         </header>
 
-        {/* Demo-mode pill (subtle, no scary error) */}
+        {/* Demo-mode pill (subtle) */}
         {isDemo && (
-          <div className="mx-4 sm:mx-7 mt-4 bg-blue-50/70 border border-blue-100 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-[#0071e3]">
-            <Sparkles size={13} className="shrink-0" />
-            <span><strong className="font-semibold">Modo demostración</strong> — estás viendo datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
+          <div className="mx-4 sm:mx-8 mt-5 bg-white rounded-xl px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-zinc-500 shadow-[0_1px_2px_rgba(24,24,27,0.04)]">
+            <Sparkles size={13} className="shrink-0 text-indigo-500" />
+            <span><span className="font-medium text-zinc-700">Modo demostración</span> — datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
           </div>
         )}
 
         {/* Scrollable content */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-7 py-5">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6">
           <AnimatePresence mode="wait">
             {activeTab === "dashboard" && (
               <motion.div key="dashboard" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
@@ -578,10 +567,10 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <footer className="text-center mt-10 pt-6 border-t border-slate-150 text-[11px] text-[#aeaeb2] flex items-center justify-center gap-3">
-            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-emerald-600" /> Supabase</span>
+          <footer className="text-center mt-12 pt-6 text-[11px] text-zinc-400 flex items-center justify-center gap-3">
+            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-emerald-500" /> Supabase</span>
             <span>·</span>
-            <span className="flex items-center gap-1"><Zap size={11} className="text-[#0071e3]" /> Gemini AI</span>
+            <span className="flex items-center gap-1"><Zap size={11} className="text-indigo-500" /> Gemini AI</span>
           </footer>
         </main>
       </div>

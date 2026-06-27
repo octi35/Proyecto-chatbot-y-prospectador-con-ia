@@ -1,100 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* Apple-style type: prefer the device's native San Francisco font, fall
-     back to Inter (a very close match) so non-Apple devices look identical. */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    "Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", monospace;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
-  /* Apple system palette */
-  --color-apple-blue: #0071e3;
-  --color-apple-blue-hover: #0077ed;
-  --color-apple-gray: #1d1d1f;       /* near-black headings */
-  --color-apple-gray-2: #6e6e73;     /* secondary text */
-  --color-apple-bg: #fbfbfd;         /* signature off-white */
+  /* shadcn-style semantic tokens (zinc neutral base, single accent) */
+  --color-background: #fafafa;       /* zinc-50 page */
+  --color-card: #ffffff;
+  --color-foreground: #18181b;       /* zinc-900 */
+  --color-muted: #71717a;            /* zinc-500 secondary text */
+  --color-muted-2: #a1a1aa;          /* zinc-400 */
+  --color-border: #f4f4f5;           /* zinc-100 hairline (used sparingly) */
+  --color-accent: #4f46e5;           /* indigo-600 single accent */
 
-  /* Soft, layered shadows (Apple's depth language) */
-  --shadow-apple-sm: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-apple: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
-  --shadow-apple-lg: 0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.05);
-
-  /* Smooth Apple easing */
-  --ease-apple: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --radius: 1rem;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
+  background: var(--color-background);
+  color: var(--color-foreground);
   font-feature-settings: "cv11", "ss01";
-  letter-spacing: -0.01em;
+  letter-spacing: -0.011em;
 }
 
-/* Apple-tight headings */
-h1, h2, h3, h4 {
-  letter-spacing: -0.022em;
-}
+h1, h2, h3, h4 { letter-spacing: -0.02em; }
 
-/* Thin, unobtrusive scrollbars */
-::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.14);
-  border-radius: 8px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.26);
-}
+/* Minimal scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #d4d4d8; }
 
-/* Frosted-glass utility (Apple's signature translucency) */
-.glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-}
-.glass-dark {
-  background: rgba(29, 29, 31, 0.72);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-}
-
-/* Reusable soft-shadow helpers */
-.shadow-apple-sm { box-shadow: var(--shadow-apple-sm); }
-.shadow-apple { box-shadow: var(--shadow-apple); }
-.shadow-apple-lg { box-shadow: var(--shadow-apple-lg); }
-
-/* Subtle lift on interactive cards */
-.lift {
-  transition: transform 0.3s var(--ease-apple), box-shadow 0.3s var(--ease-apple);
-}
-.lift:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-apple-lg);
-}
-
-@keyframes pulse-slow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-.animate-pulse-slow {
-  animation: pulse-slow 3s infinite ease-in-out;
-}
-
-@keyframes float-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-float-in {
-  animation: float-in 0.5s var(--ease-apple) both;
-}
+@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-up { animation: fade-up 0.4s var(--ease-spring) both; }
