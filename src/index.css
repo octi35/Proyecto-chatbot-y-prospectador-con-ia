@@ -5,28 +5,26 @@
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
-  /* ---- Reference design system (Salesforce-style premium) ---- */
-  --color-background: #f7f8fc;   /* app background */
+  /* ---- Restrained premium system (Linear / Vercel / Stripe caliber) ---- */
+  --color-background: #fbfbfb;   /* near-white app canvas */
   --color-card: #ffffff;
-  --color-sidebar: #232323;      /* near-black dark rail */
-  --color-ink: #111111;          /* primary text */
-  --color-ink-2: #6b7280;        /* secondary text */
-  --color-line: #ececec;         /* hairlines */
+  --color-sidebar: #0a0a0a;      /* true near-black rail */
+  --color-ink: #0a0a0a;          /* primary text */
+  --color-ink-2: #71717a;        /* secondary text */
+  --color-ink-3: #a1a1aa;        /* tertiary / placeholders */
+  --color-line: rgba(0,0,0,0.07);/* hairlines */
 
-  /* Accents (soft, never saturated) */
-  --color-brand: #4f6ef7;        /* Salesforce-style blue */
-  --color-brand-soft: #eef1fe;
-  --color-yellow: #ffd84d;
-  --color-black: #101010;
-  --color-sky: #8fd4f8;
-  --color-green: #7dd87d;
+  /* Single restrained accent, used sparingly */
+  --color-brand: #4f46e5;
+  --color-brand-soft: #eef1ff;
 
-  --radius-card: 22px;
-  --radius-input: 14px;
+  --radius-card: 16px;
+  --radius-input: 12px;
 
-  --shadow-card: 0 10px 35px rgba(0,0,0,0.05);
-  --shadow-soft: 0 8px 30px rgba(15,23,42,0.06);
-  --shadow-hover: 0 16px 44px rgba(15,23,42,0.10);
+  /* Whisper-soft elevation — depth comes from hairlines, not drop shadows */
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03);
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-hover: 0 6px 24px rgba(0,0,0,0.08);
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -36,30 +34,34 @@ body {
   background: var(--color-background);
   color: var(--color-ink);
   letter-spacing: -0.011em;
+  font-feature-settings: "cv11", "ss01";
 }
 
-h1, h2, h3, h4 { letter-spacing: -0.02em; }
+h1, h2, h3, h4 { letter-spacing: -0.021em; }
 
 /* Minimal scrollbars */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #e2e4ea; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #cdd0d9; }
+::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #d4d4d8; }
 
 /* ---- Design-system utilities ---- */
 .ds-card {
   background: var(--color-card);
   border-radius: var(--radius-card);
+  border: 1px solid var(--color-line);
   box-shadow: var(--shadow-card);
 }
-.ds-shadow { box-shadow: var(--shadow-card); }
-.ds-shadow-soft { box-shadow: var(--shadow-soft); }
+/* Cards carry a hairline + whisper shadow (not a drop shadow) */
+.ds-shadow { border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
+.ds-shadow-soft { border: 1px solid var(--color-line); box-shadow: var(--shadow-soft); }
 .ds-shadow-hover { box-shadow: var(--shadow-hover); }
 .ds-line { border-color: var(--color-line); }
+.ds-hairline { border-color: var(--color-line); }
 
-/* Legacy aliases so existing components keep valid shadows */
-.shadow-apple-sm { box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
-.shadow-apple { box-shadow: var(--shadow-card); }
+/* Legacy aliases */
+.shadow-apple-sm { border: 1px solid var(--color-line); box-shadow: var(--shadow-soft); }
+.shadow-apple { border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
 .shadow-apple-lg { box-shadow: var(--shadow-hover); }
 .glass { background: rgba(255,255,255,0.82); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 

@@ -1,9 +1,9 @@
 import React from "react";
 import { motion } from "motion/react";
 import {
-  Users, TrendingUp, DollarSign, Flame, ArrowUpRight,
+  Users, TrendingUp, DollarSign, Flame, ArrowUpRight, ArrowRight,
   Sparkles, MessageSquare, Calendar as CalendarIcon,
-  Send, UserPlus, Megaphone, ChevronRight,
+  UserPlus, Megaphone, Send, BarChart3,
 } from "lucide-react";
 import { CRMLead, Campaign, AgentConfig } from "../types";
 import { timeAgo } from "../lib/timeAgo";
@@ -38,269 +38,217 @@ export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps)
   const recent = [...leads].sort((a, b) => new Date(b.lastInteraction).getTime() - new Date(a.lastInteraction).getTime()).slice(0, 4);
 
   const stats = [
-    { label: "Prospectos", value: totalLeads.toLocaleString("es-AR"), icon: <Users size={18} />, tone: "brand" as const, delta: `+${newToday.length}` },
-    { label: "Ventas", value: `$${(totalSales / 1000).toFixed(totalSales >= 1000 ? 0 : 1)}k`, icon: <DollarSign size={18} />, tone: "success" as const, delta: `+${closed}` },
-    { label: "Conversión", value: `${convRate}%`, icon: <TrendingUp size={18} />, tone: "warning" as const, delta: `${convRate}%` },
-    { label: "Leads calientes", value: `${hotLeads.length}`, icon: <Flame size={18} />, tone: "danger" as const, delta: "ahora" },
+    { label: "Prospectos", value: totalLeads.toLocaleString("es-AR"), icon: <Users size={15} />, delta: `+${newToday.length} hoy` },
+    { label: "Ventas", value: `$${(totalSales / 1000).toFixed(totalSales >= 1000 ? 0 : 1)}k`, icon: <DollarSign size={15} />, delta: `${closed} cerradas` },
+    { label: "Conversión", value: `${convRate}%`, icon: <TrendingUp size={15} />, delta: "últ. 30 días" },
+    { label: "Leads calientes", value: `${hotLeads.length}`, icon: <Flame size={15} />, delta: "activos ahora" },
   ];
 
   const statusTone = (s: CRMLead["status"]) =>
-    s === "Cerrado" ? "success" : s === "Presupuestado" ? "brand" : s === "Contactado" ? "warning" : "info";
+    s === "Cerrado" ? "success" : s === "Presupuestado" ? "brand" : s === "Contactado" ? "warning" : "neutral";
 
-  // Soft-palette opportunity cards (Salesforce-style, never saturated)
-  const dealCards = topLeads.slice(0, 4).map((l, i) => {
-    const palettes = [
-      { bg: "bg-[#4f6ef7]", text: "text-white", sub: "text-white/70", chip: "bg-white/15 text-white", ring: "ring-white/40" },
-      { bg: "bg-[#8fd4f8]", text: "text-[#0d3b52]", sub: "text-[#0d3b52]/60", chip: "bg-black/10 text-[#0d3b52]", ring: "ring-black/10" },
-      { bg: "bg-[#ffd84d]", text: "text-[#5c4700]", sub: "text-[#5c4700]/60", chip: "bg-black/10 text-[#5c4700]", ring: "ring-black/10" },
-      { bg: "bg-[#101010]", text: "text-white", sub: "text-white/50", chip: "bg-white/10 text-white", ring: "ring-white/30" },
-    ];
-    const amount = l.totalSpent && l.totalSpent > 0 ? l.totalSpent : Math.round(l.score * 1500);
-    return { lead: l, ...palettes[i % palettes.length], amount };
-  });
-
-  // Sales funnel by status
-  const funnelStages: { label: string; status: CRMLead["status"]; color: string }[] = [
-    { label: "Nuevos", status: "Nuevo", color: "#8fd4f8" },
-    { label: "Contactados", status: "Contactado", color: "#4f6ef7" },
-    { label: "Presupuestados", status: "Presupuestado", color: "#ffd84d" },
-    { label: "Cerrados", status: "Cerrado", color: "#7dd87d" },
+  // Sales funnel by status (monochrome ink scale)
+  const funnelStages: { label: string; status: CRMLead["status"] }[] = [
+    { label: "Nuevos", status: "Nuevo" },
+    { label: "Contactados", status: "Contactado" },
+    { label: "Presupuestados", status: "Presupuestado" },
+    { label: "Cerrados", status: "Cerrado" },
   ];
-  const funnel = funnelStages.map((s) => ({ ...s, count: leads.filter((l) => l.status === s.status).length }));
+  const funnel = funnelStages.map((s, i) => ({
+    ...s,
+    count: leads.filter((l) => l.status === s.status).length,
+    shade: ["rgba(10,10,10,0.85)", "rgba(10,10,10,0.62)", "rgba(10,10,10,0.4)", "#4f46e5"][i],
+  }));
   const funnelMax = Math.max(1, ...funnel.map((f) => f.count));
 
-  // Mini calendar (current month)
+  // Mini calendar
   const now = new Date();
   const year = now.getFullYear(), month = now.getMonth();
-  const firstDay = (new Date(year, month, 1).getDay() + 6) % 7; // Mon-first
+  const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthLabel = now.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 max-w-[1240px]">
       {/* Metric row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
           <StatCard
-            key={s.label} index={i} icon={s.icon} label={s.label} value={s.value} tone={s.tone}
-            hint={<Badge tone="success"><ArrowUpRight size={11} /> {s.delta}</Badge>}
+            key={s.label} index={i} icon={s.icon} label={s.label} value={s.value}
+            hint={<span className="text-[12px] text-[#a1a1aa]">{s.delta}</span>}
           />
         ))}
       </div>
 
-      {/* Opportunity cards */}
-      {dealCards.length > 0 && (
-        <div>
-          <SectionTitle
-            title="Oportunidades destacadas"
-            subtitle="Tus leads con mayor score listos para cerrar"
-            action={<button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-[#4f6ef7] hover:brightness-110 transition-all flex items-center gap-1">Ver todas <ChevronRight size={14} /></button>}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {dealCards.map((d, i) => (
-              <motion.div
-                key={d.lead.id}
-                onClick={() => onNavigate("crm")}
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, type: "spring", stiffness: 300, damping: 26 }}
-                whileHover={{ y: -3 }}
-                className={`${d.bg} ${d.text} rounded-[22px] p-5 cursor-pointer ds-shadow flex flex-col justify-between min-h-[168px]`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${d.chip}`}>
-                    {new Date(d.lead.lastInteraction).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
-                  </span>
-                  <span className={`w-8 h-8 rounded-full ${d.chip} flex items-center justify-center`}>
-                    <ArrowUpRight size={15} />
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <p className={`text-[12.5px] ${d.sub} leading-snug line-clamp-1`}>{d.lead.notes || `${d.lead.origin} · ${d.lead.status}`}</p>
-                  <p className="text-[26px] font-bold tracking-tight leading-none mt-1 tabular-nums">
-                    ${d.amount.toLocaleString("es-AR")}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <img src={d.lead.avatar} referrerPolicy="no-referrer" alt={d.lead.name} className={`w-6 h-6 rounded-full object-cover ring-2 ${d.ring} shrink-0`} />
-                    <span className="text-[12px] font-medium truncate">{d.lead.name}</span>
-                  </div>
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${d.chip}`}>{d.lead.score}</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Main grid: activity chart + funnel | agenda/calendar */}
+      {/* Opportunities + activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: activity + funnel (2 cols) */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="p-6">
-            <SectionTitle
-              title="Actividad de la semana"
-              action={<span className="text-[13px] text-[#9aa0ab]">Últimos 7 días</span>}
-            />
-            <div className="text-[28px] font-semibold tracking-tight text-[#111] tabular-nums">
-              {days.reduce((a, d) => a + d.count, 0)}
-              <span className="text-[13px] font-normal text-[#9aa0ab] ml-2">interacciones</span>
-            </div>
-            <div className="flex items-end gap-3 h-40 mt-6">
-              {days.map((d, i) => {
-                const isPeak = i === peakIdx && d.count > 0;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2.5 relative group">
-                    {isPeak && (
-                      <span className="absolute -top-1 z-10 bg-[#101010] text-white text-[11px] font-medium px-2 py-1 rounded-lg whitespace-nowrap">
-                        {d.count}
-                      </span>
-                    )}
-                    <div className="w-full flex flex-col justify-end" style={{ height: "130px" }}>
-                      <motion.div
-                        initial={{ height: 0 }} animate={{ height: `${Math.max(8, (d.count / maxDay) * 100)}%` }}
-                        transition={{ delay: i * 0.05, type: "spring", stiffness: 200, damping: 22 }}
-                        className={isPeak ? "w-full rounded-lg bg-[#4f6ef7]" : "w-full rounded-lg bg-[#eef1fe] group-hover:bg-[#dbe1fd] transition-colors"}
-                      />
+        {/* Opportunities table (2 cols) */}
+        <Card className="lg:col-span-2 p-6">
+          <SectionTitle
+            title="Oportunidades"
+            subtitle="Leads con mayor score, listos para cerrar"
+            action={<button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-[#4f46e5] hover:text-[#4338ca] transition-colors flex items-center gap-1">Ver todas <ArrowRight size={13} /></button>}
+          />
+          <div className="-mx-2">
+            {topLeads.map((l, i) => {
+              const amount = l.totalSpent && l.totalSpent > 0 ? l.totalSpent : Math.round(l.score * 1500);
+              return (
+                <motion.div
+                  key={l.id}
+                  onClick={() => onNavigate("crm")}
+                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                  className="group flex items-center gap-4 px-2 py-3 rounded-[10px] hover:bg-black/[0.025] cursor-pointer border-b border-black/[0.05] last:border-0"
+                >
+                  <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13.5px] font-medium text-[#0a0a0a] truncate">{l.name}</p>
+                    <p className="text-[12px] text-[#a1a1aa] truncate">{l.notes || `${l.origin} · ${l.status}`}</p>
+                  </div>
+                  {/* score bar */}
+                  <div className="hidden sm:flex items-center gap-2 w-24 shrink-0">
+                    <div className="flex-1 h-1 rounded-full bg-black/[0.06] overflow-hidden">
+                      <div className="h-full rounded-full bg-[#0a0a0a]" style={{ width: `${l.score}%` }} />
                     </div>
-                    <span className="text-[11px] text-[#9aa0ab] font-medium capitalize">{d.label}</span>
+                    <span className="text-[11px] text-[#71717a] tabular-nums w-6 text-right">{l.score}</span>
                   </div>
-                );
-              })}
-            </div>
-          </Card>
+                  <div className="text-right w-24 shrink-0">
+                    <p className="text-[13.5px] font-semibold text-[#0a0a0a] tabular-nums">${amount.toLocaleString("es-AR")}</p>
+                    <Badge tone={statusTone(l.status)}>{l.status}</Badge>
+                  </div>
+                  <ArrowUpRight size={15} className="text-[#d4d4d8] group-hover:text-[#0a0a0a] transition-colors shrink-0" />
+                </motion.div>
+              );
+            })}
+            {topLeads.length === 0 && <p className="text-[13px] text-[#a1a1aa] py-10 text-center">Sin leads todavía</p>}
+          </div>
+        </Card>
 
-          {/* Funnel */}
-          <Card className="p-6">
-            <SectionTitle title="Embudo de ventas" subtitle="Distribución de leads por etapa" />
-            <div className="space-y-3.5">
-              {funnel.map((f, i) => (
-                <div key={f.label} className="flex items-center gap-3">
-                  <span className="w-28 text-[13px] text-[#6b7280] shrink-0">{f.label}</span>
-                  <div className="flex-1 h-8 bg-[#f7f8fc] rounded-full overflow-hidden">
+        {/* Activity chart */}
+        <Card className="p-6 flex flex-col">
+          <SectionTitle title="Actividad" subtitle="Últimos 7 días" />
+          <div className="text-[30px] font-semibold tracking-tight text-[#0a0a0a] tabular-nums leading-none">
+            {days.reduce((a, d) => a + d.count, 0)}
+            <span className="text-[13px] font-normal text-[#a1a1aa] ml-2">interacciones</span>
+          </div>
+          <div className="flex items-end gap-2.5 flex-1 min-h-[150px] mt-6">
+            {days.map((d, i) => {
+              const isPeak = i === peakIdx && d.count > 0;
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2 relative group">
+                  <div className="w-full flex flex-col justify-end" style={{ height: "120px" }}>
                     <motion.div
-                      initial={{ width: 0 }} animate={{ width: `${Math.max(6, (f.count / funnelMax) * 100)}%` }}
-                      transition={{ delay: i * 0.08, type: "spring", stiffness: 200, damping: 24 }}
-                      className="h-full rounded-full flex items-center justify-end pr-3"
-                      style={{ background: f.color }}
-                    >
-                      <span className="text-[12px] font-semibold text-[#111]/70 tabular-nums">{f.count}</span>
-                    </motion.div>
+                      initial={{ height: 0 }} animate={{ height: `${Math.max(6, (d.count / maxDay) * 100)}%` }}
+                      transition={{ delay: i * 0.05, type: "spring", stiffness: 220, damping: 24 }}
+                      className={isPeak ? "w-full rounded-md bg-[#4f46e5]" : "w-full rounded-md bg-black/[0.07] group-hover:bg-black/[0.12] transition-colors"}
+                    />
                   </div>
+                  <span className="text-[10.5px] text-[#a1a1aa] font-medium capitalize">{d.label}</span>
                 </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Right column: promo + calendar + quick actions */}
-        <div className="space-y-6">
-          {/* Promo / AI card */}
-          <motion.div
-            whileHover={{ y: -2 }} transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="relative p-6 rounded-[22px] ds-shadow bg-[#101010] overflow-hidden flex flex-col justify-between min-h-[190px]"
-          >
-            <div className="absolute -right-12 -bottom-12 w-44 h-44 bg-[#4f6ef7]/25 rounded-full blur-3xl" />
-            <div className="relative">
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/10 text-[#8fd4f8]">Nuevo</span>
-              <h3 className="text-[19px] font-semibold text-white leading-tight mt-3">Tu agente IA vende 24/7</h3>
-              <p className="text-[13px] text-white/50 mt-2 leading-relaxed">
-                Responde en WhatsApp, Instagram, Facebook y Email. Probalo y mirá cómo cierra ventas solo.
-              </p>
-            </div>
-            <Button variant="brand" className="relative mt-6 w-full" onClick={() => onNavigate("playground")}>
-              <Sparkles size={15} /> Probar ahora
-            </Button>
-          </motion.div>
-
-          {/* Mini calendar */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[15px] font-semibold text-[#111] capitalize">{monthLabel}</h3>
-              <CalendarIcon size={16} className="text-[#9aa0ab]" />
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
-                <span key={i} className="text-[10px] font-medium text-[#9aa0ab] py-1">{d}</span>
-              ))}
-              {Array.from({ length: firstDay }).map((_, i) => <span key={`e${i}`} />)}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                const isToday = day === now.getDate();
-                return (
-                  <span key={day} className={`text-[12px] py-1.5 rounded-lg cursor-default transition-colors ${
-                    isToday ? "bg-[#4f6ef7] text-white font-semibold" : "text-[#6b7280] hover:bg-[#f3f4f8]"
-                  }`}>
-                    {day}
-                  </span>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Quick actions */}
-          <Card className="p-6">
-            <SectionTitle title="Acciones rápidas" />
-            <div className="grid grid-cols-3 gap-3">
-              <QuickAction icon={<MessageSquare size={18} />} label="Probar IA" onClick={() => onNavigate("playground")} />
-              <QuickAction icon={<UserPlus size={18} />} label="Nuevo lead" onClick={() => onNavigate("crm")} />
-              <QuickAction icon={<Megaphone size={18} />} label="Campaña" onClick={() => onNavigate("crm")} />
-              <QuickAction icon={<Send size={18} />} label="Plantilla" onClick={() => onNavigate("integrations")} />
-              <QuickAction icon={<TrendingUp size={18} />} label="Métricas" onClick={() => onNavigate("analytics")} />
-              <QuickAction icon={<Users size={18} />} label="Ver CRM" onClick={() => onNavigate("crm")} />
-            </div>
-          </Card>
-        </div>
+              );
+            })}
+          </div>
+        </Card>
       </div>
 
-      {/* Activity + leads */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <SectionTitle title="Actividad reciente" action={<button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-[#4f6ef7] hover:brightness-110 transition-all">Ver todo</button>} />
+      {/* Funnel + right rail */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Funnel */}
+        <Card className="lg:col-span-2 p-6">
+          <SectionTitle title="Embudo de ventas" subtitle="Distribución de leads por etapa" />
+          <div className="space-y-4">
+            {funnel.map((f, i) => (
+              <div key={f.label} className="flex items-center gap-4">
+                <span className="w-32 text-[13px] text-[#71717a] shrink-0">{f.label}</span>
+                <div className="flex-1 h-7 bg-black/[0.03] rounded-md overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }} animate={{ width: `${Math.max(4, (f.count / funnelMax) * 100)}%` }}
+                    transition={{ delay: i * 0.07, type: "spring", stiffness: 220, damping: 26 }}
+                    className="h-full rounded-md"
+                    style={{ background: f.shade }}
+                  />
+                </div>
+                <span className="w-8 text-right text-[13px] font-semibold text-[#0a0a0a] tabular-nums shrink-0">{f.count}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Promo / AI card */}
+        <motion.div
+          whileHover={{ y: -1 }} transition={{ duration: 0.2 }}
+          className="relative p-6 rounded-[16px] bg-[#0a0a0a] overflow-hidden flex flex-col justify-between min-h-[200px]"
+        >
+          <div className="absolute -right-16 -bottom-16 w-48 h-48 bg-[#4f46e5]/20 rounded-full blur-3xl" />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-white/10 text-white/80">Agente IA</span>
+            <h3 className="text-[18px] font-semibold text-white leading-snug mt-3 tracking-tight">Vendé 24/7 en todos<br />tus canales</h3>
+            <p className="text-[13px] text-white/45 mt-2 leading-relaxed">
+              WhatsApp, Instagram, Facebook y Email. Probá cómo responde y cierra ventas solo.
+            </p>
+          </div>
+          <Button variant="secondary" className="relative mt-6 w-full !bg-white !text-[#0a0a0a] hover:!bg-white/90 border-0" onClick={() => onNavigate("playground")}>
+            <Sparkles size={14} /> Probar ahora
+          </Button>
+        </motion.div>
+      </div>
+
+      {/* Bottom: recent activity + calendar + quick actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1 p-6">
+          <SectionTitle title="Actividad reciente" action={<button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-[#4f46e5] hover:text-[#4338ca] transition-colors">Ver todo</button>} />
           <div className="space-y-4">
             {recent.map((l) => (
               <div key={l.id} className="flex items-center gap-3">
-                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] text-[#6b7280] leading-snug">
-                    <span className="font-medium text-[#111]">{l.name}</span>{" "}
-                    {l.status === "Cerrado" ? "concretó una compra" : `escribió por ${l.origin}`}
+                  <p className="text-[13px] text-[#71717a] leading-snug truncate">
+                    <span className="font-medium text-[#0a0a0a]">{l.name}</span>{" "}
+                    {l.status === "Cerrado" ? "cerró una compra" : `escribió por ${l.origin}`}
                   </p>
-                  <span className="text-[11px] text-[#9aa0ab]">{timeAgo(l.lastInteraction)}</span>
+                  <span className="text-[11px] text-[#a1a1aa]">{timeAgo(l.lastInteraction)}</span>
                 </div>
-                <Badge tone={statusTone(l.status)}>{l.status}</Badge>
               </div>
             ))}
             {recent.length === 0 && (
-              <div className="text-center py-8"><MessageSquare size={22} className="text-[#d1d5db] mx-auto mb-2" /><p className="text-[13px] text-[#9aa0ab]">La actividad aparecerá acá</p></div>
+              <div className="text-center py-8"><MessageSquare size={20} className="text-[#d4d4d8] mx-auto mb-2" /><p className="text-[13px] text-[#a1a1aa]">La actividad aparecerá acá</p></div>
             )}
           </div>
         </Card>
 
+        {/* Calendar */}
         <Card className="p-6">
-          <SectionTitle
-            title="Mejores leads"
-            action={
-              <div className="flex items-center gap-3">
-                <AvatarGroup avatars={topLeads.map((l) => l.avatar)} />
-                <button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-[#4f6ef7] hover:brightness-110 transition-all">Ver CRM</button>
-              </div>
-            }
-          />
-          <div className="space-y-1">
-            {topLeads.map((l) => (
-              <motion.div
-                key={l.id} onClick={() => onNavigate("crm")} whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                className="flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-xl hover:bg-[#f7f8fc] cursor-pointer"
-              >
-                <img src={l.avatar} referrerPolicy="no-referrer" alt={l.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-[13px] font-medium text-[#111] block truncate">{l.name}</span>
-                  <span className="text-[11px] text-[#9aa0ab]">{l.origin} · Score {l.score}</span>
-                </div>
-                <Badge tone={statusTone(l.status)}>{l.status}</Badge>
-              </motion.div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[15px] font-semibold text-[#0a0a0a] capitalize tracking-tight">{monthLabel}</h3>
+            <CalendarIcon size={15} className="text-[#a1a1aa]" />
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+              <span key={i} className="text-[10px] font-medium text-[#a1a1aa] py-1">{d}</span>
             ))}
-            {topLeads.length === 0 && <p className="text-[13px] text-[#9aa0ab] py-8 text-center">Sin leads todavía</p>}
+            {Array.from({ length: firstDay }).map((_, i) => <span key={`e${i}`} />)}
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const day = i + 1;
+              const isToday = day === now.getDate();
+              return (
+                <span key={day} className={`text-[12px] py-1.5 rounded-md cursor-default transition-colors ${
+                  isToday ? "bg-[#0a0a0a] text-white font-semibold" : "text-[#71717a] hover:bg-black/[0.04]"
+                }`}>
+                  {day}
+                </span>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Quick actions */}
+        <Card className="p-6">
+          <SectionTitle title="Accesos rápidos" action={<AvatarGroup avatars={topLeads.map((l) => l.avatar)} />} />
+          <div className="grid grid-cols-1 gap-2.5">
+            <QuickAction icon={<MessageSquare size={16} />} label="Probar el agente IA" onClick={() => onNavigate("playground")} />
+            <QuickAction icon={<UserPlus size={16} />} label="Agregar un lead" onClick={() => onNavigate("crm")} />
+            <QuickAction icon={<Megaphone size={16} />} label="Lanzar campaña" onClick={() => onNavigate("crm")} />
+            <QuickAction icon={<Send size={16} />} label="Crear plantilla" onClick={() => onNavigate("integrations")} />
+            <QuickAction icon={<BarChart3 size={16} />} label="Ver métricas" onClick={() => onNavigate("analytics")} />
           </div>
         </Card>
       </div>

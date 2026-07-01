@@ -48,12 +48,12 @@ export default function HelpGuide({ onNavigate }: HelpGuideProps) {
       <div className="text-center pt-2">
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#4f6ef7] bg-[#f3f5fe] px-3 py-1 rounded-full mb-4"
+          className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#4f46e5] bg-[#f5f6ff] px-3 py-1 rounded-full mb-4"
         >
           <BookOpen size={13} /> Centro de ayuda
         </motion.div>
-        <h1 className="text-[30px] font-semibold tracking-tight text-[#111111]">¿Cómo funciona Respondo?</h1>
-        <p className="text-[15px] text-[#6b7280] mt-3 max-w-xl mx-auto leading-relaxed">
+        <h1 className="text-[30px] font-semibold tracking-tight text-[#0a0a0a]">¿Cómo funciona Respondo?</h1>
+        <p className="text-[15px] text-[#71717a] mt-3 max-w-xl mx-auto leading-relaxed">
           Poné a tu agente de ventas a trabajar en 3 pasos. Te lleva menos de lo que pensás.
         </p>
       </div>
@@ -64,13 +64,13 @@ export default function HelpGuide({ onNavigate }: HelpGuideProps) {
           <Card key={s.n} interactive index={i} className="p-6 flex flex-col" onClick={() => onNavigate(s.tab)}>
             <div className="flex items-center justify-between mb-4">
               <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                s.tone === "accent" ? "bg-[#f3f5fe] text-[#4f6ef7]" : s.tone === "success" ? "bg-[#eafaea] text-[#4caf4c]" : "bg-[#fff7e0] text-[#b8860b]"
+                s.tone === "accent" ? "bg-[#f5f6ff] text-[#4f46e5]" : s.tone === "success" ? "bg-[#eafaea] text-[#4caf4c]" : "bg-[#fff7e0] text-[#b8860b]"
               }`}>{s.icon}</span>
-              <span className="text-[28px] font-semibold text-[#f3f4f8] leading-none">{s.n}</span>
+              <span className="text-[28px] font-semibold text-[#f4f4f5] leading-none">{s.n}</span>
             </div>
-            <h3 className="text-[16px] font-semibold text-[#111111]">{s.title}</h3>
-            <p className="text-[13.5px] text-[#6b7280] mt-1.5 leading-relaxed flex-1">{s.desc}</p>
-            <span className="inline-flex items-center gap-1 text-[13px] font-medium text-[#4f6ef7] mt-4">
+            <h3 className="text-[16px] font-semibold text-[#0a0a0a]">{s.title}</h3>
+            <p className="text-[13.5px] text-[#71717a] mt-1.5 leading-relaxed flex-1">{s.desc}</p>
+            <span className="inline-flex items-center gap-1 text-[13px] font-medium text-[#4f46e5] mt-4">
               {s.cta} <ArrowRight size={14} />
             </span>
           </Card>
@@ -88,10 +88,10 @@ export default function HelpGuide({ onNavigate }: HelpGuideProps) {
             { icon: <Sparkles size={15} />, t: "Usá el Modo Estricto", d: "Que el agente nunca invente datos." },
           ].map((tip, i) => (
             <div key={i} className="flex gap-3">
-              <span className="w-8 h-8 rounded-lg bg-[#f3f4f8] text-[#6b7280] flex items-center justify-center shrink-0">{tip.icon}</span>
+              <span className="w-8 h-8 rounded-lg bg-[#f4f4f5] text-[#71717a] flex items-center justify-center shrink-0">{tip.icon}</span>
               <div>
-                <p className="text-[13.5px] font-medium text-[#111111]">{tip.t}</p>
-                <p className="text-[12.5px] text-[#6b7280] mt-0.5">{tip.d}</p>
+                <p className="text-[13.5px] font-medium text-[#0a0a0a]">{tip.t}</p>
+                <p className="text-[12.5px] text-[#71717a] mt-0.5">{tip.d}</p>
               </div>
             </div>
           ))}
@@ -108,8 +108,8 @@ export default function HelpGuide({ onNavigate }: HelpGuideProps) {
                 onClick={() => setOpen(open === i ? null : i)}
                 className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer"
               >
-                <span className="text-[14px] font-medium text-[#111111]">{item.q}</span>
-                <ChevronDown size={17} className={`text-[#9aa0ab] shrink-0 transition-transform duration-300 ${open === i ? "rotate-180" : ""}`} />
+                <span className="text-[14px] font-medium text-[#0a0a0a]">{item.q}</span>
+                <ChevronDown size={17} className={`text-[#a1a1aa] shrink-0 transition-transform duration-300 ${open === i ? "rotate-180" : ""}`} />
               </button>
               <AnimatePresence initial={false}>
                 {open === i && (
@@ -118,7 +118,7 @@ export default function HelpGuide({ onNavigate }: HelpGuideProps) {
                     transition={{ duration: 0.25 }}
                     className="overflow-hidden"
                   >
-                    <p className="px-5 pb-4 text-[13.5px] text-[#6b7280] leading-relaxed">{item.a}</p>
+                    <p className="px-5 pb-4 text-[13.5px] text-[#71717a] leading-relaxed">{item.a}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -128,14 +128,14 @@ export default function HelpGuide({ onNavigate }: HelpGuideProps) {
       </div>
 
       {/* CTA footer */}
-      <Card className="p-6 bg-[#111111] flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+      <Card className="p-6 bg-[#0a0a0a] flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
         <div>
           <h3 className="text-[16px] font-semibold text-white">¿Listo para empezar?</h3>
-          <p className="text-[13px] text-[#9aa0ab] mt-1">Configurá tu agente y empezá a recibir leads hoy.</p>
+          <p className="text-[13px] text-[#a1a1aa] mt-1">Configurá tu agente y empezá a recibir leads hoy.</p>
         </div>
         <button
           onClick={() => onNavigate("playground")}
-          className="bg-[#4f6ef7] hover:bg-[#6b86f9] text-white text-[14px] font-medium px-5 py-2.5 rounded-xl flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+          className="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-[14px] font-medium px-5 py-2.5 rounded-xl flex items-center gap-2 transition-colors cursor-pointer shrink-0"
         >
           <Sparkles size={15} /> Entrenar mi agente
         </button>

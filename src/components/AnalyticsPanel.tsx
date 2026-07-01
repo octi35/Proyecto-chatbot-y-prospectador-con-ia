@@ -81,7 +81,7 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
   const maxCategoryCount = Math.max(1, ...categoryEntries.map(([, c]) => c));
-  const CATEGORY_COLORS = ["bg-[#6b86f9]","bg-[#8fa3fb]","bg-[#7dd87d]","bg-[#ffcf2e]","bg-pink-500","bg-[#6b86f9]","bg-[#e26562]","bg-[#5cc0ef]"];
+  const CATEGORY_COLORS = ["bg-[#4338ca]","bg-[#818cf8]","bg-[#7dd87d]","bg-[#ffcf2e]","bg-pink-500","bg-[#4338ca]","bg-[#e26562]","bg-[#6366f1]"];
 
   // Hourly activity heatmap derived from lead lastInteraction timestamps
   const hourCounts = Array.from({ length: 24 }, (_, h) => ({
@@ -123,23 +123,23 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
       value: `${totalLeads} Leads`,
       sub: "Registrados en vivo",
       desc: `Nuevos: ${newLeads} | Contactados: ${contactedLeads} | Presupuestados: ${budgetedLeads}`,
-      color: "from-[#6b86f9] to-[#6b86f9]",
-      icon: <Users className="text-[#4f6ef7]" size={20} />
+      color: "from-[#4338ca] to-[#4338ca]",
+      icon: <Users className="text-[#4f46e5]" size={20} />
     },
     {
       title: "Calificación Promedio",
       value: `${avgLeadScore}%`,
       sub: "Interés de Compra",
       desc: "Puntaje estimado por el modelo de IA basado en los mensajes del cliente.",
-      color: "from-[#8fa3fb] to-[#6b86f9]",
-      icon: <TrendingUp className="text-[#6b86f9]" size={20} />
+      color: "from-[#818cf8] to-[#4338ca]",
+      icon: <TrendingUp className="text-[#4338ca]" size={20} />
     },
     {
       title: "Facturación Concretada",
       value: `$${totalSalesAmount.toLocaleString("es-AR")} ARS`,
       sub: `${closedLeads} cierres de venta`,
       desc: "Ventas finalizadas y cobradas en el panel de control del CRM.",
-      color: "from-[#7dd87d] to-[#5cc0ef]",
+      color: "from-[#7dd87d] to-[#6366f1]",
       icon: <ShoppingBag className="text-emerald-650" size={20} />
     },
     {
@@ -158,28 +158,28 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
       {/* Live Agent Status Card — minimalist */}
       <div className="bg-white rounded-[22px] p-6 ds-shadow flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-[14px] bg-gradient-to-br from-[#4f6ef7] to-[#3f57d6] flex items-center justify-center shrink-0 ds-shadow">
+          <div className="w-12 h-12 rounded-[14px] bg-[#0a0a0a] flex items-center justify-center shrink-0 ds-shadow">
             <Zap className="text-white" size={24} />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold tracking-wide text-[#4f6ef7] block mb-0.5">
+            <span className="text-[10px] uppercase font-semibold tracking-wide text-[#4f46e5] block mb-0.5">
               Agente en vivo
             </span>
-            <h4 className="font-semibold text-[17px] tracking-tight text-[#111111]">
+            <h4 className="font-semibold text-[17px] tracking-tight text-[#0a0a0a]">
               {config.businessName || "Respondo AI"} — operando solo
             </h4>
-            <p className="text-[12.5px] text-[#6b7280] max-w-xl leading-relaxed mt-1">
-              Entrenado como experto en <strong className="text-[#111111] font-semibold">{config.businessType || "tu rubro"}</strong> con tono <strong className="text-[#111111] font-semibold">{config.tone}</strong>. Responde en milisegundos y deriva al CRM.
+            <p className="text-[12.5px] text-[#71717a] max-w-xl leading-relaxed mt-1">
+              Entrenado como experto en <strong className="text-[#0a0a0a] font-semibold">{config.businessType || "tu rubro"}</strong> con tono <strong className="text-[#0a0a0a] font-semibold">{config.tone}</strong>. Responde en milisegundos y deriva al CRM.
             </p>
           </div>
         </div>
 
-        <div className="shrink-0 bg-[#f7f8fc] px-5 py-3 rounded-2xl text-center min-w-[140px]">
-          <span className="text-[10px] text-[#9aa0ab] block font-semibold uppercase tracking-wide">Tienda</span>
-          <span className="text-[17px] font-bold text-[#4f6ef7] block my-0.5 tracking-tight">
+        <div className="shrink-0 bg-[#fafafa] px-5 py-3 rounded-2xl text-center min-w-[140px]">
+          <span className="text-[10px] text-[#a1a1aa] block font-semibold uppercase tracking-wide">Tienda</span>
+          <span className="text-[17px] font-bold text-[#4f46e5] block my-0.5 tracking-tight">
             {config.syncStore || "Nativa"}
           </span>
-          <span className="text-[9px] text-[#9aa0ab] block">Sincronización activa</span>
+          <span className="text-[9px] text-[#a1a1aa] block">Sincronización activa</span>
         </div>
       </div>
 
@@ -191,20 +191,20 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             className="bg-white rounded-[18px] p-5 hover:ds-shadow transition-all flex flex-col justify-between ds-shadow"
           >
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs font-semibold text-[#9aa0ab]">{m.title}</span>
-              <div className="p-2 bg-[#f7f8fc] rounded-xl shrink-0">
+              <span className="text-xs font-semibold text-[#a1a1aa]">{m.title}</span>
+              <div className="p-2 bg-[#fafafa] rounded-xl shrink-0">
                 {m.icon}
               </div>
             </div>
 
             <div className="space-y-1">
-              <h4 className="font-sans font-black text-2xl text-[#111111] tracking-tight">
+              <h4 className="font-sans font-black text-2xl text-[#0a0a0a] tracking-tight">
                 {m.value}
               </h4>
-              <span className="text-[10px] font-bold text-[#9aa0ab] uppercase tracking-wide block">
+              <span className="text-[10px] font-bold text-[#a1a1aa] uppercase tracking-wide block">
                 {m.sub}
               </span>
-              <p className="text-[10px] text-[#6b7280] leading-normal pt-1 border-t border-[#f3f4f8] mt-2">
+              <p className="text-[10px] text-[#71717a] leading-normal pt-1 border-t border-[#f4f4f5] mt-2">
                 {m.desc}
               </p>
             </div>
@@ -214,32 +214,32 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Pipeline health mini-chart */}
       {totalLeads > 0 && (
-        <div className="bg-[#f3f4f8] border border-transparent rounded-2xl p-5 shadow-sm">
+        <div className="bg-[#f4f4f5] border border-transparent rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-[#1f2430]">Salud del Embudo de Ventas</h4>
-              <p className="text-xs text-[#6b7280]">Distribución de {totalLeads} leads por etapa del pipeline</p>
+              <h4 className="font-sans font-semibold text-sm text-[#27272a]">Salud del Embudo de Ventas</h4>
+              <p className="text-xs text-[#71717a]">Distribución de {totalLeads} leads por etapa del pipeline</p>
             </div>
-            <span className="text-xs font-mono font-bold text-[#4f6ef7]">{conversionRate}% conv.</span>
+            <span className="text-xs font-mono font-bold text-[#4f46e5]">{conversionRate}% conv.</span>
           </div>
           <div className="flex gap-2 items-end h-16">
             {(["Nuevo","Contactado","Presupuestado","Cerrado"] as const).map((status) => {
               const count = leads.filter((l) => l.status === status).length;
               const pct = Math.round((count / totalLeads) * 100);
               const colors: Record<string, string> = {
-                Nuevo: "bg-[#8fd4f8]", Contactado: "bg-[#ffd84d]",
-                Presupuestado: "bg-[#8fa3fb]", Cerrado: "bg-[#7dd87d]",
+                Nuevo: "bg-[#818cf8]", Contactado: "bg-[#ffd84d]",
+                Presupuestado: "bg-[#818cf8]", Cerrado: "bg-[#7dd87d]",
               };
               return (
                 <div key={status} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[9px] font-mono text-[#6b7280]">{count}</span>
+                  <span className="text-[9px] font-mono text-[#71717a]">{count}</span>
                   <div className="w-full flex flex-col justify-end" style={{ height: "48px" }}>
                     <div
                       className={`w-full rounded-t-lg transition-all ${colors[status]}`}
                       style={{ height: `${Math.max(4, pct)}%`, minHeight: count > 0 ? "8px" : "0" }}
                     />
                   </div>
-                  <span className="text-[8px] text-[#6b7280] text-center leading-tight font-semibold">{status}</span>
+                  <span className="text-[8px] text-[#71717a] text-center leading-tight font-semibold">{status}</span>
                 </div>
               );
             })}
@@ -249,21 +249,21 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Funnel conversion rates */}
       {totalLeads > 0 && (
-        <div className="bg-[#f3f4f8] border border-transparent rounded-2xl p-5 shadow-sm">
+        <div className="bg-[#f4f4f5] border border-transparent rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-[#1f2430]">Tasas de Conversión por Etapa</h4>
-              <p className="text-xs text-[#6b7280]">% de leads que avanzan entre cada etapa del embudo</p>
+              <h4 className="font-sans font-semibold text-sm text-[#27272a]">Tasas de Conversión por Etapa</h4>
+              <p className="text-xs text-[#71717a]">% de leads que avanzan entre cada etapa del embudo</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
             {[
-              { label: "Nuevo", count: newLeads, color: "bg-[#8fd4f8] text-sky-700" },
-              { label: "→ Contactado", rate: funnelRates.toContactado, color: "text-[#9aa0ab]" },
+              { label: "Nuevo", count: newLeads, color: "bg-[#818cf8] text-sky-700" },
+              { label: "→ Contactado", rate: funnelRates.toContactado, color: "text-[#a1a1aa]" },
               { label: "Contactado", count: contactedLeads, color: "bg-[#ffd84d] text-[#a67c00]" },
-              { label: "→ Presupuestado", rate: funnelRates.toPresupuestado, color: "text-[#9aa0ab]" },
-              { label: "Presupuestado", count: budgetedLeads, color: "bg-[#8fa3fb] text-purple-700" },
-              { label: "→ Cerrado", rate: funnelRates.toCerrado, color: "text-[#9aa0ab]" },
+              { label: "→ Presupuestado", rate: funnelRates.toPresupuestado, color: "text-[#a1a1aa]" },
+              { label: "Presupuestado", count: budgetedLeads, color: "bg-[#818cf8] text-purple-700" },
+              { label: "→ Cerrado", rate: funnelRates.toCerrado, color: "text-[#a1a1aa]" },
               { label: "Cerrado", count: closedLeads, color: "bg-[#7dd87d] text-[#3f9f3f]" },
             ].map((item, i) =>
               "rate" in item ? (
@@ -271,8 +271,8 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
                   <span className={`text-[10px] font-bold font-mono ${item.rate >= 50 ? "text-[#4caf4c]" : item.rate >= 25 ? "text-[#b8860b]" : "text-[#e26562]"}`}>
                     {item.rate}%
                   </span>
-                  <div className="w-full h-0.5 bg-[#e5e7eb] relative">
-                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-[#d1d5db]" />
+                  <div className="w-full h-0.5 bg-[#e4e4e7] relative">
+                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-[#d4d4d8]" />
                   </div>
                 </div>
               ) : (
@@ -290,13 +290,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* 7-day leads sparkline */}
       {leadsPerDay.length > 0 && (
-        <div className="bg-[#f3f4f8] border border-transparent rounded-2xl p-5 shadow-sm">
+        <div className="bg-[#f4f4f5] border border-transparent rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-[#1f2430]">Leads Captados — Últimos 7 Días</h4>
-              <p className="text-xs text-[#6b7280]">Nuevos prospectos registrados por día en el CRM</p>
+              <h4 className="font-sans font-semibold text-sm text-[#27272a]">Leads Captados — Últimos 7 Días</h4>
+              <p className="text-xs text-[#71717a]">Nuevos prospectos registrados por día en el CRM</p>
             </div>
-            <span className="text-xs font-mono font-bold text-[#4f6ef7]">
+            <span className="text-xs font-mono font-bold text-[#4f46e5]">
               {leadsPerDay.reduce((a, d) => a + d.count, 0)} leads
             </span>
           </div>
@@ -305,16 +305,16 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               const pct = maxDayLeads > 0 ? Math.round((day.count / maxDayLeads) * 100) : 0;
               return (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group">
-                  <span className="text-[9px] font-mono text-[#9aa0ab] group-hover:text-[#4f6ef7] transition-colors">
+                  <span className="text-[9px] font-mono text-[#a1a1aa] group-hover:text-[#4f46e5] transition-colors">
                     {day.count > 0 ? day.count : ""}
                   </span>
                   <div className="w-full flex flex-col justify-end" style={{ height: "44px" }}>
                     <div
-                      className="w-full rounded-t-md bg-[#6b86f9] group-hover:bg-[#4f6ef7] transition-all"
+                      className="w-full rounded-t-md bg-[#4338ca] group-hover:bg-[#4f46e5] transition-all"
                       style={{ height: `${Math.max(day.count > 0 ? 12 : 3, pct)}%`, opacity: day.count === 0 ? 0.2 : 1 }}
                     />
                   </div>
-                  <span className="text-[8px] font-semibold text-[#9aa0ab]">{day.label}</span>
+                  <span className="text-[8px] font-semibold text-[#a1a1aa]">{day.label}</span>
                 </div>
               );
             })}
@@ -324,13 +324,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Hourly activity heatmap */}
       {leads.length > 0 && (
-        <div className="bg-[#f3f4f8] border border-transparent rounded-2xl p-5 shadow-sm">
+        <div className="bg-[#f4f4f5] border border-transparent rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-[#1f2430]">Actividad por Hora del Día</h4>
-              <p className="text-xs text-[#6b7280]">Cuándo tus clientes están más activos (basado en última interacción)</p>
+              <h4 className="font-sans font-semibold text-sm text-[#27272a]">Actividad por Hora del Día</h4>
+              <p className="text-xs text-[#71717a]">Cuándo tus clientes están más activos (basado en última interacción)</p>
             </div>
-            <span className="text-xs font-mono font-bold text-[#4f6ef7]">
+            <span className="text-xs font-mono font-bold text-[#4f46e5]">
               {leads.length} interacciones
             </span>
           </div>
@@ -341,12 +341,12 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               return (
                 <div key={hour} className="flex-1 flex flex-col items-center gap-0.5 group relative">
                   <div
-                    className={`w-full rounded-sm transition-all ${count === 0 ? "bg-[#f3f4f8]" : isNight ? "bg-[#b3c0fc]" : "bg-[#6b86f9]"}`}
+                    className={`w-full rounded-sm transition-all ${count === 0 ? "bg-[#f4f4f5]" : isNight ? "bg-[#c7d2fe]" : "bg-[#4338ca]"}`}
                     style={{ height: `${Math.max(4, intensity * 36)}px`, opacity: count === 0 ? 0.4 : 0.5 + intensity * 0.5 }}
                     title={`${hour}:00 — ${count} lead${count !== 1 ? "s" : ""}`}
                   />
                   {/* Tooltip on hover */}
-                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#111111] text-white text-[8px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10 transition-opacity">
+                  <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#0a0a0a] text-white text-[8px] font-mono px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10 transition-opacity">
                     {hour}h: {count}
                   </div>
                 </div>
@@ -354,14 +354,14 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             })}
           </div>
           <div className="flex justify-between mt-1 px-0.5">
-            <span className="text-[8px] text-[#9aa0ab] font-mono">0h</span>
-            <span className="text-[8px] text-[#9aa0ab] font-mono">6h</span>
-            <span className="text-[8px] text-[#9aa0ab] font-mono">12h</span>
-            <span className="text-[8px] text-[#9aa0ab] font-mono">18h</span>
-            <span className="text-[8px] text-[#9aa0ab] font-mono">23h</span>
+            <span className="text-[8px] text-[#a1a1aa] font-mono">0h</span>
+            <span className="text-[8px] text-[#a1a1aa] font-mono">6h</span>
+            <span className="text-[8px] text-[#a1a1aa] font-mono">12h</span>
+            <span className="text-[8px] text-[#a1a1aa] font-mono">18h</span>
+            <span className="text-[8px] text-[#a1a1aa] font-mono">23h</span>
           </div>
           {maxHourCount > 0 && (
-            <p className="text-[9px] text-[#9aa0ab] mt-1.5 text-center">
+            <p className="text-[9px] text-[#a1a1aa] mt-1.5 text-center">
               Pico: {hourCounts.find(h => h.count === maxHourCount)?.hour}:00 hs
               ({maxHourCount} lead{maxHourCount !== 1 ? "s" : ""})
             </p>
@@ -371,13 +371,13 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
 
       {/* Leads by category */}
       {categoryEntries.length > 1 && (
-        <div className="bg-[#f3f4f8] border border-transparent rounded-2xl p-5 shadow-sm">
+        <div className="bg-[#f4f4f5] border border-transparent rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-[#1f2430]">Distribución por Categoría / Interés</h4>
-              <p className="text-xs text-[#6b7280]">Qué productos o servicios generan más consultas</p>
+              <h4 className="font-sans font-semibold text-sm text-[#27272a]">Distribución por Categoría / Interés</h4>
+              <p className="text-xs text-[#71717a]">Qué productos o servicios generan más consultas</p>
             </div>
-            <span className="text-xs font-mono font-bold text-[#4f6ef7]">{categoryEntries.length} categorías</span>
+            <span className="text-xs font-mono font-bold text-[#4f46e5]">{categoryEntries.length} categorías</span>
           </div>
           <div className="space-y-2">
             {categoryEntries.map(([cat, count], i) => {
@@ -385,10 +385,10 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
               return (
                 <div key={cat} className="space-y-0.5">
                   <div className="flex justify-between text-[10px]">
-                    <span className="font-semibold text-[#374151] truncate max-w-[60%]">{cat}</span>
-                    <span className="font-mono text-[#6b7280]">{count} lead{count !== 1 ? "s" : ""} · {pct}%</span>
+                    <span className="font-semibold text-[#3f3f46] truncate max-w-[60%]">{cat}</span>
+                    <span className="font-mono text-[#71717a]">{count} lead{count !== 1 ? "s" : ""} · {pct}%</span>
                   </div>
-                  <div className="w-full h-2.5 bg-[#f3f4f8] rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-[#f4f4f5] rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
                       style={{ width: `${Math.max(4, (count / maxCategoryCount) * 100)}%` }}
@@ -405,16 +405,16 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Chart 1: Interactive Growth Lines */}
-        <div className="lg:col-span-8 bg-[#f3f4f8] border border-transparent rounded-3xl p-6 shadow-sm">
+        <div className="lg:col-span-8 bg-[#f4f4f5] border border-transparent rounded-3xl p-6 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h4 className="font-sans font-semibold text-sm text-[#1f2430]">Progreso de Ventas Concretadas</h4>
-              <p className="text-xs text-[#6b7280]">Volumen mensual acumulado de ventas cobradas directamente en tu CRM</p>
+              <h4 className="font-sans font-semibold text-sm text-[#27272a]">Progreso de Ventas Concretadas</h4>
+              <p className="text-xs text-[#71717a]">Volumen mensual acumulado de ventas cobradas directamente en tu CRM</p>
             </div>
             <div className="flex items-center space-x-2 text-xs">
               <span className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#6b86f9] inline-block" />
-                <span className="text-[#4b5563] font-medium">Facturación (ARS)</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#4338ca] inline-block" />
+                <span className="text-[#52525b] font-medium">Facturación (ARS)</span>
               </span>
             </div>
           </div>
@@ -539,45 +539,45 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
         </div>
 
         {/* Actividad real del agente */}
-        <div className="lg:col-span-4 bg-[#f3f4f8] border border-transparent rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-[#f4f4f5] border border-transparent rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <h4 className="font-sans font-semibold text-sm text-[#1f2430]">Actividad del Agente</h4>
-            <p className="text-xs text-[#6b7280] mb-6">Métricas reales de conversaciones procesadas por la IA</p>
+            <h4 className="font-sans font-semibold text-sm text-[#27272a]">Actividad del Agente</h4>
+            <p className="text-xs text-[#71717a] mb-6">Métricas reales de conversaciones procesadas por la IA</p>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-[#374151] flex items-center gap-1"><MessageCircle size={12} className="text-[#4f6ef7]" /> Conversaciones Atendidas</span>
-                <span className="text-[#4f6ef7] font-mono font-bold">{totalConversations}</span>
+                <span className="font-bold text-[#3f3f46] flex items-center gap-1"><MessageCircle size={12} className="text-[#4f46e5]" /> Conversaciones Atendidas</span>
+                <span className="text-[#4f46e5] font-mono font-bold">{totalConversations}</span>
               </div>
-              <div className="w-full h-2 bg-[#f3f4f8] border border-[#e5e7eb] rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-[#f4f4f5] border border-[#e4e4e7] rounded-full overflow-hidden">
                 <div
                   style={{ width: `${Math.min(100, totalLeads ? (totalConversations / totalLeads) * 100 : 0)}%` }}
-                  className="h-full bg-[#6b86f9] rounded-full"
+                  className="h-full bg-[#4338ca] rounded-full"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-[#374151]">Mensajes Procesados</span>
-                <span className="text-[#4f6ef7] font-mono font-bold">{totalInteractions}</span>
+                <span className="font-bold text-[#3f3f46]">Mensajes Procesados</span>
+                <span className="text-[#4f46e5] font-mono font-bold">{totalInteractions}</span>
               </div>
-              <div className="w-full h-2 bg-[#f3f4f8] border border-[#e5e7eb] rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-[#f4f4f5] border border-[#e4e4e7] rounded-full overflow-hidden">
                 <div
                   style={{ width: totalInteractions > 0 ? `${Math.min(100, (totalInteractions / Math.max(totalInteractions, 200)) * 100)}%` : "0%" }}
-                  className="h-full bg-[#6b86f9] rounded-full transition-all"
+                  className="h-full bg-[#4338ca] rounded-full transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="font-bold text-[#374151]">Campañas de Difusión</span>
+                <span className="font-bold text-[#3f3f46]">Campañas de Difusión</span>
                 <span className="text-[#4caf4c] font-mono font-bold">{totalCampaigns}</span>
               </div>
-              <div className="w-full h-2 bg-[#f3f4f8] border border-[#e5e7eb] rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-[#f4f4f5] border border-[#e4e4e7] rounded-full overflow-hidden">
                 <div
                   style={{ width: `${Math.min(100, (totalCampaigns / Math.max(totalCampaigns, 5)) * 100)}%` }}
                   className="h-full bg-[#7dd87d] rounded-full transition-all"
@@ -589,38 +589,38 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             {avgResponseTimeSec !== null && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="font-bold text-[#374151] flex items-center gap-1"><Clock size={12} className="text-[#ffcf2e]" /> Tiempo Prom. de Respuesta</span>
+                  <span className="font-bold text-[#3f3f46] flex items-center gap-1"><Clock size={12} className="text-[#ffcf2e]" /> Tiempo Prom. de Respuesta</span>
                   <span className="text-[#b8860b] font-mono font-bold">
                     {avgResponseTimeSec < 60 ? `${avgResponseTimeSec}s` : `${Math.round(avgResponseTimeSec / 60)}m`}
                   </span>
                 </div>
-                <div className="w-full h-2 bg-[#f3f4f8] border border-[#e5e7eb] rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-[#f4f4f5] border border-[#e4e4e7] rounded-full overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, 100 - (avgResponseTimeSec / 30) * 10)}%` }}
                     className="h-full bg-[#ffd84d] rounded-full"
                   />
                 </div>
-                <p className="text-[8px] text-[#9aa0ab]">Tiempo medido entre mensaje del cliente y respuesta del bot</p>
+                <p className="text-[8px] text-[#a1a1aa]">Tiempo medido entre mensaje del cliente y respuesta del bot</p>
               </div>
             )}
 
             {/* Channel Breakdown */}
             {Object.keys(channelCounts).length > 0 && (
-              <div className="space-y-1.5 pt-1 border-t border-[#f3f4f8]">
-                <span className="text-[10px] font-bold text-[#9aa0ab] uppercase tracking-wider block">Leads por Canal</span>
+              <div className="space-y-1.5 pt-1 border-t border-[#f4f4f5]">
+                <span className="text-[10px] font-bold text-[#a1a1aa] uppercase tracking-wider block">Leads por Canal</span>
                 {(["WhatsApp","Instagram","Facebook","Email"] as const).map((ch) => {
                   const count: number = (channelCounts[ch] as number | undefined) ?? 0;
                   const pct: number = Math.round((count / totalChannelLeads) * 100);
                   return count > 0 ? (
                     <div key={ch} className="space-y-0.5">
                       <div className="flex justify-between text-[10px]">
-                        <span className="font-semibold text-[#4b5563]">{ch}</span>
-                        <span className="font-mono text-[#6b7280]">{count} ({pct}%)</span>
+                        <span className="font-semibold text-[#52525b]">{ch}</span>
+                        <span className="font-mono text-[#71717a]">{count} ({pct}%)</span>
                       </div>
-                      <div className="w-full h-1.5 bg-[#f3f4f8] rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-[#f4f4f5] rounded-full overflow-hidden">
                         <div
                           style={{ width: `${pct}%` }}
-                          className={`h-full rounded-full transition-all ${ch === "WhatsApp" ? "bg-[#7dd87d]" : ch === "Instagram" ? "bg-pink-500" : ch === "Email" ? "bg-[#6b7280]" : "bg-[#6b86f9]"}`}
+                          className={`h-full rounded-full transition-all ${ch === "WhatsApp" ? "bg-[#7dd87d]" : ch === "Instagram" ? "bg-pink-500" : ch === "Email" ? "bg-[#71717a]" : "bg-[#4338ca]"}`}
                         />
                       </div>
                     </div>
@@ -630,8 +630,8 @@ export default function AnalyticsPanel({ leads, campaigns, config }: AnalyticsPa
             )}
           </div>
 
-          <div className="mt-6 pt-4 border-t border-[#f3f4f8] text-xs text-[#6b7280] leading-relaxed bg-[#f7f8fc] p-3 rounded-2xl border border-[#e5e7eb]/50">
-            <span className="font-semibold text-[#1f2430] block mb-1">💡 Datos 100% reales</span>
+          <div className="mt-6 pt-4 border-t border-[#f4f4f5] text-xs text-[#71717a] leading-relaxed bg-[#fafafa] p-3 rounded-2xl border border-[#e4e4e7]/50">
+            <span className="font-semibold text-[#27272a] block mb-1">💡 Datos 100% reales</span>
             Todas las métricas provienen de la base de datos (Supabase). El gráfico de ventas se llena a medida que el agente cierra ventas reales.
           </div>
         </div>

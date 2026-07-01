@@ -3,13 +3,12 @@ import { motion, AnimatePresence, type HTMLMotionProps } from "motion/react";
 import { AlertCircle, X, Plus } from "lucide-react";
 
 /**
- * Premium design-system primitives (Salesforce-style reference).
- * Palette: bg #F7F8FC · card #FFF · ink #111 · muted #6B7280 · line #ECECEC
- * Accents: brand #4F6EF7 · yellow #FFD84D · black #101010 · sky #8FD4F8 · green #7DD87D
- * Cards: radius 22px, shadow 0 10px 35px rgba(0,0,0,.05), hover translateY(-2px).
+ * Restrained premium primitives (Linear / Vercel / Stripe caliber).
+ * Near-monochrome. One accent (#4f46e5) used sparingly. Depth from
+ * hairlines + whisper shadows, generous whitespace, refined type.
  */
 
-const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
+const spring = { type: "spring" as const, stiffness: 400, damping: 34 };
 export function cx(...c: (string | false | undefined | null)[]) {
   return c.filter(Boolean).join(" ");
 }
@@ -21,11 +20,11 @@ interface CardProps extends HTMLMotionProps<"div"> {
 export function Card({ interactive, className, children, ...props }: CardProps) {
   return (
     <motion.div
-      whileHover={interactive ? { y: -2 } : undefined}
+      whileHover={interactive ? { y: -1 } : undefined}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className={cx(
-        "bg-white rounded-[22px] ds-shadow",
-        interactive && "cursor-pointer hover:ds-shadow-hover",
+        "bg-white rounded-[16px] border border-black/[0.07] ds-shadow",
+        interactive && "cursor-pointer hover:border-black/[0.12]",
         className
       )}
       {...props}
@@ -42,20 +41,19 @@ interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
   size?: "sm" | "md";
 }
 const BTN: Record<ButtonVariant, string> = {
-  primary: "bg-[#101010] text-white hover:brightness-125",
-  brand: "bg-[#4f6ef7] text-white hover:brightness-110",
-  secondary: "bg-[#f3f4f8] text-[#111] hover:bg-[#e9ebf2]",
-  ghost: "text-[#6b7280] hover:bg-[#f3f4f8] hover:text-[#111]",
+  primary: "bg-[#0a0a0a] text-white hover:bg-[#262626]",
+  brand: "bg-[#4f46e5] text-white hover:bg-[#4338ca]",
+  secondary: "bg-white text-[#0a0a0a] border border-black/[0.09] hover:bg-[#fafafa]",
+  ghost: "text-[#71717a] hover:bg-black/[0.04] hover:text-[#0a0a0a]",
 };
 export function Button({ variant = "primary", size = "md", className, children, ...props }: ButtonProps) {
   return (
     <motion.button
-      whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={spring}
       className={cx(
-        "inline-flex items-center justify-center gap-2 font-medium rounded-full transition-all duration-200 cursor-pointer",
-        size === "sm" ? "text-[13px] px-4 h-9" : "text-[14px] px-5 h-[42px]",
+        "inline-flex items-center justify-center gap-2 font-medium rounded-[10px] transition-colors duration-150 cursor-pointer",
+        size === "sm" ? "text-[13px] px-3.5 h-8" : "text-[13.5px] px-4 h-10",
         BTN[variant],
         className
       )}
@@ -69,16 +67,16 @@ export function Button({ variant = "primary", size = "md", className, children, 
 /* ----------------------------- Badge ---------------------------- */
 type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info" | "brand";
 const BADGE: Record<BadgeTone, string> = {
-  neutral: "bg-[#f3f4f8] text-[#6b7280]",
-  success: "bg-[#eafaea] text-[#3f9f3f]",
-  warning: "bg-[#fff7e0] text-[#a67c00]",
-  danger: "bg-[#fdecec] text-[#d9534f]",
-  info: "bg-[#e8f6fe] text-[#3a9fd4]",
-  brand: "bg-[#eef1fe] text-[#4f6ef7]",
+  neutral: "bg-black/[0.05] text-[#52525b]",
+  success: "bg-[#f0fdf4] text-[#16794c] ring-1 ring-[#16794c]/10",
+  warning: "bg-[#fefce8] text-[#a16207] ring-1 ring-[#a16207]/10",
+  danger: "bg-[#fef2f2] text-[#b91c1c] ring-1 ring-[#b91c1c]/10",
+  info: "bg-[#eff6ff] text-[#1d4ed8] ring-1 ring-[#1d4ed8]/10",
+  brand: "bg-[#eef1ff] text-[#4f46e5] ring-1 ring-[#4f46e5]/10",
 };
 export function Badge({ tone = "neutral", className, children }: { tone?: BadgeTone; className?: string; children: React.ReactNode }) {
   return (
-    <span className={cx("inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full", BADGE[tone], className)}>
+    <span className={cx("inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md", BADGE[tone], className)}>
       {children}
     </span>
   );
@@ -94,14 +92,14 @@ interface FieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export function Field({ label, error, icon, className, ...props }: FieldProps) {
   return (
     <div className="space-y-1.5">
-      {label && <label className="text-[13px] font-medium text-[#111] block">{label}</label>}
+      {label && <label className="text-[13px] font-medium text-[#0a0a0a] block">{label}</label>}
       <div className="relative">
-        {icon && <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa0ab] pointer-events-none">{icon}</span>}
+        {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a1a1aa] pointer-events-none">{icon}</span>}
         <input
           className={cx(
-            "w-full bg-[#f3f4f8] rounded-[14px] py-2.5 text-[14px] text-[#111] placeholder:text-[#9aa0ab] transition-all focus:outline-none focus:ring-2",
-            icon ? "pl-11 pr-4" : "px-4",
-            error ? "ring-2 ring-[#f3b0ae]" : "ring-0 focus:ring-[#c9d3fd]",
+            "w-full bg-white rounded-[10px] h-10 text-[14px] text-[#0a0a0a] placeholder:text-[#a1a1aa] border transition-all focus:outline-none",
+            icon ? "pl-10 pr-3.5" : "px-3.5",
+            error ? "border-[#e0a3a3] focus:border-[#d05a5a]" : "border-black/[0.1] focus:border-[#4f46e5] focus:ring-[3px] focus:ring-[#4f46e5]/10",
             className
           )}
           {...props}
@@ -110,7 +108,7 @@ export function Field({ label, error, icon, className, ...props }: FieldProps) {
       <AnimatePresence>
         {error && (
           <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="text-[12px] text-[#d9534f] flex items-center gap-1">
+            className="text-[12px] text-[#b91c1c] flex items-center gap-1">
             <AlertCircle size={12} /> {error}
           </motion.p>
         )}
@@ -128,32 +126,25 @@ interface StatCardProps {
   tone?: BadgeTone;
   index?: number;
 }
-const ICON_TONE: Record<BadgeTone, string> = {
-  neutral: "bg-[#f3f4f8] text-[#6b7280]",
-  success: "bg-[#eafaea] text-[#3f9f3f]",
-  warning: "bg-[#fff7e0] text-[#a67c00]",
-  danger: "bg-[#fdecec] text-[#d9534f]",
-  info: "bg-[#e8f6fe] text-[#3a9fd4]",
-  brand: "bg-[#eef1fe] text-[#4f6ef7]",
-};
-export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, hint, tone = "brand", index = 0 }) => (
-  <Card interactive initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, ...spring }} className="p-6">
-    <div className="flex items-center justify-between mb-5">
-      <span className={cx("w-11 h-11 rounded-2xl flex items-center justify-center", ICON_TONE[tone])}>{icon}</span>
+export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, hint, index = 0 }) => (
+  <Card initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04, ...spring }} className="p-5">
+    <div className="flex items-center justify-between">
+      <span className="text-[13px] text-[#71717a] font-medium flex items-center gap-2">
+        <span className="text-[#a1a1aa]">{icon}</span>{label}
+      </span>
       {hint}
     </div>
-    <div className="text-[28px] font-semibold tracking-tight text-[#111] leading-none tabular-nums">{value}</div>
-    <div className="text-[13px] text-[#6b7280] mt-2">{label}</div>
+    <div className="text-[30px] font-semibold tracking-tight text-[#0a0a0a] leading-none tabular-nums mt-4">{value}</div>
   </Card>
 );
 
 /* ------------------------- SectionTitle ------------------------- */
 export function SectionTitle({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex items-end justify-between mb-5">
+    <div className="flex items-end justify-between mb-4">
       <div>
-        <h3 className="text-[16px] font-semibold text-[#111]">{title}</h3>
-        {subtitle && <p className="text-[13px] text-[#6b7280] mt-0.5">{subtitle}</p>}
+        <h3 className="text-[15px] font-semibold text-[#0a0a0a] tracking-tight">{title}</h3>
+        {subtitle && <p className="text-[13px] text-[#71717a] mt-0.5">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -165,7 +156,7 @@ export const SectionHeading = ({ title, action }: { title: string; action?: Reac
 );
 
 /* -------------------------- AvatarGroup ------------------------- */
-export function AvatarGroup({ avatars, size = 28, max = 4, ring = "ring-white" }: {
+export function AvatarGroup({ avatars, size = 26, max = 4, ring = "ring-white" }: {
   avatars: string[]; size?: number; max?: number; ring?: string;
 }) {
   const shown = avatars.slice(0, max);
@@ -178,7 +169,7 @@ export function AvatarGroup({ avatars, size = 28, max = 4, ring = "ring-white" }
       ))}
       {extra > 0 && (
         <span style={{ width: size, height: size, marginLeft: -size / 3 }}
-          className={cx("rounded-full bg-[#f3f4f8] text-[#6b7280] text-[10px] font-semibold flex items-center justify-center ring-2", ring)}>
+          className={cx("rounded-full bg-black/[0.05] text-[#71717a] text-[10px] font-semibold flex items-center justify-center ring-2", ring)}>
           +{extra}
         </span>
       )}
@@ -190,11 +181,11 @@ export function AvatarGroup({ avatars, size = 28, max = 4, ring = "ring-white" }
 export function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
   return (
     <motion.button
-      whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} transition={spring} onClick={onClick}
-      className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#f7f8fc] hover:bg-[#eef1fe] transition-colors cursor-pointer group"
+      whileTap={{ scale: 0.98 }} transition={spring} onClick={onClick}
+      className="flex items-center gap-2.5 px-3.5 h-11 rounded-[10px] border border-black/[0.07] bg-white hover:bg-[#fafafa] hover:border-black/[0.12] transition-colors cursor-pointer text-left"
     >
-      <span className="w-10 h-10 rounded-xl bg-white ds-shadow flex items-center justify-center text-[#4f6ef7] group-hover:scale-105 transition-transform">{icon}</span>
-      <span className="text-[12px] font-medium text-[#111]">{label}</span>
+      <span className="text-[#71717a]">{icon}</span>
+      <span className="text-[13px] font-medium text-[#0a0a0a]">{label}</span>
     </motion.button>
   );
 }
@@ -207,17 +198,17 @@ export function Modal({ open, onClose, title, children, footer }: {
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-          <motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }} transition={spring}
-            className="relative bg-white rounded-[22px] ds-shadow-hover w-full max-w-md overflow-hidden">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" />
+          <motion.div initial={{ opacity: 0, scale: 0.98, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: 8 }} transition={spring}
+            className="relative bg-white rounded-[16px] border border-black/[0.08] shadow-[0_16px_48px_rgba(0,0,0,0.16)] w-full max-w-md overflow-hidden">
             {title && (
-              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#ececec" }}>
-                <h3 className="text-[16px] font-semibold text-[#111]">{title}</h3>
-                <button onClick={onClose} className="text-[#9aa0ab] hover:text-[#111] transition-colors cursor-pointer"><X size={18} /></button>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.07]">
+                <h3 className="text-[15px] font-semibold text-[#0a0a0a]">{title}</h3>
+                <button onClick={onClose} className="text-[#a1a1aa] hover:text-[#0a0a0a] transition-colors cursor-pointer"><X size={18} /></button>
               </div>
             )}
-            <div className="px-6 py-5">{children}</div>
-            {footer && <div className="px-6 py-4 bg-[#f7f8fc] flex justify-end gap-2.5">{footer}</div>}
+            <div className="px-5 py-5">{children}</div>
+            {footer && <div className="px-5 py-4 bg-[#fafafa] border-t border-black/[0.07] flex justify-end gap-2.5">{footer}</div>}
           </motion.div>
         </div>
       )}
@@ -230,10 +221,10 @@ export function EmptyState({ icon, title, description, action }: {
   icon: React.ReactNode; title: string; description?: string; action?: React.ReactNode;
 }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="flex flex-col items-center justify-center text-center py-14 px-6">
-      <div className="w-14 h-14 rounded-2xl bg-[#f3f4f8] flex items-center justify-center text-[#9aa0ab] mb-4">{icon}</div>
-      <p className="text-[15px] font-semibold text-[#111]">{title}</p>
-      {description && <p className="text-[13px] text-[#6b7280] mt-1.5 max-w-xs leading-relaxed">{description}</p>}
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="flex flex-col items-center justify-center text-center py-14 px-6">
+      <div className="w-12 h-12 rounded-[12px] border border-black/[0.07] bg-[#fafafa] flex items-center justify-center text-[#a1a1aa] mb-4">{icon}</div>
+      <p className="text-[15px] font-semibold text-[#0a0a0a]">{title}</p>
+      {description && <p className="text-[13px] text-[#71717a] mt-1.5 max-w-xs leading-relaxed">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
     </motion.div>
   );
@@ -241,7 +232,7 @@ export function EmptyState({ icon, title, description, action }: {
 
 /* ---------------------------- Skeleton -------------------------- */
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx("animate-pulse bg-[#f3f4f8] rounded-lg", className)} />;
+  return <div className={cx("animate-pulse bg-black/[0.05] rounded-md", className)} />;
 }
 
 export { Plus };

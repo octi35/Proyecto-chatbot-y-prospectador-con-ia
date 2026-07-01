@@ -73,17 +73,17 @@ export default function WaTemplateManager() {
     <div className="bg-white rounded-[22px] p-6 ds-shadow space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-[14px] bg-gradient-to-br from-[#8fd88f] to-[#4caf4c] flex items-center justify-center text-white ds-shadow">
+          <div className="w-11 h-11 rounded-[14px] bg-[#0a0a0a] flex items-center justify-center text-white ds-shadow">
             <FileText size={20} />
           </div>
           <div>
-            <h3 className="font-semibold text-[18px] tracking-tight text-[#111111]">Plantillas de WhatsApp</h3>
-            <p className="text-[12.5px] text-[#6b7280]">Mensajes aprobados por Meta para campañas masivas legales</p>
+            <h3 className="font-semibold text-[18px] tracking-tight text-[#0a0a0a]">Plantillas de WhatsApp</h3>
+            <p className="text-[12.5px] text-[#71717a]">Mensajes aprobados por Meta para campañas masivas legales</p>
           </div>
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className={`px-4 py-2 rounded-full text-[13px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${showForm ? "bg-[#f3f4f8] text-[#111111]" : "bg-[#4f6ef7] text-white hover:bg-[#6b86f9]"}`}
+          className={`px-4 py-2 rounded-full text-[13px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${showForm ? "bg-[#f4f4f5] text-[#0a0a0a]" : "bg-[#4f46e5] text-white hover:bg-[#4338ca]"}`}
         >
           <Plus size={15} className={showForm ? "rotate-45 transition-transform" : "transition-transform"} />
           {showForm ? "Cancelar" : "Nueva plantilla"}
@@ -93,33 +93,33 @@ export default function WaTemplateManager() {
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="bg-[#f7f8fc]/70 rounded-2xl p-4 space-y-3">
+            <div className="bg-[#fafafa]/70 rounded-2xl p-4 space-y-3">
               <div className="grid sm:grid-cols-3 gap-3">
                 <input
                   type="text" value={name} onChange={(e) => setName(e.target.value.replace(/[^a-z0-9_]/gi, "_").toLowerCase())}
                   placeholder="nombre_plantilla"
-                  className="bg-[#f3f4f8] border border-transparent rounded-xl px-3 py-2 text-[13px] text-[#111111] focus:outline-none focus:border-[#4f6ef7]"
+                  className="bg-[#f4f4f5] border border-transparent rounded-xl px-3 py-2 text-[13px] text-[#0a0a0a] focus:outline-none focus:border-[#4f46e5]"
                 />
-                <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-[#f3f4f8] border border-transparent rounded-xl px-3 py-2 text-[13px] text-[#111111] focus:outline-none focus:border-[#4f6ef7] cursor-pointer">
+                <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-[#f4f4f5] border border-transparent rounded-xl px-3 py-2 text-[13px] text-[#0a0a0a] focus:outline-none focus:border-[#4f46e5] cursor-pointer">
                   <option value="es_AR">Español (AR)</option>
                   <option value="es_MX">Español (MX)</option>
                   <option value="es_ES">Español (ES)</option>
                   <option value="en_US">English (US)</option>
                   <option value="pt_BR">Português (BR)</option>
                 </select>
-                <select value={category} onChange={(e) => setCategory(e.target.value as WaTemplate["category"])} className="bg-[#f3f4f8] border border-transparent rounded-xl px-3 py-2 text-[13px] text-[#111111] focus:outline-none focus:border-[#4f6ef7] cursor-pointer">
+                <select value={category} onChange={(e) => setCategory(e.target.value as WaTemplate["category"])} className="bg-[#f4f4f5] border border-transparent rounded-xl px-3 py-2 text-[13px] text-[#0a0a0a] focus:outline-none focus:border-[#4f46e5] cursor-pointer">
                   {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                 </select>
               </div>
               <textarea
                 value={body} onChange={(e) => setBody(e.target.value)} rows={3}
                 placeholder="Hola {{1}}, tenemos una oferta especial para vos en {{2}}. ¡Respondé para más info!"
-                className="w-full bg-[#f3f4f8] border border-transparent rounded-xl p-3 text-[13px] text-[#111111] focus:outline-none focus:border-[#4f6ef7] resize-none leading-relaxed"
+                className="w-full bg-[#f4f4f5] border border-transparent rounded-xl p-3 text-[13px] text-[#0a0a0a] focus:outline-none focus:border-[#4f46e5] resize-none leading-relaxed"
               />
-              <p className="text-[10px] text-[#9aa0ab]">Usá {"{{1}}"}, {"{{2}}"}… para variables. {varCount > 0 ? `${varCount} variable${varCount !== 1 ? "s" : ""} detectada${varCount !== 1 ? "s" : ""}.` : "Sin variables."}</p>
+              <p className="text-[10px] text-[#a1a1aa]">Usá {"{{1}}"}, {"{{2}}"}… para variables. {varCount > 0 ? `${varCount} variable${varCount !== 1 ? "s" : ""} detectada${varCount !== 1 ? "s" : ""}.` : "Sin variables."}</p>
               <button
                 onClick={handleCreate} disabled={saving || !name.trim() || !body.trim()}
-                className="w-full py-2.5 bg-[#4f6ef7] hover:bg-[#6b86f9] disabled:opacity-50 text-white text-[13px] font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
+                className="w-full py-2.5 bg-[#4f46e5] hover:bg-[#4338ca] disabled:opacity-50 text-white text-[13px] font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
                 Crear plantilla
@@ -130,12 +130,12 @@ export default function WaTemplateManager() {
       </AnimatePresence>
 
       {loading ? (
-        <div className="flex items-center justify-center py-10 text-[#9aa0ab]"><Loader2 size={20} className="animate-spin" /></div>
+        <div className="flex items-center justify-center py-10 text-[#a1a1aa]"><Loader2 size={20} className="animate-spin" /></div>
       ) : templates.length === 0 ? (
         <div className="text-center py-10">
-          <div className="w-14 h-14 rounded-2xl bg-[#f7f8fc] flex items-center justify-center mx-auto mb-3"><FileText size={26} className="text-[#d1d5db]" /></div>
-          <p className="text-[14px] font-semibold text-[#111111]">Sin plantillas todavía</p>
-          <p className="text-[12.5px] text-[#6b7280] mt-1 max-w-sm mx-auto">Creá plantillas para enviar campañas masivas por la API oficial sin riesgo de baneo.</p>
+          <div className="w-14 h-14 rounded-2xl bg-[#fafafa] flex items-center justify-center mx-auto mb-3"><FileText size={26} className="text-[#d4d4d8]" /></div>
+          <p className="text-[14px] font-semibold text-[#0a0a0a]">Sin plantillas todavía</p>
+          <p className="text-[12.5px] text-[#71717a] mt-1 max-w-sm mx-auto">Creá plantillas para enviar campañas masivas por la API oficial sin riesgo de baneo.</p>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -145,18 +145,18 @@ export default function WaTemplateManager() {
               <div key={t.id} className="p-3.5 rounded-2xl bg-white ds-shadow">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[13px] font-mono font-semibold text-[#111111] truncate">{t.name}</span>
-                    <span className="text-[10px] text-[#9aa0ab] bg-[#f3f4f8] px-1.5 py-0.5 rounded-md shrink-0">{t.language}</span>
-                    <span className="text-[10px] text-[#6b7280] bg-[#f3f4f8] px-1.5 py-0.5 rounded-md shrink-0">{CATEGORY_LABEL[t.category]}</span>
+                    <span className="text-[13px] font-mono font-semibold text-[#0a0a0a] truncate">{t.name}</span>
+                    <span className="text-[10px] text-[#a1a1aa] bg-[#f4f4f5] px-1.5 py-0.5 rounded-md shrink-0">{t.language}</span>
+                    <span className="text-[10px] text-[#71717a] bg-[#f4f4f5] px-1.5 py-0.5 rounded-md shrink-0">{CATEGORY_LABEL[t.category]}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => cycleStatus(t)} className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full cursor-pointer ${s.cls}`} title="Cambiar estado (simula la revisión de Meta)">
                       {s.icon} {s.label}
                     </button>
-                    <button onClick={() => remove(t.id)} className="p-1 text-[#d1d5db] hover:text-[#e26562] transition-colors cursor-pointer" title="Eliminar"><Trash2 size={14} /></button>
+                    <button onClick={() => remove(t.id)} className="p-1 text-[#d4d4d8] hover:text-[#e26562] transition-colors cursor-pointer" title="Eliminar"><Trash2 size={14} /></button>
                   </div>
                 </div>
-                <p className="text-[12px] text-[#6b7280] mt-2 leading-relaxed bg-[#f7f8fc]/70 rounded-xl px-3 py-2 whitespace-pre-wrap">{t.body}</p>
+                <p className="text-[12px] text-[#71717a] mt-2 leading-relaxed bg-[#fafafa]/70 rounded-xl px-3 py-2 whitespace-pre-wrap">{t.body}</p>
               </div>
             );
           })}
