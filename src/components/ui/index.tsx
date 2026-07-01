@@ -1,16 +1,16 @@
 import React from "react";
 import { motion, AnimatePresence, type HTMLMotionProps } from "motion/react";
-import { AlertCircle, X } from "lucide-react";
+import { AlertCircle, X, Plus } from "lucide-react";
 
 /**
- * Reusable UI primitives following the 21st.dev / shadcn philosophy:
- * minimal borders, subtle shadows, zinc neutrals, a single indigo accent,
- * and purposeful spring micro-interactions.
+ * Premium design-system primitives (Salesforce-style reference).
+ * Palette: bg #F7F8FC · card #FFF · ink #111 · muted #6B7280 · line #ECECEC
+ * Accents: brand #4F6EF7 · yellow #FFD84D · black #101010 · sky #8FD4F8 · green #7DD87D
+ * Cards: radius 22px, shadow 0 10px 35px rgba(0,0,0,.05), hover translateY(-2px).
  */
 
-const spring = { type: "spring" as const, stiffness: 400, damping: 28 };
-
-function cx(...c: (string | false | undefined | null)[]) {
+const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
+export function cx(...c: (string | false | undefined | null)[]) {
   return c.filter(Boolean).join(" ");
 }
 
@@ -21,11 +21,11 @@ interface CardProps extends HTMLMotionProps<"div"> {
 export function Card({ interactive, className, children, ...props }: CardProps) {
   return (
     <motion.div
-      whileHover={interactive ? { y: -3 } : undefined}
-      transition={spring}
+      whileHover={interactive ? { y: -2 } : undefined}
+      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className={cx(
-        "bg-white rounded-2xl shadow-[0_1px_2px_rgba(24,24,27,0.04),0_4px_16px_rgba(24,24,27,0.04)]",
-        interactive && "cursor-pointer hover:shadow-[0_8px_30px_rgba(24,24,27,0.08)]",
+        "bg-white rounded-[22px] ds-shadow",
+        interactive && "cursor-pointer hover:ds-shadow-hover",
         className
       )}
       {...props}
@@ -36,27 +36,27 @@ export function Card({ interactive, className, children, ...props }: CardProps) 
 }
 
 /* ---------------------------- Button ---------------------------- */
-type ButtonVariant = "primary" | "secondary" | "ghost" | "accent";
+type ButtonVariant = "primary" | "brand" | "secondary" | "ghost";
 interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
   variant?: ButtonVariant;
   size?: "sm" | "md";
 }
-const BTN_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-zinc-900 text-white hover:bg-zinc-800",
-  accent: "bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_6px_16px_-6px_rgba(79,70,229,0.6)]",
-  secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
-  ghost: "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900",
+const BTN: Record<ButtonVariant, string> = {
+  primary: "bg-[#101010] text-white hover:brightness-125",
+  brand: "bg-[#4f6ef7] text-white hover:brightness-110",
+  secondary: "bg-[#f3f4f8] text-[#111] hover:bg-[#e9ebf2]",
+  ghost: "text-[#6b7280] hover:bg-[#f3f4f8] hover:text-[#111]",
 };
 export function Button({ variant = "primary", size = "md", className, children, ...props }: ButtonProps) {
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.97 }}
+      whileTap={{ scale: 0.98 }}
       transition={spring}
       className={cx(
-        "inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-colors cursor-pointer",
-        size === "sm" ? "text-[13px] px-3 py-1.5" : "text-sm px-4 py-2.5",
-        BTN_VARIANTS[variant],
+        "inline-flex items-center justify-center gap-2 font-medium rounded-full transition-all duration-200 cursor-pointer",
+        size === "sm" ? "text-[13px] px-4 h-9" : "text-[14px] px-5 h-[42px]",
+        BTN[variant],
         className
       )}
       {...props}
@@ -67,60 +67,20 @@ export function Button({ variant = "primary", size = "md", className, children, 
 }
 
 /* ----------------------------- Badge ---------------------------- */
-type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info" | "accent";
-const BADGE_TONES: Record<BadgeTone, string> = {
-  neutral: "bg-zinc-100 text-zinc-600",
-  success: "bg-emerald-50 text-emerald-600",
-  warning: "bg-amber-50 text-amber-600",
-  danger: "bg-red-50 text-red-600",
-  info: "bg-sky-50 text-sky-600",
-  accent: "bg-indigo-50 text-indigo-600",
+type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info" | "brand";
+const BADGE: Record<BadgeTone, string> = {
+  neutral: "bg-[#f3f4f8] text-[#6b7280]",
+  success: "bg-[#eafaea] text-[#3f9f3f]",
+  warning: "bg-[#fff7e0] text-[#a67c00]",
+  danger: "bg-[#fdecec] text-[#d9534f]",
+  info: "bg-[#e8f6fe] text-[#3a9fd4]",
+  brand: "bg-[#eef1fe] text-[#4f6ef7]",
 };
 export function Badge({ tone = "neutral", className, children }: { tone?: BadgeTone; className?: string; children: React.ReactNode }) {
   return (
-    <span className={cx("inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full", BADGE_TONES[tone], className)}>
+    <span className={cx("inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full", BADGE[tone], className)}>
       {children}
     </span>
-  );
-}
-
-/* --------------------------- StatCard --------------------------- */
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint?: React.ReactNode;
-  tone?: BadgeTone;
-  index?: number;
-}
-export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, hint, tone = "accent", index = 0 }) => {
-  const iconTone: Record<BadgeTone, string> = {
-    neutral: "bg-zinc-100 text-zinc-500",
-    success: "bg-emerald-50 text-emerald-600",
-    warning: "bg-amber-50 text-amber-600",
-    danger: "bg-red-50 text-red-500",
-    info: "bg-sky-50 text-sky-600",
-    accent: "bg-indigo-50 text-indigo-600",
-  };
-  return (
-    <Card interactive initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, ...spring }} className="p-5">
-      <div className="flex items-center justify-between mb-4">
-        <span className={cx("w-10 h-10 rounded-xl flex items-center justify-center", iconTone[tone])}>{icon}</span>
-        {hint}
-      </div>
-      <div className="text-[27px] font-semibold tracking-tight text-zinc-900 leading-none tabular-nums">{value}</div>
-      <div className="text-[13px] text-zinc-500 mt-1.5">{label}</div>
-    </Card>
-  );
-};
-
-/* --------------------------- SectionHeading -------------------- */
-export function SectionHeading({ title, action }: { title: string; action?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between mb-5">
-      <h3 className="text-[15px] font-semibold text-zinc-900">{title}</h3>
-      {action}
-    </div>
   );
 }
 
@@ -134,14 +94,14 @@ interface FieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export function Field({ label, error, icon, className, ...props }: FieldProps) {
   return (
     <div className="space-y-1.5">
-      {label && <label className="text-[13px] font-medium text-zinc-700 block">{label}</label>}
+      {label && <label className="text-[13px] font-medium text-[#111] block">{label}</label>}
       <div className="relative">
-        {icon && <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none">{icon}</span>}
+        {icon && <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa0ab] pointer-events-none">{icon}</span>}
         <input
           className={cx(
-            "w-full bg-white rounded-xl py-2.5 text-[14px] text-zinc-900 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(24,24,27,0.05)] ring-1 transition-all focus:outline-none focus:ring-2",
-            icon ? "pl-10 pr-4" : "px-4",
-            error ? "ring-red-300 focus:ring-red-400" : "ring-zinc-200 focus:ring-indigo-400",
+            "w-full bg-[#f3f4f8] rounded-[14px] py-2.5 text-[14px] text-[#111] placeholder:text-[#9aa0ab] transition-all focus:outline-none focus:ring-2",
+            icon ? "pl-11 pr-4" : "px-4",
+            error ? "ring-2 ring-[#f3b0ae]" : "ring-0 focus:ring-[#c9d3fd]",
             className
           )}
           {...props}
@@ -149,10 +109,8 @@ export function Field({ label, error, icon, className, ...props }: FieldProps) {
       </div>
       <AnimatePresence>
         {error && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="text-[12px] text-red-500 flex items-center gap-1"
-          >
+          <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            className="text-[12px] text-[#d9534f] flex items-center gap-1">
             <AlertCircle size={12} /> {error}
           </motion.p>
         )}
@@ -161,26 +119,84 @@ export function Field({ label, error, icon, className, ...props }: FieldProps) {
   );
 }
 
-/* --------------------------- EmptyState ------------------------- */
-export function EmptyState({ icon, title, description, action }: {
-  icon: React.ReactNode; title: string; description?: string; action?: React.ReactNode;
-}) {
+/* --------------------------- StatCard --------------------------- */
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  hint?: React.ReactNode;
+  tone?: BadgeTone;
+  index?: number;
+}
+const ICON_TONE: Record<BadgeTone, string> = {
+  neutral: "bg-[#f3f4f8] text-[#6b7280]",
+  success: "bg-[#eafaea] text-[#3f9f3f]",
+  warning: "bg-[#fff7e0] text-[#a67c00]",
+  danger: "bg-[#fdecec] text-[#d9534f]",
+  info: "bg-[#e8f6fe] text-[#3a9fd4]",
+  brand: "bg-[#eef1fe] text-[#4f6ef7]",
+};
+export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, hint, tone = "brand", index = 0 }) => (
+  <Card interactive initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, ...spring }} className="p-6">
+    <div className="flex items-center justify-between mb-5">
+      <span className={cx("w-11 h-11 rounded-2xl flex items-center justify-center", ICON_TONE[tone])}>{icon}</span>
+      {hint}
+    </div>
+    <div className="text-[28px] font-semibold tracking-tight text-[#111] leading-none tabular-nums">{value}</div>
+    <div className="text-[13px] text-[#6b7280] mt-2">{label}</div>
+  </Card>
+);
+
+/* ------------------------- SectionTitle ------------------------- */
+export function SectionTitle({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}
-      className="flex flex-col items-center justify-center text-center py-14 px-6"
-    >
-      <div className="w-14 h-14 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 mb-4">{icon}</div>
-      <p className="text-[15px] font-semibold text-zinc-900">{title}</p>
-      {description && <p className="text-[13px] text-zinc-500 mt-1.5 max-w-xs leading-relaxed">{description}</p>}
-      {action && <div className="mt-5">{action}</div>}
-    </motion.div>
+    <div className="flex items-end justify-between mb-5">
+      <div>
+        <h3 className="text-[16px] font-semibold text-[#111]">{title}</h3>
+        {subtitle && <p className="text-[13px] text-[#6b7280] mt-0.5">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+// Back-compat alias
+export const SectionHeading = ({ title, action }: { title: string; action?: React.ReactNode }) => (
+  <SectionTitle title={title} action={action} />
+);
+
+/* -------------------------- AvatarGroup ------------------------- */
+export function AvatarGroup({ avatars, size = 28, max = 4, ring = "ring-white" }: {
+  avatars: string[]; size?: number; max?: number; ring?: string;
+}) {
+  const shown = avatars.slice(0, max);
+  const extra = avatars.length - shown.length;
+  return (
+    <div className="flex items-center">
+      {shown.map((a, i) => (
+        <img key={i} src={a} referrerPolicy="no-referrer" alt="" style={{ width: size, height: size, marginLeft: i === 0 ? 0 : -size / 3 }}
+          className={cx("rounded-full object-cover ring-2", ring)} />
+      ))}
+      {extra > 0 && (
+        <span style={{ width: size, height: size, marginLeft: -size / 3 }}
+          className={cx("rounded-full bg-[#f3f4f8] text-[#6b7280] text-[10px] font-semibold flex items-center justify-center ring-2", ring)}>
+          +{extra}
+        </span>
+      )}
+    </div>
   );
 }
 
-/* ---------------------------- Skeleton -------------------------- */
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx("animate-pulse bg-zinc-100 rounded-lg", className)} />;
+/* -------------------------- QuickAction ------------------------- */
+export function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
+  return (
+    <motion.button
+      whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} transition={spring} onClick={onClick}
+      className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#f7f8fc] hover:bg-[#eef1fe] transition-colors cursor-pointer group"
+    >
+      <span className="w-10 h-10 rounded-xl bg-white ds-shadow flex items-center justify-center text-[#4f6ef7] group-hover:scale-105 transition-transform">{icon}</span>
+      <span className="text-[12px] font-medium text-[#111]">{label}</span>
+    </motion.button>
+  );
 }
 
 /* ----------------------------- Modal ---------------------------- */
@@ -191,26 +207,41 @@ export function Modal({ open, onClose, title, children, footer }: {
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose} className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }}
-            transition={spring}
-            className="relative bg-white rounded-2xl shadow-[0_24px_60px_rgba(24,24,27,0.2)] w-full max-w-md overflow-hidden"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }} transition={spring}
+            className="relative bg-white rounded-[22px] ds-shadow-hover w-full max-w-md overflow-hidden">
             {title && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
-                <h3 className="text-[16px] font-semibold text-zinc-900">{title}</h3>
-                <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer"><X size={18} /></button>
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#ececec" }}>
+                <h3 className="text-[16px] font-semibold text-[#111]">{title}</h3>
+                <button onClick={onClose} className="text-[#9aa0ab] hover:text-[#111] transition-colors cursor-pointer"><X size={18} /></button>
               </div>
             )}
             <div className="px-6 py-5">{children}</div>
-            {footer && <div className="px-6 py-4 bg-zinc-50 flex justify-end gap-2.5">{footer}</div>}
+            {footer && <div className="px-6 py-4 bg-[#f7f8fc] flex justify-end gap-2.5">{footer}</div>}
           </motion.div>
         </div>
       )}
     </AnimatePresence>
   );
 }
+
+/* --------------------------- EmptyState ------------------------- */
+export function EmptyState({ icon, title, description, action }: {
+  icon: React.ReactNode; title: string; description?: string; action?: React.ReactNode;
+}) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="flex flex-col items-center justify-center text-center py-14 px-6">
+      <div className="w-14 h-14 rounded-2xl bg-[#f3f4f8] flex items-center justify-center text-[#9aa0ab] mb-4">{icon}</div>
+      <p className="text-[15px] font-semibold text-[#111]">{title}</p>
+      {description && <p className="text-[13px] text-[#6b7280] mt-1.5 max-w-xs leading-relaxed">{description}</p>}
+      {action && <div className="mt-5">{action}</div>}
+    </motion.div>
+  );
+}
+
+/* ---------------------------- Skeleton -------------------------- */
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cx("animate-pulse bg-[#f3f4f8] rounded-lg", className)} />;
+}
+
+export { Plus };

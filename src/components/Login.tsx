@@ -21,15 +21,15 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex">
+    <div className="min-h-screen bg-[#f7f8fc] flex p-3">
       {/* ===== Left brand panel ===== */}
-      <div className="hidden lg:flex flex-col justify-between w-[46%] bg-zinc-900 p-12 relative overflow-hidden">
-        <div className="absolute -top-24 -left-16 w-[32rem] h-[32rem] bg-indigo-600/25 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[26rem] h-[26rem] bg-violet-600/15 rounded-full blur-[120px]" />
+      <div className="hidden lg:flex flex-col justify-between w-[46%] bg-[#232323] p-12 relative overflow-hidden rounded-[28px]">
+        <div className="absolute -top-24 -left-16 w-[32rem] h-[32rem] bg-[#4f6ef7]/25 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[26rem] h-[26rem] bg-[#8fd4f8]/15 rounded-full blur-[120px]" />
 
         {/* Brand */}
         <div className="relative flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-[11px] bg-indigo-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-[14px] bg-[#4f6ef7] flex items-center justify-center">
             <span className="font-semibold text-white text-base">R</span>
           </div>
           <span className="font-semibold text-[16px] text-white tracking-tight">Respondo</span>
@@ -43,7 +43,7 @@ export default function Login({ onLogin }: LoginProps) {
           >
             Tu vendedor con IA que<br />nunca duerme.
           </motion.h1>
-          <p className="text-[15px] text-zinc-400 mt-4 leading-relaxed max-w-md">
+          <p className="text-[15px] text-white/50 mt-4 leading-relaxed max-w-md">
             Atendé WhatsApp, Instagram, Facebook y Email con un agente que responde, califica leads y cierra ventas solo.
           </p>
           <div className="mt-8 space-y-3">
@@ -54,16 +54,16 @@ export default function Login({ onLogin }: LoginProps) {
             ].map((f, i) => (
               <motion.div
                 key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.1 }}
-                className="flex items-center gap-3 text-[14px] text-zinc-300"
+                className="flex items-center gap-3 text-[14px] text-white/70"
               >
-                <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-indigo-300 shrink-0">{f.icon}</span>
+                <span className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#8fd4f8] shrink-0">{f.icon}</span>
                 {f.t}
               </motion.div>
             ))}
           </div>
         </div>
 
-        <p className="relative text-[12px] text-zinc-500">© {new Date().getFullYear()} Respondo · Chatea menos, vendé más.</p>
+        <p className="relative text-[12px] text-white/40">© {new Date().getFullYear()} Respondo · Chatea menos, vendé más.</p>
       </div>
 
       {/* ===== Right form ===== */}
@@ -74,60 +74,60 @@ export default function Login({ onLogin }: LoginProps) {
         >
           {/* Mobile brand */}
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-[11px] bg-indigo-600 flex items-center justify-center"><span className="font-semibold text-white">R</span></div>
-            <span className="font-semibold text-[16px] text-zinc-900">Respondo</span>
+            <div className="w-10 h-10 rounded-[14px] bg-[#4f6ef7] flex items-center justify-center"><span className="font-semibold text-white">R</span></div>
+            <span className="font-semibold text-[16px] text-[#111]">Respondo</span>
           </div>
 
-          <h2 className="text-[26px] font-semibold tracking-tight text-zinc-900">Bienvenido de nuevo</h2>
-          <p className="text-[14px] text-zinc-500 mt-1.5">Iniciá sesión para entrar a tu panel.</p>
+          <h2 className="text-[26px] font-semibold tracking-tight text-[#111]">Bienvenido de nuevo</h2>
+          <p className="text-[14px] text-[#6b7280] mt-1.5">Iniciá sesión para entrar a tu panel.</p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
             <div>
-              <label className="text-[13px] font-medium text-zinc-700 block mb-1.5">Email</label>
+              <label className="text-[13px] font-medium text-[#111] block mb-1.5">Email</label>
               <div className="relative">
-                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa0ab] pointer-events-none" />
                 <input
                   type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
                   placeholder="tu@email.com"
-                  className="w-full bg-white rounded-xl pl-10 pr-4 py-2.5 text-[14px] text-zinc-900 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(24,24,27,0.05)] ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all"
+                  className="w-full bg-[#f3f4f8] rounded-[14px] pl-11 pr-4 py-3 text-[14px] text-[#111] placeholder:text-[#9aa0ab] focus:outline-none focus:ring-2 focus:ring-[#c9d3fd] transition-all"
                 />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[13px] font-medium text-zinc-700">Contraseña</label>
-                <button type="button" className="text-[12px] text-indigo-600 hover:text-indigo-500">¿Olvidaste?</button>
+                <label className="text-[13px] font-medium text-[#111]">Contraseña</label>
+                <button type="button" className="text-[12px] text-[#4f6ef7] hover:brightness-110">¿Olvidaste?</button>
               </div>
               <div className="relative">
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa0ab] pointer-events-none" />
                 <input
                   type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-white rounded-xl pl-10 pr-4 py-2.5 text-[14px] text-zinc-900 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(24,24,27,0.05)] ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all"
+                  className="w-full bg-[#f3f4f8] rounded-[14px] pl-11 pr-4 py-3 text-[14px] text-[#111] placeholder:text-[#9aa0ab] focus:outline-none focus:ring-2 focus:ring-[#c9d3fd] transition-all"
                 />
               </div>
             </div>
 
-            <Button type="submit" variant="accent" className="w-full py-2.5 mt-2" disabled={loading}>
+            <Button type="submit" variant="brand" className="w-full mt-2" disabled={loading}>
               {loading ? "Entrando…" : <>Iniciar sesión <ArrowRight size={15} /></>}
             </Button>
           </form>
 
           <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-zinc-200" />
-            <span className="text-[12px] text-zinc-400">o</span>
-            <div className="flex-1 h-px bg-zinc-200" />
+            <div className="flex-1 h-px bg-[#ececec]" />
+            <span className="text-[12px] text-[#9aa0ab]">o</span>
+            <div className="flex-1 h-px bg-[#ececec]" />
           </div>
 
           <button
             onClick={() => onLogin("demo@respondo.app")}
-            className="w-full flex items-center justify-center gap-2 bg-white ring-1 ring-zinc-200 hover:bg-zinc-50 text-zinc-700 text-[14px] font-medium py-2.5 rounded-xl transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 bg-[#f3f4f8] hover:bg-[#e9ebf2] text-[#111] text-[14px] font-medium h-[42px] rounded-full transition-colors cursor-pointer"
           >
-            <Sparkles size={15} className="text-indigo-500" /> Entrar con la demo
+            <Sparkles size={15} className="text-[#4f6ef7]" /> Entrar con la demo
           </button>
 
-          <p className="text-[12px] text-zinc-400 text-center mt-6 flex items-center justify-center gap-1">
-            <Check size={12} className="text-emerald-500" /> Sin tarjeta · Configurá tu agente en minutos
+          <p className="text-[12px] text-[#9aa0ab] text-center mt-6 flex items-center justify-center gap-1">
+            <Check size={12} className="text-[#7dd87d]" /> Sin tarjeta · Configurá tu agente en minutos
           </p>
         </motion.div>
       </div>

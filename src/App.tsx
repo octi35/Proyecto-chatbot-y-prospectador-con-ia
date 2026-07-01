@@ -343,9 +343,9 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center gap-3">
-        <Loader2 size={30} className="text-indigo-600 animate-spin" />
-        <p className="text-sm text-zinc-500 font-medium tracking-tight">Cargando Respondo…</p>
+      <div className="min-h-screen bg-[#f7f8fc] flex flex-col items-center justify-center gap-3">
+        <Loader2 size={30} className="text-[#4f6ef7] animate-spin" />
+        <p className="text-sm text-[#6b7280] font-medium tracking-tight">Cargando Respondo…</p>
       </div>
     );
   }
@@ -364,61 +364,57 @@ export default function App() {
   };
 
   return (
-    <div id="respondo-app" className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex">
-      {/* ===================== SIDEBAR ===================== */}
-      <aside className="hidden md:flex flex-col w-[244px] shrink-0 h-screen sticky top-0 bg-white border-r border-zinc-100 px-3.5 py-5 z-20">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5 px-2.5 mb-8">
-          <div className="w-8 h-8 rounded-[10px] bg-indigo-600 flex items-center justify-center shrink-0 overflow-hidden">
+    <div id="respondo-app" className="min-h-screen bg-[#f7f8fc] text-[#111] font-sans selection:bg-[#eef1fe] selection:text-[#4f6ef7] flex">
+      {/* ===================== SIDEBAR (dark thin rail) ===================== */}
+      <aside className="hidden md:flex flex-col items-center w-[84px] shrink-0 h-screen sticky top-0 py-5 z-20">
+        <div className="flex flex-col items-center flex-1 w-[64px] my-1 py-5 rounded-[28px] bg-[#232323]">
+          {/* Brand mark */}
+          <div className="w-11 h-11 rounded-[16px] bg-[#4f6ef7] flex items-center justify-center shrink-0 overflow-hidden mb-8">
             {config.logoUrl ? (
               <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
             ) : (
-              <span className="font-semibold text-[15px] text-white">R</span>
+              <span className="font-semibold text-[17px] text-white">R</span>
             )}
           </div>
-          <span className="font-semibold text-[15px] tracking-tight text-zinc-900 truncate">
-            {config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo"}
-          </span>
-        </div>
 
-        {/* Nav */}
-        <nav className="flex flex-col gap-1">
-          {NAV_ITEMS.map(([tab, icon, label, badge]) => (
-            <motion.button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className={`group flex items-center gap-3 px-3 py-2 rounded-xl text-[13.5px] transition-colors duration-200 ${
-                activeTab === tab
-                  ? "bg-zinc-100 text-zinc-900 font-medium"
-                  : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 font-normal"
-              }`}
-            >
-              <span className={activeTab === tab ? "text-indigo-600" : "text-zinc-400 group-hover:text-zinc-600"}>{icon}</span>
-              {label}
-              {badge > 0 && (
-                <span className="ml-auto min-w-5 h-5 px-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
-                  {badge > 9 ? "9+" : badge}
+          {/* Nav */}
+          <nav className="flex flex-col items-center gap-2 flex-1">
+            {NAV_ITEMS.map(([tab, icon, label, badge]) => (
+              <motion.button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                title={label}
+                className={`group relative w-11 h-11 rounded-2xl flex items-center justify-center transition-colors duration-200 ${
+                  activeTab === tab
+                    ? "bg-white text-[#232323]"
+                    : "text-white/50 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {icon}
+                {badge > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#4f6ef7] text-white text-[10px] font-semibold rounded-full flex items-center justify-center ring-2 ring-[#232323]">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+                {/* Tooltip */}
+                <span className="pointer-events-none absolute left-[calc(100%+14px)] whitespace-nowrap px-2.5 py-1 rounded-lg bg-[#232323] text-white text-[12px] font-medium opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50">
+                  {label}
                 </span>
-              )}
-            </motion.button>
-          ))}
-        </nav>
+              </motion.button>
+            ))}
+          </nav>
 
-        {/* Bottom: status + account */}
-        <div className="mt-auto px-1 space-y-2">
-          <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-zinc-50">
-            <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-indigo-500" : "bg-emerald-500 animate-pulse"}`} />
-            <span className="text-[11.5px] text-zinc-500 font-medium">{isDemo ? "Modo demo" : "Conectado"}</span>
-          </div>
-          <div className="flex items-center gap-2.5 px-2 py-1.5">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[12px] font-semibold shrink-0">
+          {/* Bottom: account + logout */}
+          <div className="flex flex-col items-center gap-3 mt-4">
+            <span className={`w-2 h-2 rounded-full ${isDemo ? "bg-[#8fd4f8]" : "bg-[#7dd87d] animate-pulse"}`} title={isDemo ? "Modo demo" : "Conectado"} />
+            <div className="w-9 h-9 rounded-full bg-[#4f6ef7] flex items-center justify-center text-white text-[13px] font-semibold shrink-0" title={authedUser || ""}>
               {(authedUser || "U").charAt(0).toUpperCase()}
             </div>
-            <span className="text-[12px] text-zinc-600 font-medium truncate flex-1">{authedUser}</span>
-            <button onClick={handleLogout} title="Cerrar sesión" className="text-zinc-400 hover:text-red-500 transition-colors cursor-pointer shrink-0">
-              <LogOut size={15} />
+            <button onClick={handleLogout} title="Cerrar sesión" className="w-9 h-9 rounded-2xl flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-pointer">
+              <LogOut size={16} />
             </button>
           </div>
         </div>
@@ -427,25 +423,25 @@ export default function App() {
       {/* ===================== MAIN ===================== */}
       <div className="flex-1 min-w-0 flex flex-col h-screen relative z-10">
         {/* Top bar */}
-        <header className="shrink-0 bg-zinc-50/80 backdrop-blur-xl border-b border-zinc-100 px-4 sm:px-8 py-3.5 flex items-center gap-4 sticky top-0 z-30">
+        <header className="shrink-0 bg-[#f7f8fc]/80 backdrop-blur-xl px-4 sm:px-8 py-4 flex items-center gap-4 sticky top-0 z-30">
           {/* Mobile tab selector */}
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value as TabType)}
-            className="md:hidden bg-zinc-100 rounded-xl px-2 py-1.5 text-[13px] font-medium text-zinc-900 focus:outline-none cursor-pointer"
+            className="md:hidden bg-[#f3f4f8] rounded-[14px] px-2 py-1.5 text-[13px] font-medium text-[#111] focus:outline-none cursor-pointer"
           >
             {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab}>{label}</option>)}
           </select>
-          <h1 className="hidden md:block text-[19px] font-semibold tracking-tight text-zinc-900 shrink-0">{pageTitle[activeTab]}</h1>
+          <h1 className="hidden md:block text-[22px] font-semibold tracking-tight text-[#111] shrink-0">{pageTitle[activeTab]}</h1>
 
           {/* Search bar */}
           <div className="hidden md:flex flex-1 max-w-sm mx-2">
             <div className="relative w-full">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa0ab] pointer-events-none" />
               <input
                 type="text"
                 placeholder="Buscar…"
-                className="w-full bg-white rounded-full pl-10 pr-4 py-2 text-[13px] text-zinc-900 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(24,24,27,0.04)] focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+                className="w-full bg-white rounded-full pl-11 pr-4 h-[42px] text-[13px] text-[#111] placeholder:text-[#9aa0ab] ds-shadow focus:outline-none focus:ring-2 focus:ring-[#c9d3fd] transition-all"
               />
             </div>
           </div>
@@ -457,7 +453,7 @@ export default function App() {
             onClick={() => setActiveTab("playground")}
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-medium px-4 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-[0_6px_16px_-6px_rgba(79,70,229,0.6)]"
+            className="bg-[#101010] hover:brightness-125 text-white text-[13px] font-medium px-5 h-[42px] rounded-full flex items-center gap-1.5 cursor-pointer transition-all"
           >
             <Sparkles size={14} /> <span className="hidden sm:inline">Probar IA</span>
           </motion.button>
@@ -466,12 +462,12 @@ export default function App() {
           <div className="relative">
             <button
               onClick={() => setShowNotifPanel((v) => !v)}
-              className="relative w-9 h-9 rounded-full bg-white hover:bg-zinc-100 shadow-[0_1px_2px_rgba(24,24,27,0.04)] flex items-center justify-center text-zinc-500 transition-colors cursor-pointer"
+              className="relative w-[42px] h-[42px] rounded-full bg-white hover:bg-[#f3f4f8] ds-shadow flex items-center justify-center text-[#6b7280] transition-colors cursor-pointer"
               title="Notificaciones"
             >
               <Bell size={16} />
               {notifications.length > 0 && (
-                <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 bg-[#d9534f] text-white text-[8px] font-bold rounded-full flex items-center justify-center">
                   {notifications.length > 9 ? "9+" : notifications.length}
                 </span>
               )}
@@ -485,33 +481,33 @@ export default function App() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.98 }}
                     transition={{ duration: 0.18 }}
-                    className="absolute right-0 mt-2 w-80 bg-white border border-slate-150 rounded-2xl shadow-apple-lg z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-80 bg-white rounded-[22px] ds-shadow-hover z-50 overflow-hidden"
                   >
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                      <span className="text-[13px] font-semibold text-zinc-900">Notificaciones</span>
+                    <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: "#ececec" }}>
+                      <span className="text-[13px] font-semibold text-[#111]">Notificaciones</span>
                       {notifications.length > 0 && (
-                        <button onClick={() => setNotifications([])} className="text-[11px] text-indigo-600 hover:underline">Limpiar</button>
+                        <button onClick={() => setNotifications([])} className="text-[11px] text-[#4f6ef7] hover:underline">Limpiar</button>
                       )}
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {hotLeads > 0 && (
-                        <div className="px-4 py-3 bg-orange-50/60 border-b border-orange-100 flex items-center gap-2">
+                        <div className="px-5 py-3 bg-[#fff7e0] flex items-center gap-2">
                           <span className="text-base">🔥</span>
                           <div className="flex-1">
-                            <p className="text-[12.5px] font-semibold text-orange-800">{hotLeads} lead{hotLeads !== 1 ? "s" : ""} caliente{hotLeads !== 1 ? "s" : ""} ahora</p>
-                            <button onClick={() => { setActiveTab("crm"); setShowNotifPanel(false); }} className="text-[11px] text-orange-700 hover:underline">Ver en el CRM →</button>
+                            <p className="text-[12.5px] font-semibold text-[#a67c00]">{hotLeads} lead{hotLeads !== 1 ? "s" : ""} caliente{hotLeads !== 1 ? "s" : ""} ahora</p>
+                            <button onClick={() => { setActiveTab("crm"); setShowNotifPanel(false); }} className="text-[11px] text-[#a67c00] hover:underline">Ver en el CRM →</button>
                           </div>
                         </div>
                       )}
                       {notifications.length === 0 ? (
-                        <div className="px-4 py-8 text-center">
-                          <Bell size={22} className="text-slate-300 mx-auto mb-1.5" />
-                          <p className="text-[12px] text-zinc-400">Sin notificaciones nuevas</p>
+                        <div className="px-5 py-8 text-center">
+                          <Bell size={22} className="text-[#d1d5db] mx-auto mb-1.5" />
+                          <p className="text-[12px] text-[#9aa0ab]">Sin notificaciones nuevas</p>
                         </div>
                       ) : (
                         notifications.map((n, i) => (
-                          <div key={i} className="px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                            <p className="text-[12px] text-zinc-900 leading-snug">{n}</p>
+                          <div key={i} className="px-5 py-2.5 border-b last:border-0 hover:bg-[#f7f8fc] transition-colors" style={{ borderColor: "#f3f4f8" }}>
+                            <p className="text-[12px] text-[#111] leading-snug">{n}</p>
                           </div>
                         ))
                       )}
@@ -523,16 +519,16 @@ export default function App() {
           </div>
 
           {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[13px] font-semibold shrink-0">
+          <div className="w-[42px] h-[42px] rounded-full bg-[#4f6ef7] flex items-center justify-center text-white text-[13px] font-semibold shrink-0">
             {(config.businessName || "R").charAt(0).toUpperCase()}
           </div>
         </header>
 
         {/* Demo-mode pill (subtle) */}
         {isDemo && (
-          <div className="mx-4 sm:mx-8 mt-5 bg-white rounded-xl px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-zinc-500 shadow-[0_1px_2px_rgba(24,24,27,0.04)]">
-            <Sparkles size={13} className="shrink-0 text-indigo-500" />
-            <span><span className="font-medium text-zinc-700">Modo demostración</span> — datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
+          <div className="mx-4 sm:mx-8 mt-5 bg-white rounded-[16px] px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-[#6b7280] ds-shadow">
+            <Sparkles size={13} className="shrink-0 text-[#4f6ef7]" />
+            <span><span className="font-medium text-[#111]">Modo demostración</span> — datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
           </div>
         )}
 
@@ -598,10 +594,10 @@ export default function App() {
             )}
           </AnimatePresence>
 
-          <footer className="text-center mt-12 pt-6 text-[11px] text-zinc-400 flex items-center justify-center gap-3">
-            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-emerald-500" /> Supabase</span>
+          <footer className="text-center mt-12 pt-6 text-[11px] text-[#9aa0ab] flex items-center justify-center gap-3">
+            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-[#7dd87d]" /> Supabase</span>
             <span>·</span>
-            <span className="flex items-center gap-1"><Zap size={11} className="text-indigo-500" /> Gemini AI</span>
+            <span className="flex items-center gap-1"><Zap size={11} className="text-[#4f6ef7]" /> Gemini AI</span>
           </footer>
         </main>
       </div>

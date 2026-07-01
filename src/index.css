@@ -1,29 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
-  /* shadcn-style semantic tokens (zinc neutral base, single accent) */
-  --color-background: #fafafa;       /* zinc-50 page */
+  /* ---- Reference design system (Salesforce-style premium) ---- */
+  --color-background: #f7f8fc;   /* app background */
   --color-card: #ffffff;
-  --color-foreground: #18181b;       /* zinc-900 */
-  --color-muted: #71717a;            /* zinc-500 secondary text */
-  --color-muted-2: #a1a1aa;          /* zinc-400 */
-  --color-border: #f4f4f5;           /* zinc-100 hairline (used sparingly) */
-  --color-accent: #4f46e5;           /* indigo-600 single accent */
+  --color-sidebar: #232323;      /* near-black dark rail */
+  --color-ink: #111111;          /* primary text */
+  --color-ink-2: #6b7280;        /* secondary text */
+  --color-line: #ececec;         /* hairlines */
 
-  --radius: 1rem;
-  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Accents (soft, never saturated) */
+  --color-brand: #4f6ef7;        /* Salesforce-style blue */
+  --color-brand-soft: #eef1fe;
+  --color-yellow: #ffd84d;
+  --color-black: #101010;
+  --color-sky: #8fd4f8;
+  --color-green: #7dd87d;
+
+  --radius-card: 22px;
+  --radius-input: 14px;
+
+  --shadow-card: 0 10px 35px rgba(0,0,0,0.05);
+  --shadow-soft: 0 8px 30px rgba(15,23,42,0.06);
+  --shadow-hover: 0 16px 44px rgba(15,23,42,0.10);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
   background: var(--color-background);
-  color: var(--color-foreground);
-  font-feature-settings: "cv11", "ss01";
+  color: var(--color-ink);
   letter-spacing: -0.011em;
 }
 
@@ -32,16 +43,25 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 /* Minimal scrollbars */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #d4d4d8; }
+::-webkit-scrollbar-thumb { background: #e2e4ea; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #cdd0d9; }
+
+/* ---- Design-system utilities ---- */
+.ds-card {
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.ds-shadow { box-shadow: var(--shadow-card); }
+.ds-shadow-soft { box-shadow: var(--shadow-soft); }
+.ds-shadow-hover { box-shadow: var(--shadow-hover); }
+.ds-line { border-color: var(--color-line); }
+
+/* Legacy aliases so existing components keep valid shadows */
+.shadow-apple-sm { box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
+.shadow-apple { box-shadow: var(--shadow-card); }
+.shadow-apple-lg { box-shadow: var(--shadow-hover); }
+.glass { background: rgba(255,255,255,0.82); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fade-up { animation: fade-up 0.4s var(--ease-spring) both; }
-
-/* Soft shadow utilities (consistent depth across all components) */
-.shadow-apple-sm { box-shadow: 0 1px 2px rgba(24,24,27,0.04), 0 1px 3px rgba(24,24,27,0.05); }
-.shadow-apple { box-shadow: 0 1px 2px rgba(24,24,27,0.04), 0 8px 24px rgba(24,24,27,0.06); }
-.shadow-apple-lg { box-shadow: 0 12px 40px rgba(24,24,27,0.10), 0 4px 12px rgba(24,24,27,0.05); }
-.lift { transition: transform .3s var(--ease-spring), box-shadow .3s var(--ease-spring); }
-.lift:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(24,24,27,0.08); }
-.glass { background: rgba(255,255,255,0.8); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
+.animate-fade-up { animation: fade-up 0.4s var(--ease) both; }
