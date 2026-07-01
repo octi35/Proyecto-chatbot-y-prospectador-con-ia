@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { FileText, Plus, Trash2, Loader2, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { WaTemplate } from "../types";
 import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from "../lib/api";
+import { toast } from "./ui/toast";
 
 const CATEGORIES: WaTemplate["category"][] = ["MARKETING", "UTILITY", "AUTHENTICATION"];
 const CATEGORY_LABEL: Record<WaTemplate["category"], string> = {
@@ -32,25 +33,37 @@ export default function WaTemplateManager() {
   const reset = () => { setName(""); setLanguage("es_AR"); setCategory("MARKETING"); setBody(""); };
 
   const handleCreate = async () => {
-    if (!name.trim() || !body.trim()) return;
+    if (!name.trim() || !body.trim()) { toast.error("Faltan datos", "Completá el nombre y el cuerpo del mensaje."); return; }
     setSaving(true);
     try {
       const created = await createTemplate({ name: name.trim(), language, category, body: body.trim(), status: "PENDIENTE" });
       setTemplates((prev) => [created, ...prev]);
       reset(); setShowForm(false);
-    } catch { /* ignore */ } finally { setSaving(false); }
+      toast.success("Plantilla creada", "Quedó en revisión (pendiente).");
+    } catch (e) {
+      toast.error("No se pudo crear la plantilla", (e as Error).message);
+    } finally { setSaving(false); }
   };
 
   const cycleStatus = async (t: WaTemplate) => {
     const order: WaTemplate["status"][] = ["PENDIENTE", "APROBADA", "RECHAZADA"];
     const next = order[(order.indexOf(t.status) + 1) % order.length];
-    const updated = await updateTemplate(t.id, { status: next });
-    setTemplates((prev) => prev.map((x) => (x.id === t.id ? updated : x)));
+    try {
+      const updated = await updateTemplate(t.id, { status: next });
+      setTemplates((prev) => prev.map((x) => (x.id === t.id ? updated : x)));
+    } catch (e) {
+      toast.error("No se pudo actualizar el estado", (e as Error).message);
+    }
   };
 
   const remove = async (id: string) => {
-    await deleteTemplate(id);
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
+    try {
+      await deleteTemplate(id);
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Plantilla eliminada");
+    } catch (e) {
+      toast.error("No se pudo eliminar", (e as Error).message);
+    }
   };
 
   // Variable count for preview hint

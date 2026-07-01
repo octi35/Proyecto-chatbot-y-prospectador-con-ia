@@ -24,6 +24,7 @@ import { CRMLead, Campaign, AgentConfig } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
 import { timeAgo } from "../lib/timeAgo";
 import { sendLeadMessage, sendCampaign, runFollowups } from "../lib/api";
+import { toast } from "./ui/toast";
 
 interface CRMAdminProps {
   leads: CRMLead[];
@@ -144,8 +145,9 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
       setNewLeadName("");
       setNewLeadPhone("");
       setShowAddForm(false);
+      toast.success("Lead agregado", `${created.name} entró al embudo.`);
     } catch (e) {
-      console.error("Create lead failed:", e);
+      toast.error("No se pudo crear el lead", (e as Error).message);
     } finally {
       setIsAddingLead(false);
     }
@@ -158,8 +160,9 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
       await onLeadDelete(selectedLead.id);
       setLeads((prev) => prev.filter((l) => l.id !== selectedLead.id));
       setSelectedLead(null);
+      toast.success("Lead eliminado");
     } catch (e) {
-      console.error("Delete lead failed:", e);
+      toast.error("No se pudo eliminar el lead", (e as Error).message);
     } finally {
       setIsDeletingLead(false);
     }
@@ -360,12 +363,14 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
   const handleBulkDelete = async () => {
     if (checkedLeadIds.size === 0 || isBulkActing || !onLeadDelete) return;
     if (!window.confirm(`¿Eliminar ${checkedLeadIds.size} lead${checkedLeadIds.size !== 1 ? "s" : ""}?`)) return;
+    const count = checkedLeadIds.size;
     setIsBulkActing(true);
     try {
       await Promise.all([...checkedLeadIds].map((id) => onLeadDelete(id).catch(() => {})));
       setLeads((prev) => prev.filter((l) => !checkedLeadIds.has(l.id)));
       if (selectedLead && checkedLeadIds.has(selectedLead.id)) setSelectedLead(null);
       setCheckedLeadIds(new Set());
+      toast.success(`${count} lead${count !== 1 ? "s" : ""} eliminado${count !== 1 ? "s" : ""}`);
     } finally {
       setIsBulkActing(false);
     }
@@ -438,6 +443,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
 
       // Update local campaigns state
       setCampaigns((prev) => prev.map((c) => c.id === saved.id ? result : c));
+      toast.success("Campaña enviada", `Se disparó a ${result.totalTargeted ?? result.sentCount} contactos.`);
 
       setTimeout(() => {
         setSendingProgress(0);
@@ -448,7 +454,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
       clearInterval(progressTick);
       setSendingProgress(0);
       setIsSendingCampaign(false);
-      console.error("Campaign send failed:", e);
+      toast.error("No se pudo enviar la campaña", (e as Error).message);
     }
   };
 
@@ -472,11 +478,10 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
             onClick={async () => {
               try {
                 const result = await runFollowups();
-                setFollowupResult(`✅ ${result.contacted} seguimiento${result.contacted !== 1 ? "s" : ""} enviado${result.contacted !== 1 ? "s" : ""} de ${result.totalStale} leads inactivos`);
-              } catch {
-                setFollowupResult("⚠️ Error al ejecutar seguimientos");
+                toast.success("Seguimientos enviados", `${result.contacted} de ${result.totalStale} leads inactivos.`);
+              } catch (e) {
+                toast.error("Error al ejecutar seguimientos", (e as Error).message);
               }
-              setTimeout(() => setFollowupResult(null), 5000);
             }}
             className="px-3 py-1.5 text-xs rounded-lg font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 flex items-center gap-1.5 transition-all cursor-pointer"
             title="Enviar seguimientos automáticos a leads sin respuesta"

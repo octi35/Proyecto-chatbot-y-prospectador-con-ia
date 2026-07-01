@@ -5,6 +5,7 @@ import { AutomationRule } from "../types";
 import {
   getAutomations, createAutomation, updateAutomation, deleteAutomation,
 } from "../lib/api";
+import { toast } from "./ui/toast";
 
 // Human-friendly labels for each trigger and action
 const TRIGGERS: { value: AutomationRule["trigger"]; label: string; needsValue?: string }[] = [
@@ -51,7 +52,7 @@ export default function AutomationRules() {
   };
 
   const handleCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) { toast.error("Falta el nombre", "Poné un nombre para la regla."); return; }
     setSaving(true);
     try {
       const created = await createAutomation({
@@ -62,17 +63,29 @@ export default function AutomationRules() {
       setRules((prev) => [created, ...prev]);
       resetForm();
       setShowForm(false);
-    } catch { /* ignore */ } finally { setSaving(false); }
+      toast.success("Regla creada", `"${created.name}" está activa.`);
+    } catch (e) {
+      toast.error("No se pudo crear la regla", (e as Error).message);
+    } finally { setSaving(false); }
   };
 
   const toggleRule = async (rule: AutomationRule) => {
-    const updated = await updateAutomation(rule.id, { enabled: !rule.enabled });
-    setRules((prev) => prev.map((r) => (r.id === rule.id ? updated : r)));
+    try {
+      const updated = await updateAutomation(rule.id, { enabled: !rule.enabled });
+      setRules((prev) => prev.map((r) => (r.id === rule.id ? updated : r)));
+    } catch (e) {
+      toast.error("No se pudo actualizar", (e as Error).message);
+    }
   };
 
   const removeRule = async (id: string) => {
-    await deleteAutomation(id);
-    setRules((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await deleteAutomation(id);
+      setRules((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Regla eliminada");
+    } catch (e) {
+      toast.error("No se pudo eliminar", (e as Error).message);
+    }
   };
 
   return (
