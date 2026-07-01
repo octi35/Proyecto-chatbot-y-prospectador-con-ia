@@ -46,6 +46,18 @@ export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps)
   const statusTone = (s: CRMLead["status"]) =>
     s === "Cerrado" ? "success" : s === "Presupuestado" ? "accent" : s === "Contactado" ? "warning" : "info";
 
+  // Vibrant "Interaction History" deal cards (Salesforce-style)
+  const dealCards = topLeads.slice(0, 4).map((l, i) => {
+    const palettes = [
+      { bg: "bg-indigo-600", text: "text-white", sub: "text-indigo-200", chip: "bg-white/15 text-white" },
+      { bg: "bg-teal-400", text: "text-zinc-900", sub: "text-teal-900/70", chip: "bg-black/10 text-zinc-900" },
+      { bg: "bg-amber-300", text: "text-zinc-900", sub: "text-amber-900/70", chip: "bg-black/10 text-zinc-900" },
+      { bg: "bg-zinc-900", text: "text-white", sub: "text-zinc-400", chip: "bg-white/10 text-white" },
+    ];
+    const amount = l.totalSpent && l.totalSpent > 0 ? l.totalSpent : Math.round(l.score * 1500);
+    return { lead: l, ...palettes[i % palettes.length], amount };
+  });
+
   return (
     <div className="space-y-6">
       {/* Metric row */}
@@ -57,6 +69,49 @@ export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps)
           />
         ))}
       </div>
+
+      {/* Vibrant deal cards — "Historial de oportunidades" */}
+      {dealCards.length > 0 && (
+        <div>
+          <SectionHeading
+            title="Oportunidades destacadas"
+            action={<button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-indigo-600 hover:text-indigo-500 transition-colors">Ver todas</button>}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {dealCards.map((d, i) => (
+              <motion.div
+                key={d.lead.id}
+                onClick={() => onNavigate("crm")}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, type: "spring", stiffness: 300, damping: 26 }}
+                whileHover={{ y: -4 }}
+                className={`${d.bg} ${d.text} rounded-3xl p-5 cursor-pointer shadow-[0_8px_30px_rgba(24,24,27,0.10)] flex flex-col justify-between min-h-[168px]`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${d.chip}`}>
+                    {new Date(d.lead.lastInteraction).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
+                  </span>
+                  <span className={`w-8 h-8 rounded-full ${d.chip} flex items-center justify-center`}>
+                    <ArrowUpRight size={15} />
+                  </span>
+                </div>
+                <div className="mt-4">
+                  <p className={`text-[12.5px] ${d.sub} leading-snug line-clamp-1`}>{d.lead.notes || `${d.lead.origin} · ${d.lead.status}`}</p>
+                  <p className="text-[26px] font-bold tracking-tight leading-none mt-1 tabular-nums">
+                    ${d.amount.toLocaleString("es-AR")}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img src={d.lead.avatar} referrerPolicy="no-referrer" alt={d.lead.name} className="w-6 h-6 rounded-full object-cover ring-2 ring-white/40 shrink-0" />
+                    <span className="text-[12px] font-medium truncate">{d.lead.name}</span>
+                  </div>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${d.chip}`}>{d.lead.score}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Chart + promo */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
