@@ -31,9 +31,9 @@ export const toast = {
 };
 
 const TONE = {
-  success: { icon: <CheckCircle2 size={18} />, color: "text-emerald-600", ring: "ring-emerald-100" },
-  error: { icon: <AlertCircle size={18} />, color: "text-red-600", ring: "ring-red-100" },
-  info: { icon: <Info size={18} />, color: "text-indigo-600", ring: "ring-indigo-100" },
+  success: { icon: <CheckCircle2 size={18} />, chip: "bg-[#e9f8ec] text-[#2f8f4e]" },
+  error: { icon: <AlertCircle size={18} />, chip: "bg-[#fdeaea] text-[#c0392b]" },
+  info: { icon: <Info size={18} />, chip: "bg-[#eef1fe] text-[#4f6ef7]" },
 };
 
 export function Toaster() {
@@ -55,15 +55,15 @@ export function Toaster() {
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, x: 24, scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className={`pointer-events-auto bg-white rounded-2xl p-3.5 flex items-start gap-3 shadow-[0_8px_30px_rgba(24,24,27,0.12)] ring-1 ${tone.ring}`}
+              transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              className="pointer-events-auto bg-white rounded-[18px] p-3.5 flex items-start gap-3 shadow-[0_12px_40px_rgba(15,23,42,0.14)]"
             >
-              <span className={`${tone.color} shrink-0 mt-0.5`}>{tone.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13.5px] font-medium text-zinc-900 leading-snug">{t.title}</p>
-                {t.description && <p className="text-[12.5px] text-zinc-500 mt-0.5 leading-snug">{t.description}</p>}
+              <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tone.chip}`}>{tone.icon}</span>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <p className="text-[13.5px] font-medium text-[#111111] leading-snug">{t.title}</p>
+                {t.description && <p className="text-[12.5px] text-[#6b7280] mt-0.5 leading-snug">{t.description}</p>}
               </div>
-              <button onClick={() => dismiss(t.id)} className="text-zinc-300 hover:text-zinc-600 transition-colors shrink-0 cursor-pointer">
+              <button onClick={() => dismiss(t.id)} className="text-[#cbd0e0] hover:text-[#6b7280] transition-colors shrink-0 cursor-pointer">
                 <X size={15} />
               </button>
             </motion.div>

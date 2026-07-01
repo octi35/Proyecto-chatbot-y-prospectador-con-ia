@@ -49,6 +49,8 @@ export interface CRMLead {
   category?: string;
   avatar: string;
   totalSpent?: number;
+  aiPaused?: boolean;      // true = a human took over; the AI stays silent
+  assignedTo?: string;     // human agent handling this chat
   conversationHistory: { role: "user" | "model"; text: string; timestamp: string }[];
 }
 

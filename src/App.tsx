@@ -16,6 +16,7 @@ import {
   Search,
   LogOut,
   Flame,
+  Settings,
 } from "lucide-react";
 
 import { AgentConfig, CRMLead, Campaign, AgentAction } from "./types";
@@ -25,6 +26,7 @@ import {
   getConfig, saveConfig,
   getLeads, createLead, updateLead, deleteLead,
   getCampaigns, createCampaign, updateCampaign,
+  authLogout, claimLegacy, getSession,
 } from "./lib/api";
 
 import AgentTrainer from "./components/AgentTrainer";
@@ -54,6 +56,7 @@ export default function App() {
   }, []);
   const handleLogout = useCallback(() => {
     try { localStorage.removeItem("respondo_user"); } catch { /* ignore */ }
+    authLogout(); // clears the Supabase session tokens
     setAuthedUser(null);
   }, []);
 
@@ -69,6 +72,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<string[]>([]);
   const [newLeadsBadge, setNewLeadsBadge] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [navExpanded, setNavExpanded] = useState(false);
 
   // Ref to avoid stale closure in pending config saves
   const pendingConfigSave = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,9 +81,14 @@ export default function App() {
   // INITIAL LOAD from API
   // ---------------------------------------------------------------------------
   useEffect(() => {
+    // No session and no demo flag → the Login screen is showing; skip loading
+    if (!authedUser) return;
     (async () => {
       try {
         setLoading(true);
+        setIsDemo(false);
+        // Adopt rows created before multi-account (one-time, no-op afterwards)
+        if (getSession()) await claimLegacy().catch(() => {});
         const [serverConfig, serverLeads, serverCampaigns] = await Promise.all([
           getConfig(),
           getLeads(),
@@ -92,16 +101,17 @@ export default function App() {
         if (serverLeads.length === 0) setIsDemo(true);
         addNotification("✅ Datos cargados desde la base de datos.");
       } catch (e) {
-        // API unreachable → run in demo mode with realistic sample data
+        // Not authenticated / API unreachable → demo mode with sample data
         setLeads(DEMO_LEADS);
         setCampaigns(DEMO_CAMPAIGNS);
         setIsDemo(true);
-        addNotification("Mostrando datos de demostración. Conectá Supabase para usar tus datos reales.");
+        addNotification("Mostrando datos de demostración. Iniciá sesión con una cuenta real para usar tus datos.");
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authedUser]);
 
   // ---------------------------------------------------------------------------
   // AUTO-POLL leads every 30 s to catch incoming WhatsApp messages
@@ -344,9 +354,9 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fbfbfb] flex flex-col items-center justify-center gap-3">
-        <Loader2 size={28} className="text-[#0a0a0a] animate-spin" />
-        <p className="text-sm text-[#71717a] font-medium tracking-tight">Cargando Respondo…</p>
+      <div className="min-h-screen bg-[#f7f8fc] flex flex-col items-center justify-center gap-3">
+        <Loader2 size={28} className="text-[#4f6ef7] animate-spin" />
+        <p className="text-sm text-[#6b7280] font-medium tracking-tight">Cargando Respondo…</p>
       </div>
     );
   }
@@ -360,243 +370,301 @@ export default function App() {
     ["help",         <HelpCircle size={18} />,     "Ayuda",          0],
   ];
   const pageTitle: Record<TabType, string> = {
-    dashboard: "Dashboard", playground: "Estudio IA", crm: "CRM de Ventas",
+    dashboard: "Panel general", playground: "Estudio IA", crm: "CRM de Ventas",
     analytics: "Métricas", integrations: "Integraciones", help: "Centro de ayuda",
   };
+  const brandName = config.businessName && config.businessName !== "Mi Negocio" ? config.businessName : "Respondo";
 
   return (
-    <div id="respondo-app" className="min-h-screen bg-[#fbfbfb] text-[#0a0a0a] font-sans selection:bg-[#4f46e5]/15 selection:text-[#4f46e5] flex">
-      {/* ===================== SIDEBAR (near-black thin rail) ===================== */}
-      <aside className="hidden md:flex flex-col items-center w-[72px] shrink-0 h-screen sticky top-0 py-4 z-20 border-r border-black/[0.06]">
-        {/* Brand mark */}
-        <div className="w-9 h-9 rounded-[10px] bg-[#0a0a0a] flex items-center justify-center shrink-0 overflow-hidden mb-8">
-          {config.logoUrl ? (
-            <img src={config.logoUrl} alt={config.businessName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
-          ) : (
-            <span className="font-semibold text-[15px] text-white">R</span>
-          )}
+    <div id="respondo-app" className="h-screen overflow-hidden bg-[#f7f8fc] text-[#111111] font-sans selection:bg-[#4f6ef7]/20 selection:text-[#4f6ef7]">
+      {/* ===================== SIDEBAR (dark floating rail, expands on hover) ===================== */}
+      <motion.aside
+        onMouseEnter={() => setNavExpanded(true)}
+        onMouseLeave={() => setNavExpanded(false)}
+        animate={{ width: navExpanded ? 252 : 88 }}
+        transition={{ type: "spring", stiffness: 320, damping: 32 }}
+        className="hidden md:flex fixed left-3 top-3 bottom-3 z-40 flex-col bg-[#232323] rounded-[26px] py-5 overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.18)]"
+      >
+        {/* Brand */}
+        <div className="flex items-center h-9 pl-[26px] pr-4 mb-8 shrink-0">
+          <div className="w-9 h-9 rounded-[12px] bg-[#4f6ef7] flex items-center justify-center shrink-0 overflow-hidden">
+            {config.logoUrl ? (
+              <img src={config.logoUrl} alt={brandName} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+            ) : (
+              <span className="font-semibold text-[15px] text-white">R</span>
+            )}
+          </div>
+          <AnimatePresence>
+            {navExpanded && (
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="ml-3 font-semibold text-[15px] text-white whitespace-nowrap">{brandName}</motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-col items-center gap-1 flex-1">
-          {NAV_ITEMS.map(([tab, icon, label, badge]) => (
-            <motion.button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              whileTap={{ scale: 0.94 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              title={label}
-              className={`group relative w-10 h-10 rounded-[10px] flex items-center justify-center transition-colors duration-150 ${
-                activeTab === tab
-                  ? "bg-[#0a0a0a] text-white"
-                  : "text-[#a1a1aa] hover:bg-black/[0.05] hover:text-[#0a0a0a]"
-              }`}
-            >
-              {icon}
-              {badge > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-[#4f46e5] text-white text-[9px] font-semibold rounded-full flex items-center justify-center ring-2 ring-[#fbfbfb]">
-                  {badge > 9 ? "9+" : badge}
+        <nav className="flex flex-col gap-1 flex-1">
+          {NAV_ITEMS.map(([tab, icon, label, badge]) => {
+            const active = activeTab === tab;
+            return (
+              <motion.button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                whileTap={{ scale: 0.97 }}
+                className="group relative flex items-center h-11 pl-[22px] pr-4"
+              >
+                {active ? (
+                  <motion.span layoutId="navPill" transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    className="absolute inset-y-0 left-3 right-3 rounded-[14px] bg-[#4f6ef7]" />
+                ) : (
+                  <span className="absolute inset-y-0 left-3 right-3 rounded-[14px] bg-transparent group-hover:bg-white/[0.06] transition-colors" />
+                )}
+                <span className={`relative z-10 w-11 flex items-center justify-center shrink-0 transition-colors ${active ? "text-white" : "text-[#8a8a8a] group-hover:text-white"}`}>
+                  {icon}
                 </span>
-              )}
-              {/* Tooltip */}
-              <span className="pointer-events-none absolute left-[calc(100%+12px)] whitespace-nowrap px-2 py-1 rounded-md bg-[#0a0a0a] text-white text-[11.5px] font-medium opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50">
-                {label}
-              </span>
-            </motion.button>
-          ))}
+                <AnimatePresence>
+                  {navExpanded && (
+                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className={`relative z-10 ml-1 text-[13.5px] font-medium whitespace-nowrap ${active ? "text-white" : "text-[#b5b5b5] group-hover:text-white"}`}>
+                      {label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                {badge > 0 && (
+                  <span className={`z-10 min-w-[18px] h-[18px] px-1 bg-white text-[#111111] text-[10px] font-semibold rounded-full flex items-center justify-center ${navExpanded ? "relative ml-auto" : "absolute top-1.5 right-3.5"}`}>
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+              </motion.button>
+            );
+          })}
         </nav>
 
-        {/* Bottom: account + logout */}
-        <div className="flex flex-col items-center gap-3 mt-4">
-          <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? "bg-[#a1a1aa]" : "bg-[#16a34a] animate-pulse"}`} title={isDemo ? "Modo demo" : "Conectado"} />
-          <div className="w-8 h-8 rounded-full bg-[#0a0a0a] flex items-center justify-center text-white text-[12px] font-semibold shrink-0" title={authedUser || ""}>
-            {(authedUser || "U").charAt(0).toUpperCase()}
-          </div>
-          <button onClick={handleLogout} title="Cerrar sesión" className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[#a1a1aa] hover:bg-black/[0.05] hover:text-[#0a0a0a] transition-colors cursor-pointer">
-            <LogOut size={15} />
-          </button>
-        </div>
-      </aside>
-
-      {/* ===================== MAIN ===================== */}
-      <div className="flex-1 min-w-0 flex flex-col h-screen relative z-10">
-        {/* Top bar */}
-        <header className="shrink-0 bg-[#fbfbfb]/85 backdrop-blur-xl px-4 sm:px-8 h-16 flex items-center gap-4 sticky top-0 z-30 border-b border-black/[0.06]">
-          {/* Mobile tab selector */}
-          <select
-            value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value as TabType)}
-            className="md:hidden bg-white border border-black/[0.09] rounded-[10px] px-2 py-1.5 text-[13px] font-medium text-[#0a0a0a] focus:outline-none cursor-pointer"
-          >
-            {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab}>{label}</option>)}
-          </select>
-          <h1 className="hidden md:block text-[18px] font-semibold tracking-tight text-[#0a0a0a] shrink-0">{pageTitle[activeTab]}</h1>
-
-          {/* Search bar */}
-          <div className="hidden md:flex flex-1 max-w-xs mx-2">
-            <div className="relative w-full">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a1a1aa] pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Buscar…"
-                className="w-full bg-white rounded-[10px] pl-9 pr-3 h-9 text-[13px] text-[#0a0a0a] placeholder:text-[#a1a1aa] border border-black/[0.09] focus:outline-none focus:border-[#4f46e5] focus:ring-[3px] focus:ring-[#4f46e5]/10 transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 md:hidden" />
-
-          {/* Create → goes to chat playground */}
-          <motion.button
-            onClick={() => setActiveTab("playground")}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="bg-[#0a0a0a] hover:bg-[#262626] text-white text-[13px] font-medium px-3.5 h-9 rounded-[10px] flex items-center gap-1.5 cursor-pointer transition-colors"
-          >
-            <Sparkles size={14} /> <span className="hidden sm:inline">Probar IA</span>
-          </motion.button>
-
-          {/* Notifications bell + dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifPanel((v) => !v)}
-              className="relative w-9 h-9 rounded-[10px] bg-white hover:bg-[#fafafa] border border-black/[0.09] flex items-center justify-center text-[#71717a] transition-colors cursor-pointer"
-              title="Notificaciones"
-            >
-              <Bell size={15} />
-              {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 bg-[#4f46e5] text-white text-[8px] font-bold rounded-full flex items-center justify-center ring-2 ring-[#fbfbfb]">
-                  {notifications.length > 9 ? "9+" : notifications.length}
-                </span>
-              )}
-            </button>
+        {/* Bottom: status + account + logout */}
+        <div className="mt-4 shrink-0">
+          <div className="flex items-center h-8 pl-[22px] pr-4">
+            <span className="w-11 flex items-center justify-center shrink-0">
+              <span className={`w-2 h-2 rounded-full ${isDemo ? "bg-[#8a8a8a]" : "bg-[#7dd87d] animate-pulse"}`} />
+            </span>
             <AnimatePresence>
-              {showNotifPanel && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifPanel(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                    transition={{ duration: 0.16 }}
-                    className="absolute right-0 mt-2 w-80 bg-white rounded-[14px] border border-black/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.12)] z-50 overflow-hidden"
-                  >
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.06]">
-                      <span className="text-[13px] font-semibold text-[#0a0a0a]">Notificaciones</span>
-                      {notifications.length > 0 && (
-                        <button onClick={() => setNotifications([])} className="text-[11px] text-[#4f46e5] hover:underline">Limpiar</button>
-                      )}
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {hotLeads > 0 && (
-                        <div className="px-4 py-3 bg-[#fefce8] flex items-center gap-2 border-b border-black/[0.05]">
-                          <Flame size={14} className="text-[#a16207] shrink-0" />
-                          <div className="flex-1">
-                            <p className="text-[12.5px] font-semibold text-[#a16207]">{hotLeads} lead{hotLeads !== 1 ? "s" : ""} caliente{hotLeads !== 1 ? "s" : ""} ahora</p>
-                            <button onClick={() => { setActiveTab("crm"); setShowNotifPanel(false); }} className="text-[11px] text-[#a16207] hover:underline">Ver en el CRM →</button>
-                          </div>
-                        </div>
-                      )}
-                      {notifications.length === 0 ? (
-                        <div className="px-4 py-8 text-center">
-                          <Bell size={20} className="text-[#d4d4d8] mx-auto mb-1.5" />
-                          <p className="text-[12px] text-[#a1a1aa]">Sin notificaciones nuevas</p>
-                        </div>
-                      ) : (
-                        notifications.map((n, i) => (
-                          <div key={i} className="px-4 py-2.5 border-b last:border-0 hover:bg-[#fafafa] transition-colors border-black/[0.04]">
-                            <p className="text-[12px] text-[#0a0a0a] leading-snug">{n}</p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
-                </>
+              {navExpanded && (
+                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="ml-1 text-[12px] text-[#8a8a8a] whitespace-nowrap">{isDemo ? "Modo demo" : "Conectado"}</motion.span>
               )}
             </AnimatePresence>
           </div>
+          <div className="flex items-center h-12 pl-[22px] pr-4">
+            <span className="w-11 flex items-center justify-center shrink-0">
+              <span className="w-8 h-8 rounded-full bg-[#4f6ef7] flex items-center justify-center text-white text-[12px] font-semibold" title={authedUser || ""}>
+                {(authedUser || "U").charAt(0).toUpperCase()}
+              </span>
+            </span>
+            <AnimatePresence>
+              {navExpanded && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="ml-1 flex-1 min-w-0">
+                  <p className="text-[12.5px] font-medium text-white truncate">{authedUser || "Usuario"}</p>
+                  <p className="text-[11px] text-[#8a8a8a] truncate">Cuenta</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {navExpanded && (
+              <button onClick={handleLogout} title="Cerrar sesión" className="relative z-10 text-[#8a8a8a] hover:text-white transition-colors cursor-pointer shrink-0">
+                <LogOut size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      </motion.aside>
 
-          {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-[#0a0a0a] flex items-center justify-center text-white text-[12px] font-semibold shrink-0">
-            {(config.businessName || "R").charAt(0).toUpperCase()}
+      {/* ===================== MAIN ===================== */}
+      <div className="h-screen flex flex-col md:pl-[112px]">
+        {/* Top bar (white floating card) */}
+        <header className="shrink-0 px-4 md:px-6 pt-4 md:pt-5">
+          <div className="bg-white rounded-[22px] shadow-card h-16 flex items-center gap-3 px-4 md:px-5">
+            {/* Mobile tab selector */}
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as TabType)}
+              className="md:hidden bg-[#f3f5fb] rounded-full px-3 py-1.5 text-[13px] font-medium text-[#111111] focus:outline-none cursor-pointer"
+            >
+              {NAV_ITEMS.map(([tab, , label]) => <option key={tab} value={tab}>{label}</option>)}
+            </select>
+
+            {/* Breadcrumb + title */}
+            <div className="hidden md:block shrink-0">
+              <p className="text-[12px] text-[#9ca3af] leading-none">Workspace <span className="mx-1 text-[#cbd0e0]">/</span> {brandName}</p>
+              <h1 className="text-[18px] font-semibold tracking-tight text-[#111111] mt-1">{pageTitle[activeTab]}</h1>
+            </div>
+
+            {/* Search */}
+            <div className="flex-1 flex justify-center px-2">
+              <div className="relative w-full max-w-md">
+                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9ca3af] pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Buscar campañas, clientes, copys…"
+                  className="w-full bg-[#f3f5fb] rounded-full pl-11 pr-4 h-10 text-[13px] text-[#111111] placeholder:text-[#9ca3af] border-0 outline-none focus:bg-[#eef1fe] focus:ring-2 focus:ring-[#4f6ef7]/25 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <button onClick={() => setActiveTab("help")} title="Ayuda" className="hidden sm:flex w-10 h-10 rounded-full hover:bg-[#f3f5fb] items-center justify-center text-[#6b7280] transition-colors cursor-pointer shrink-0">
+              <HelpCircle size={18} />
+            </button>
+
+            {/* Notifications bell + dropdown */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setShowNotifPanel((v) => !v)}
+                title="Notificaciones"
+                className="relative w-10 h-10 rounded-full hover:bg-[#f3f5fb] flex items-center justify-center text-[#6b7280] transition-colors cursor-pointer"
+              >
+                <Bell size={18} />
+                {notifications.length > 0 && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-[#4f6ef7] rounded-full ring-2 ring-white" />
+                )}
+              </button>
+              <AnimatePresence>
+                {showNotifPanel && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowNotifPanel(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                      transition={{ duration: 0.16 }}
+                      className="absolute right-0 mt-3 w-80 bg-white rounded-[18px] shadow-[0_16px_45px_rgba(15,23,42,0.14)] z-50 overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-[#ececec]">
+                        <span className="text-[13px] font-semibold text-[#111111]">Notificaciones</span>
+                        {notifications.length > 0 && (
+                          <button onClick={() => setNotifications([])} className="text-[11px] text-[#4f6ef7] hover:underline">Limpiar</button>
+                        )}
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {hotLeads > 0 && (
+                          <div className="px-4 py-3 bg-[#fff6d6] flex items-center gap-2 border-b border-[#ececec]">
+                            <Flame size={14} className="text-[#a16207] shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-[12.5px] font-semibold text-[#a16207]">{hotLeads} lead{hotLeads !== 1 ? "s" : ""} caliente{hotLeads !== 1 ? "s" : ""} ahora</p>
+                              <button onClick={() => { setActiveTab("crm"); setShowNotifPanel(false); }} className="text-[11px] text-[#a16207] hover:underline">Ver en el CRM →</button>
+                            </div>
+                          </div>
+                        )}
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-8 text-center">
+                            <Bell size={20} className="text-[#cbd0e0] mx-auto mb-1.5" />
+                            <p className="text-[12px] text-[#9ca3af]">Sin notificaciones nuevas</p>
+                          </div>
+                        ) : (
+                          notifications.map((n, i) => (
+                            <div key={i} className="px-4 py-2.5 border-b last:border-0 hover:bg-[#f3f5fb] transition-colors border-[#f0f1f5]">
+                              <p className="text-[12px] text-[#111111] leading-snug">{n}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button title="Ajustes" className="hidden sm:flex w-10 h-10 rounded-full hover:bg-[#f3f5fb] items-center justify-center text-[#6b7280] transition-colors cursor-pointer shrink-0">
+              <Settings size={18} />
+            </button>
+
+            {/* Account chip */}
+            <div className="flex items-center gap-2.5 pl-1 sm:pl-2 shrink-0">
+              <div className="hidden sm:block text-right leading-tight">
+                <p className="text-[13px] font-semibold text-[#111111]">{brandName}</p>
+                <p className="text-[11px] text-[#9ca3af]">Agencia IA</p>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-[#4f6ef7] flex items-center justify-center text-white text-[12px] font-semibold shrink-0">
+                {brandName.charAt(0).toUpperCase()}
+              </div>
+            </div>
           </div>
         </header>
 
         {/* Demo-mode pill (subtle) */}
         {isDemo && (
-          <div className="mx-4 sm:mx-8 mt-6 bg-white rounded-[12px] px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-[#71717a] border border-black/[0.07]">
-            <Sparkles size={13} className="shrink-0 text-[#4f46e5]" />
-            <span><span className="font-medium text-[#0a0a0a]">Modo demostración</span> — datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
+          <div className="mx-4 md:mx-6 mt-4 bg-white rounded-[18px] shadow-card px-4 py-2.5 flex items-center gap-2 text-[12.5px] text-[#6b7280]">
+            <Sparkles size={13} className="shrink-0 text-[#4f6ef7]" />
+            <span><span className="font-medium text-[#111111]">Modo demostración</span> — datos de ejemplo. Conectá Supabase para usar tus datos reales.</span>
           </div>
         )}
 
         {/* Scrollable content */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6">
-          <AnimatePresence mode="wait">
-            {activeTab === "dashboard" && (
-              <motion.div key="dashboard" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                <DashboardHome leads={leads} campaigns={campaigns} config={config} onNavigate={(t) => setActiveTab(t as TabType)} />
-              </motion.div>
-            )}
+        <main className="flex-1 overflow-y-auto px-4 md:px-6 pb-8 pt-5">
+          <div className="max-w-[1560px] mx-auto w-full">
+            <AnimatePresence mode="wait">
+              {activeTab === "dashboard" && (
+                <motion.div key="dashboard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}>
+                  <DashboardHome leads={leads} campaigns={campaigns} config={config} onNavigate={(t) => setActiveTab(t as TabType)} />
+                </motion.div>
+              )}
 
-            {activeTab === "playground" && (
-              <motion.div key="playground" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-7">
-                  <AgentTrainer config={config} onChange={handleConfigChange} />
-                </div>
-                <div className="lg:col-span-5 h-[620px]">
-                  <ChatSimulator
+              {activeTab === "playground" && (
+                <motion.div key="playground" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                  className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-7">
+                    <AgentTrainer config={config} onChange={handleConfigChange} />
+                  </div>
+                  <div className="lg:col-span-5 h-[620px]">
+                    <ChatSimulator
+                      config={config}
+                      onLeadMessageAdded={handleLeadMessageAdded}
+                      onAgentActions={handleAgentActions}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === "crm" && (
+                <motion.div key="crm" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}>
+                  <CRMAdmin
+                    leads={leads}
+                    setLeads={setLeadsCompat}
+                    campaigns={campaigns}
+                    setCampaigns={setCampaignsCompat}
                     config={config}
-                    onLeadMessageAdded={handleLeadMessageAdded}
-                    onAgentActions={handleAgentActions}
+                    onLeadCreate={handleCreateLead}
+                    onLeadUpdate={handleUpdateLead}
+                    onLeadDelete={handleDeleteLead}
+                    onCampaignCreate={handleCreateCampaign}
                   />
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {activeTab === "crm" && (
-              <motion.div key="crm" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                <CRMAdmin
-                  leads={leads}
-                  setLeads={setLeadsCompat}
-                  campaigns={campaigns}
-                  setCampaigns={setCampaignsCompat}
-                  config={config}
-                  onLeadCreate={handleCreateLead}
-                  onLeadUpdate={handleUpdateLead}
-                  onLeadDelete={handleDeleteLead}
-                  onCampaignCreate={handleCreateCampaign}
-                />
-              </motion.div>
-            )}
+              {activeTab === "analytics" && (
+                <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}>
+                  <AnalyticsPanel leads={leads} campaigns={campaigns} config={config} />
+                </motion.div>
+              )}
 
-            {activeTab === "analytics" && (
-              <motion.div key="analytics" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                <AnalyticsPanel leads={leads} campaigns={campaigns} config={config} />
-              </motion.div>
-            )}
+              {activeTab === "integrations" && (
+                <motion.div key="integrations" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }} className="space-y-8">
+                  <ChannelConnect />
+                  <AutomationRules />
+                  <WaTemplateManager />
+                </motion.div>
+              )}
 
-            {activeTab === "integrations" && (
-              <motion.div key="integrations" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} className="space-y-8">
-                <ChannelConnect />
-                <AutomationRules />
-                <WaTemplateManager />
-              </motion.div>
-            )}
+              {activeTab === "help" && (
+                <motion.div key="help" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}>
+                  <HelpGuide onNavigate={(t) => setActiveTab(t as TabType)} />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {activeTab === "help" && (
-              <motion.div key="help" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                <HelpGuide onNavigate={(t) => setActiveTab(t as TabType)} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <footer className="text-center mt-14 pt-6 text-[11px] text-[#a1a1aa] flex items-center justify-center gap-3">
-            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-[#a1a1aa]" /> Supabase</span>
-            <span>·</span>
-            <span className="flex items-center gap-1"><Zap size={11} className="text-[#a1a1aa]" /> Gemini AI</span>
-          </footer>
+            <footer className="text-center mt-14 pt-6 text-[11px] text-[#9ca3af] flex items-center justify-center gap-3">
+              <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-[#9ca3af]" /> Supabase</span>
+              <span>·</span>
+              <span className="flex items-center gap-1"><Zap size={11} className="text-[#9ca3af]" /> Gemini AI</span>
+            </footer>
+          </div>
         </main>
       </div>
 

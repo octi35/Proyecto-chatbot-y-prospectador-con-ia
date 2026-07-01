@@ -2,67 +2,79 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "SF Pro Display", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
-  /* ---- Restrained premium system (Linear / Vercel / Stripe caliber) ---- */
-  --color-background: #fbfbfb;   /* near-white app canvas */
-  --color-card: #ffffff;
-  --color-sidebar: #0a0a0a;      /* true near-black rail */
-  --color-ink: #0a0a0a;          /* primary text */
-  --color-ink-2: #71717a;        /* secondary text */
-  --color-ink-3: #a1a1aa;        /* tertiary / placeholders */
-  --color-line: rgba(0,0,0,0.07);/* hairlines */
+  /* ---- SaaS premium 2026 (Salesforce / Linear / Stripe) ---- */
+  --color-background: #f7f8fc;  /* canvas — blanco frío */
+  --color-canvas:  #f7f8fc;
+  --color-card:    #ffffff;
+  --color-surface: #ffffff;
+  --color-sink:    #f3f5fb;      /* inputs / superficies sutiles */
+  --color-sidebar: #232323;      /* rail lateral oscuro */
+  --color-line:    #ececec;      /* hairlines / bordes */
+  --color-ink:     #111111;      /* texto primario */
+  --color-ink-2:   #6b7280;      /* texto secundario */
+  --color-ink-3:   #9ca3af;      /* terciario / placeholders */
 
-  /* Single restrained accent, used sparingly */
-  --color-brand: #4f46e5;
-  --color-brand-soft: #eef1ff;
+  /* Único acento (azul índigo), usado con moderación */
+  --color-brand:      #4f6ef7;
+  --color-brand-soft: #eef1fe;
+  --color-accent:      #4f6ef7;
+  --color-accent-soft: #eef1fe;
 
-  --radius-card: 16px;
-  --radius-input: 12px;
+  /* Colores "pop" para tarjetas de datos y avatares */
+  --color-yellow: #ffd84d;
+  --color-sky:    #8fd4f8;
+  --color-green:  #7dd87d;
+  --color-black:  #101010;
 
-  /* Whisper-soft elevation — depth comes from hairlines, not drop shadows */
-  --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03);
-  --shadow-soft: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-hover: 0 6px 24px rgba(0,0,0,0.08);
+  --radius-card:  22px;
+  --radius-input: 14px;
+
+  /* Sombras susurradas — profundidad por flotación, no por bordes */
+  --shadow-card:       0 10px 35px rgba(15,23,42,0.05);
+  --shadow-card-hover: 0 18px 45px rgba(15,23,42,0.09);
+  --shadow-float:      0 8px 30px rgba(15,23,42,0.06);
+  --shadow-soft:       0 8px 30px rgba(15,23,42,0.06);
+  --shadow-hover:      0 18px 45px rgba(15,23,42,0.09);
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
-  background: var(--color-background);
+  background: var(--color-canvas);
   color: var(--color-ink);
   letter-spacing: -0.011em;
   font-feature-settings: "cv11", "ss01";
 }
 
-h1, h2, h3, h4 { letter-spacing: -0.021em; }
+h1, h2, h3, h4 { letter-spacing: -0.02em; }
 
-/* Minimal scrollbars */
+/* Scrollbars minimal */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #d4d4d8; }
+::-webkit-scrollbar-thumb { background: #e2e5ee; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #d3d7e4; }
 
-/* ---- Design-system utilities ---- */
-.ds-card {
-  background: var(--color-card);
-  border-radius: var(--radius-card);
-  border: 1px solid var(--color-line);
-  box-shadow: var(--shadow-card);
-}
-/* Cards carry a hairline + whisper shadow (not a drop shadow) */
-.ds-shadow { border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
-.ds-shadow-soft { border: 1px solid var(--color-line); box-shadow: var(--shadow-soft); }
-.ds-shadow-hover { box-shadow: var(--shadow-hover); }
-.ds-line { border-color: var(--color-line); }
-.ds-hairline { border-color: var(--color-line); }
+/* ---- Design-system utilities (mismos nombres, valores nuevos) ---- */
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-card-hover { box-shadow: var(--shadow-card-hover); }
+.shadow-float { box-shadow: var(--shadow-float); }
 
-/* Legacy aliases */
-.shadow-apple-sm { border: 1px solid var(--color-line); box-shadow: var(--shadow-soft); }
-.shadow-apple { border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
-.shadow-apple-lg { box-shadow: var(--shadow-hover); }
+.ds-card { background: var(--color-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.ds-shadow { box-shadow: var(--shadow-card); }
+.ds-shadow-soft { box-shadow: var(--shadow-float); }
+.ds-shadow-hover { box-shadow: var(--shadow-card-hover); }
+.ds-line, .ds-hairline { border-color: var(--color-line); }
+
+/* Legacy aliases → nuevas sombras */
+.shadow-apple-sm { box-shadow: var(--shadow-float); }
+.shadow-apple { box-shadow: var(--shadow-card); }
+.shadow-apple-lg { box-shadow: var(--shadow-card-hover); }
 .glass { background: rgba(255,255,255,0.82); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }

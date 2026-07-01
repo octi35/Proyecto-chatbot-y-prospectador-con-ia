@@ -9,6 +9,7 @@ import cors from "cors";
 import pino from "pino";
 import { z, ZodError } from "zod";
 import { localBotReply } from "./botEngine";
+import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow } from "./serverHelpers";
 
 dotenv.config();
 
@@ -48,7 +49,7 @@ const logger = pino({
 // ---------------------------------------------------------------------------
 // CONSTANTS
 // ---------------------------------------------------------------------------
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
@@ -76,11 +77,32 @@ function getAI(): GoogleGenAI {
   return _ai;
 }
 
+// Server-privileged client. Uses the service role key when provided (bypasses
+// RLS for webhooks/schedulers); falls back to the anon key otherwise.
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 function getDB() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!SUPABASE_URL || !(SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY)) {
     throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY are required");
   }
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY);
+}
+
+// Mercado Pago: real checkout links when MP_ACCESS_TOKEN is set
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || "";
+async function createMercadoPagoLink(concepto: string, monto: number): Promise<string> {
+  const res = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
+    body: JSON.stringify({
+      items: [{ title: concepto || "Compra", quantity: 1, unit_price: monto, currency_id: "ARS" }],
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Mercado Pago HTTP ${res.status}: ${detail.slice(0, 150)}`);
+  }
+  const data: any = await res.json();
+  return data.init_point || data.sandbox_init_point;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +143,8 @@ const LeadPatchSchema = z.object({
   category: z.string().max(100).optional().nullable(),
   avatar: z.string().max(500).optional(),
   totalSpent: z.number().min(0).optional(),
+  aiPaused: z.boolean().optional(),
+  assignedTo: z.string().max(200).optional().nullable(),
   conversationHistory: z.array(z.object({
     role: z.enum(["user","model"]),
     text: z.string(),
@@ -174,6 +198,8 @@ function mapLeadFromDB(row: any) {
     category: row.category ?? undefined,
     avatar: row.avatar,
     totalSpent: parseFloat(row.total_spent) || 0,
+    aiPaused: row.ai_paused ?? false,
+    assignedTo: row.assigned_to ?? undefined,
     conversationHistory: row.conversation_history || [],
   };
 }
@@ -190,6 +216,8 @@ function mapLeadToDB(data: any) {
   if (data.category !== undefined) out.category = data.category;
   if (data.avatar !== undefined) out.avatar = data.avatar;
   if (data.totalSpent !== undefined) out.total_spent = data.totalSpent;
+  if (data.aiPaused !== undefined) out.ai_paused = data.aiPaused;
+  if (data.assignedTo !== undefined) out.assigned_to = data.assignedTo || null;
   if (data.conversationHistory !== undefined) out.conversation_history = data.conversationHistory;
   return out;
 }
@@ -357,6 +385,42 @@ const TOOL_DECLARATIONS: any = [{
         required: ["concepto", "monto"],
       },
     },
+    {
+      name: "calificar_lead",
+      description: "Asigná o actualizá el puntaje de intención de compra del prospecto (0 a 100) según las señales de la conversación. Alto (85-100) si pide precio/pago/reserva/stock puntual; medio (60-84) si compara o muestra interés; bajo (<60) si duda o se aleja.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          nombre: { type: "STRING", description: "Nombre del prospecto." },
+          score:  { type: "NUMBER", description: "Puntaje de intención de compra, 0 a 100." },
+          motivo: { type: "STRING", description: "Motivo breve del puntaje. Opcional." },
+        },
+        required: ["nombre", "score"],
+      },
+    },
+    {
+      name: "etiquetar_lead",
+      description: "Asigná una categoría/etiqueta al prospecto según lo que le interesa (producto, servicio o segmento). Ayuda a segmentar el CRM para campañas.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          nombre:    { type: "STRING", description: "Nombre del prospecto." },
+          categoria: { type: "STRING", description: "Categoría o interés principal (ej: Calzado, VIP, Delivery)." },
+        },
+        required: ["nombre", "categoria"],
+      },
+    },
+    {
+      name: "enviar_foto",
+      description: "Envía al cliente la foto de un producto del catálogo (solo si el producto tiene foto cargada). Usala cuando el cliente pide ver el producto o cuando mostrar la foto ayuda a cerrar la venta.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          producto: { type: "STRING", description: "Nombre del producto cuya foto querés mandar." },
+        },
+        required: ["producto"],
+      },
+    },
   ],
 }];
 
@@ -366,7 +430,7 @@ interface AgentAction {
   payload: Record<string, any>;
 }
 
-function executeTool(name: string, args: Record<string, any>, config: any): { result: Record<string, any>; action?: AgentAction } {
+async function executeTool(name: string, args: Record<string, any>, config: any): Promise<{ result: Record<string, any>; action?: AgentAction }> {
   switch (name) {
     case "buscar_producto": {
       const query = String(args.consulta || "").toLowerCase();
@@ -397,10 +461,49 @@ function executeTool(name: string, args: Record<string, any>, config: any): { re
     }
     case "generar_link_pago": {
       const monto = Number(args.monto) || 0;
-      const link = `https://mpago.la/respondo?concepto=${encodeURIComponent(args.concepto || "")}&monto=${monto}`;
+      let link: string;
+      let real = false;
+      if (MP_ACCESS_TOKEN && monto > 0) {
+        try {
+          link = await createMercadoPagoLink(String(args.concepto || "Compra"), monto);
+          real = true;
+        } catch (e) {
+          logger.warn({ err: (e as Error).message }, "Mercado Pago preference failed; using placeholder link");
+          link = `https://mpago.la/respondo?concepto=${encodeURIComponent(args.concepto || "")}&monto=${monto}`;
+        }
+      } else {
+        link = `https://mpago.la/respondo?concepto=${encodeURIComponent(args.concepto || "")}&monto=${monto}`;
+      }
       return {
-        result: { ok: true, link },
-        action: { type: "payment_link", label: `💳 Link de pago $${monto.toLocaleString("es-AR")} ARS generado`, payload: { ...args, monto, link } },
+        result: { ok: true, link, nota: real ? "Link de pago real de Mercado Pago." : "Link de ejemplo (configurá MP_ACCESS_TOKEN para cobrar de verdad)." },
+        action: { type: "payment_link", label: `💳 Link de pago $${monto.toLocaleString("es-AR")} ARS ${real ? "(Mercado Pago)" : "(simulado)"}`, payload: { ...args, monto, link, real } },
+      };
+    }
+    case "enviar_foto": {
+      const consulta = String(args.producto || "").toLowerCase();
+      const terms = consulta.split(/\s+/).filter((w) => w.length > 2);
+      // Search the RAW catalog (it still contains the {foto:URL} markers)
+      const lines = String(config.catalog || "").split("\n");
+      const line = lines.find((l: string) => terms.some((t) => l.toLowerCase().includes(t)));
+      const m = line?.match(/\{foto:([^}]+)\}/i);
+      if (!m) return { result: { ok: false, mensaje: "Ese producto no tiene foto cargada en el catálogo. Avisale al cliente con naturalidad." } };
+      const url = m[1].trim();
+      return {
+        result: { ok: true, mensaje: "Foto enviada al cliente por el canal." },
+        action: { type: "send_image", label: `🖼️ Foto enviada: ${String(args.producto).slice(0, 60)}`, payload: { url, producto: args.producto } },
+      };
+    }
+    case "calificar_lead": {
+      const score = Math.max(0, Math.min(100, Math.round(Number(args.score) || 0)));
+      return {
+        result: { ok: true, mensaje: `Score de "${args.nombre}" → ${score}.` },
+        action: { type: "score_lead", label: `🎯 "${args.nombre}" calificado: ${score}/100${args.motivo ? " — " + args.motivo : ""}`, payload: { ...args, score } },
+      };
+    }
+    case "etiquetar_lead": {
+      return {
+        result: { ok: true, mensaje: `Categoría de "${args.nombre}" → ${args.categoria}.` },
+        action: { type: "tag_lead", label: `🏷️ "${args.nombre}" etiquetado: ${args.categoria}`, payload: args },
       };
     }
     default:
@@ -479,6 +582,18 @@ ${catalogText || "(sin catálogo cargado: si preguntan precios/stock puntuales, 
 - actualizar_estado_lead: al pasar un precio → Presupuestado; al confirmar la compra → Cerrado.
 - agendar_seguimiento: si algo queda pendiente o pidió pensarlo.
 - generar_link_pago: cuando confirma que quiere comprar.
+- calificar_lead: actualizá el puntaje de intención (0-100) cada vez que cambian las señales de compra (pide precio/pago/stock = alto; duda o se va = bajo).
+- etiquetar_lead: categorizá el interés del cliente (producto/servicio/segmento) para segmentar el CRM.
+- enviar_foto: mandá la foto del producto cuando el cliente pide verlo o cuando la imagen ayuda a cerrar (solo productos con foto en el catálogo). Avisale con naturalidad: "te paso la foto".
+
+# PARA VENDER MÁS (regla de oro)
+- Avanzá SIEMPRE al próximo paso: no cierres una respuesta sin una pregunta o una propuesta que acerque la compra.
+- Capturá datos temprano: si no tenés el nombre, pedilo con naturalidad y registrá el lead apenas haya interés.
+- Upsell / cross-sell: sugerí un complemento o una mejor opción cuando aporta valor real (nunca inventes productos).
+- Urgencia honesta: mencioná stock limitado, promo vigente o beneficio por pago hoy SOLO si figura en tu información.
+- Recuperá conversaciones frías: si retomás un chat, referí lo último que habló el cliente.
+- Pedí la venta cuando hay interés: "¿Te lo reservo?", "¿Coordinamos el pago así te lo aseguro?".
+- Calificá y etiquetá en silencio con las herramientas para que el equipo priorice a los más calientes.
 
 Tu misión: que cada persona se sienta bien atendida y termine comprando con ganas. Lema: "Chatea menos, Vendé más."`;
 
@@ -549,7 +664,7 @@ async function runGemini(
       if (modelContent) contents.push(modelContent);
       const parts: any[] = [];
       for (const call of calls) {
-        const { result, action } = executeTool(call.name as string, (call.args as any) || {}, config);
+        const { result, action } = await executeTool(call.name as string, (call.args as any) || {}, config);
         if (action) actions.push(action);
         parts.push({ functionResponse: { name: call.name, response: result } });
       }
@@ -612,6 +727,81 @@ async function runOpenRouter(
 }
 
 // ---------------------------------------------------------------------------
+// LIGHTWEIGHT LLM TEXT HELPER (no tools) — used for summaries, suggested
+// replies and lead analysis. Same provider chain: Gemini → OpenRouter.
+// ---------------------------------------------------------------------------
+async function runLLMText(systemInstruction: string, prompt: string): Promise<string> {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: { systemInstruction, temperature: 0.4, topP: 0.9 },
+      });
+      const text = response.text || "";
+      if (text.trim()) return text.trim();
+    } catch (err) {
+      logger.warn({ err: (err as Error).message }, "runLLMText: Gemini failed, trying OpenRouter");
+    }
+  }
+  if (process.env.OPENROUTER_API_KEY) {
+    const model = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001";
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "HTTP-Referer": process.env.APP_URL || "https://respondo.app",
+        "X-Title": "Respondo",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemInstruction },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.4,
+      }),
+    });
+    if (res.ok) {
+      const data: any = await res.json();
+      const text = data?.choices?.[0]?.message?.content || "";
+      if (text.trim()) return text.trim();
+    }
+  }
+  throw new Error("No hay proveedor de IA disponible (configurá GEMINI_API_KEY u OPENROUTER_API_KEY)");
+}
+
+// (formatTranscript / extractJsonArray / extractJsonObject viven en
+// serverHelpers.ts para poder testearlos)
+
+// Craft a personalized follow-up message for a lead that went quiet, using the
+// conversation context. Falls back to a warm generic message if AI is unavailable.
+async function craftFollowUp(lead: { name?: string; status?: string; conversation_history?: any[] }, config: any): Promise<string> {
+  const persona = config?.botPersonaName?.trim() || "Respondo";
+  const business = config?.businessName || "el negocio";
+  const hist = Array.isArray(lead.conversation_history) ? lead.conversation_history : [];
+  const transcript = formatTranscript(hist).slice(-1500);
+  const fallback = `¡Hola${lead.name ? " " + lead.name : ""}! 😊 Te escribo de ${business} para retomar tu consulta. ¿Seguís interesado/a o querés que te ayude a avanzar?`;
+  if (!process.env.GEMINI_API_KEY && !process.env.OPENROUTER_API_KEY) return fallback;
+  // Stage-aware angle: a quoted lead is a "abandoned cart" — recover the sale
+  const stageNote = lead.status === "Presupuestado"
+    ? "IMPORTANTE: este cliente YA recibió precio/presupuesto y no concretó (carrito abandonado). Recuperá la venta: recordale lo que le cotizaste, resolvé la traba probable (precio, dudas) y ofrecé cerrarla hoy (reserva, medio de pago o beneficio si figura en la info del negocio)."
+    : lead.status === "Contactado"
+    ? "Este cliente mostró interés pero todavía no recibió precio. Retomá su consulta puntual y acercalo a pedir el presupuesto."
+    : "";
+  try {
+    const system = `Sos ${persona}, vendedor/a de ${business}. Escribís por WhatsApp, en español rioplatense, cálido, humano y breve.`;
+    const prompt = `El cliente${lead.name ? " " + lead.name : ""} dejó de responder. ${stageNote} Escribí UN solo mensaje de seguimiento corto (1-2 oraciones), personalizado según la conversación, que retome el interés puntual que mostró y proponga el próximo paso para avanzar la venta, sin sonar insistente ni robótico. No uses comillas, no firmes, no te presentes de nuevo.\n\n${transcript ? "CONVERSACIÓN PREVIA:\n" + transcript : "(Todavía no hay mensajes; hacé un seguimiento cálido y genérico.)"}`;
+    const text = await runLLMText(system, prompt);
+    return text.replace(/^["']|["']$/g, "").trim() || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // EXPRESS APP
 // ---------------------------------------------------------------------------
 const app = express();
@@ -628,6 +818,34 @@ app.use((req, _res, next) => {
   next();
 });
 
+// In-memory rate limiter (per IP + path prefix). Protects auth brute-force
+// and AI-endpoint abuse without external dependencies.
+const rlBuckets = new Map<string, { n: number; reset: number }>();
+function rateLimit(max: number, windowMs: number) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const key = `${req.ip}:${req.baseUrl || req.path}`;
+    const now = Date.now();
+    const bucket = rlBuckets.get(key);
+    if (!bucket || now > bucket.reset) {
+      rlBuckets.set(key, { n: 1, reset: now + windowMs });
+      return next();
+    }
+    if (++bucket.n > max) {
+      return res.status(429).json({ error: "Demasiadas solicitudes. Esperá un momento y volvé a intentar." });
+    }
+    next();
+  };
+}
+// Periodic cleanup so the map doesn't grow unbounded
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rlBuckets) if (now > v.reset) rlBuckets.delete(k);
+}, 60_000).unref?.();
+
+app.use("/api/auth", rateLimit(15, 60_000));
+app.use("/api/chat", rateLimit(30, 60_000));
+app.use("/api/ai", rateLimit(30, 60_000));
+
 // Zod error handler
 function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
   return schema.parse(body);
@@ -642,6 +860,93 @@ function handleError(res: express.Response, err: any) {
   logger.error({ message: err?.message, code: err?.code, details: err?.details, hint: err?.hint }, "request error");
   return res.status(500).json({ error: msg, code: err?.code });
 }
+
+// ---------------------------------------------------------------------------
+// AUTH (Supabase Auth) — real sessions + per-user data isolation.
+// Authenticated API requests run against Supabase WITH the user's JWT, so the
+// RLS policies (owner_id = auth.uid()) enforce isolation at the DB level.
+// ---------------------------------------------------------------------------
+interface AuthedUser { id: string; email?: string; token: string }
+
+async function getUserFromReq(req: express.Request): Promise<AuthedUser | null> {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) return null;
+  const token = header.slice(7);
+  try {
+    const { data, error } = await getDB().auth.getUser(token);
+    if (error || !data?.user) return null;
+    return { id: data.user.id, email: data.user.email ?? undefined, token };
+  } catch { return null; }
+}
+
+// Per-request client that queries AS the user (RLS owner policies apply)
+function getDBAs(user: AuthedUser) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${user.token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+// Guard: resolves the user or replies 401. Usage: const user = await requireUser(req, res); if (!user) return;
+async function requireUser(req: express.Request, res: express.Response): Promise<AuthedUser | null> {
+  const user = await getUserFromReq(req);
+  if (!user) { res.status(401).json({ error: "No autenticado" }); return null; }
+  return user;
+}
+
+const CredsSchema = z.object({ email: z.string().email(), password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres") });
+const sessionOut = (s: any) => ({ access_token: s.access_token, refresh_token: s.refresh_token, expires_at: s.expires_at });
+
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    const { email, password } = CredsSchema.parse(req.body);
+    const { data, error } = await getDB().auth.signUp({ email, password });
+    if (error) return res.status(400).json({ error: error.message });
+    if (!data.session) return res.json({ ok: true, needsEmailConfirm: true, user: { id: data.user?.id, email } });
+    res.json({ ok: true, session: sessionOut(data.session), user: { id: data.user!.id, email } });
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = CredsSchema.parse(req.body);
+    const { data, error } = await getDB().auth.signInWithPassword({ email, password });
+    if (error) return res.status(401).json({ error: error.message === "Invalid login credentials" ? "Email o contraseña incorrectos" : error.message });
+    res.json({ ok: true, session: sessionOut(data.session), user: { id: data.user.id, email: data.user.email } });
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/auth/refresh", async (req, res) => {
+  try {
+    const refresh_token = String(req.body?.refresh_token || "");
+    if (!refresh_token) return res.status(400).json({ error: "refresh_token requerido" });
+    const { data, error } = await getDB().auth.refreshSession({ refresh_token });
+    if (error || !data.session) return res.status(401).json({ error: error?.message || "Sesión expirada" });
+    res.json({ ok: true, session: sessionOut(data.session), user: { id: data.user?.id, email: data.user?.email } });
+  } catch (err) { handleError(res, err); }
+});
+
+app.get("/api/auth/me", async (req, res) => {
+  const user = await getUserFromReq(req);
+  if (!user) return res.status(401).json({ error: "No autenticado" });
+  res.json({ id: user.id, email: user.email });
+});
+
+// One-time adoption of pre-auth data: rows created before multi-account have
+// owner_id NULL; the first user to claim them becomes their owner.
+app.post("/api/auth/claim-legacy", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDB(); // anon client can see/patch null-owner rows
+    const tables = ["respondo_config","respondo_leads","respondo_campaigns","respondo_automations","respondo_wa_templates","respondo_chat_events"];
+    let claimed = 0;
+    for (const t of tables) {
+      const { data } = await db.from(t).update({ owner_id: user.id }).is("owner_id", null).select("id");
+      claimed += (data || []).length;
+    }
+    res.json({ ok: true, claimed });
+  } catch (err) { handleError(res, err); }
+});
 
 // ---------------------------------------------------------------------------
 // HEALTH CHECK
@@ -670,9 +975,10 @@ app.get("/api/health", (_req, res) => {
 // ---------------------------------------------------------------------------
 // CONFIG
 // ---------------------------------------------------------------------------
-app.get("/api/config", async (_req, res) => {
+app.get("/api/config", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
     if (error) throw error;
     if (!data) return res.json(null);
@@ -682,15 +988,16 @@ app.get("/api/config", async (_req, res) => {
 
 app.put("/api/config", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(AgentConfigSchema, req.body);
-    const db = getDB();
+    const db = getDBAs(user);
     const { data: existing } = await db.from("respondo_config").select("id").limit(1).maybeSingle();
     let result: any;
     if (existing) {
       const { data } = await db.from("respondo_config").update(mapConfigToDB(body)).eq("id", existing.id).select().single();
       result = data;
     } else {
-      const { data } = await db.from("respondo_config").insert(mapConfigToDB(body)).select().single();
+      const { data } = await db.from("respondo_config").insert({ ...mapConfigToDB(body), owner_id: user.id }).select().single();
       result = data;
     }
     res.json(mapConfigFromDB(result));
@@ -702,7 +1009,8 @@ app.put("/api/config", async (req, res) => {
 // ---------------------------------------------------------------------------
 app.get("/api/leads", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     let query = db.from("respondo_leads").select("*").order("created_at", { ascending: false });
     // ?since=ISO8601 — return only leads created/updated after that timestamp
     const since = req.query.since as string | undefined;
@@ -715,9 +1023,10 @@ app.get("/api/leads", async (req, res) => {
 
 app.post("/api/leads", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(LeadCreateSchema, req.body);
-    const db = getDB();
-    const { data, error } = await db.from("respondo_leads").insert(mapLeadToDB(body)).select().single();
+    const db = getDBAs(user);
+    const { data, error } = await db.from("respondo_leads").insert({ ...mapLeadToDB(body), owner_id: user.id }).select().single();
     if (error) throw error;
     res.status(201).json(mapLeadFromDB(data));
   } catch (err) { handleError(res, err); }
@@ -725,8 +1034,9 @@ app.post("/api/leads", async (req, res) => {
 
 app.put("/api/leads/:id", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(LeadPatchSchema, req.body);
-    const db = getDB();
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_leads").update(mapLeadToDB(body)).eq("id", req.params.id).select().single();
     if (error) throw error;
     if (!data) return res.status(404).json({ error: "Lead no encontrado" });
@@ -736,7 +1046,8 @@ app.put("/api/leads/:id", async (req, res) => {
 
 app.delete("/api/leads/:id", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { error } = await db.from("respondo_leads").delete().eq("id", req.params.id);
     if (error) throw error;
     res.status(204).send();
@@ -746,8 +1057,9 @@ app.delete("/api/leads/:id", async (req, res) => {
 // Manual message send: CRM user → WhatsApp lead
 app.post("/api/leads/:id/message", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const { text } = z.object({ text: z.string().min(1).max(4000) }).parse(req.body);
-    const db = getDB();
+    const db = getDBAs(user);
     const { data: lead } = await db.from("respondo_leads").select("phone,conversation_history").eq("id", req.params.id).maybeSingle();
     if (!lead?.phone) return res.status(400).json({ error: "El lead no tiene teléfono registrado" });
 
@@ -770,9 +1082,10 @@ app.post("/api/leads/:id/message", async (req, res) => {
 // ---------------------------------------------------------------------------
 // CAMPAIGNS
 // ---------------------------------------------------------------------------
-app.get("/api/campaigns", async (_req, res) => {
+app.get("/api/campaigns", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_campaigns").select("*").order("created_at", { ascending: false });
     if (error) throw error;
     res.json((data || []).map(mapCampaignFromDB));
@@ -781,9 +1094,10 @@ app.get("/api/campaigns", async (_req, res) => {
 
 app.post("/api/campaigns", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(CampaignPatchSchema.extend({ name: z.string().min(1), template: z.string().min(1) }), req.body);
-    const db = getDB();
-    const { data, error } = await db.from("respondo_campaigns").insert(mapCampaignToDB(body)).select().single();
+    const db = getDBAs(user);
+    const { data, error } = await db.from("respondo_campaigns").insert({ ...mapCampaignToDB(body), owner_id: user.id }).select().single();
     if (error) throw error;
     res.status(201).json(mapCampaignFromDB(data));
   } catch (err) { handleError(res, err); }
@@ -792,25 +1106,43 @@ app.post("/api/campaigns", async (req, res) => {
 // Send a campaign to all leads (real WhatsApp API when configured)
 app.post("/api/campaigns/:id/send", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { data: camp, error: campErr } = await db.from("respondo_campaigns").select("*").eq("id", req.params.id).maybeSingle();
     if (campErr) throw campErr;
     if (!camp) return res.status(404).json({ error: "Campaña no encontrada" });
 
-    // Get leads to send to
-    const { data: leads } = await db.from("respondo_leads").select("id,name,phone");
+    // Optional Meta-approved template for leads OUTSIDE the 24h window
+    const templateName = typeof req.body?.templateName === "string" ? req.body.templateName.trim() : "";
+    const templateLang = typeof req.body?.templateLang === "string" ? req.body.templateLang.trim() : "es_AR";
+
+    // Business name for {{empresa}} replacement
+    const { data: cfgRow } = await db.from("respondo_config").select("business_name").limit(1).maybeSingle();
+    const businessName = cfgRow?.business_name || "Respondo";
+
+    // Get leads to send to (history needed for the 24h-window check)
+    const { data: leads } = await db.from("respondo_leads").select("id,name,phone,conversation_history");
     const validLeads = (leads || []).filter((l: any) => l.phone);
 
     let sentCount = 0;
+    let skippedOutsideWindow = 0;
     if (WA_TOKEN && WA_PHONE_ID) {
-      // Send to each lead with a short delay to avoid rate limits
       for (const lead of validLeads) {
         const text = camp.template
           .replace(/\{\{nombre\}\}/gi, lead.name)
-          .replace(/\{\{empresa\}\}/gi, "Respondo");
+          .replace(/\{\{empresa\}\}/gi, businessName);
         try {
-          await sendWhatsAppMessage(lead.phone, text);
-          sentCount++;
+          if (isInside24hWindow(lead.conversation_history)) {
+            // Free-form message allowed inside the 24h service window
+            await sendWhatsAppMessage(lead.phone, text);
+            sentCount++;
+          } else if (templateName) {
+            // Outside the window Meta only allows approved templates
+            await sendWhatsAppTemplate(lead.phone, templateName, templateLang, [lead.name]);
+            sentCount++;
+          } else {
+            skippedOutsideWindow++;
+          }
         } catch {
           // Continue on individual send failures
         }
@@ -819,11 +1151,13 @@ app.post("/api/campaigns/:id/send", async (req, res) => {
       }
     }
 
+    // Honest metrics: only sent_count is real; read/replies stay 0 until
+    // delivery-status webhooks are wired.
     await db.from("respondo_campaigns").update({
       status: "Completado",
-      sent_count: sentCount || validLeads.length,
-      read_count: Math.round((sentCount || validLeads.length) * 0.82),
-      replies_count: Math.round((sentCount || validLeads.length) * 0.18),
+      sent_count: sentCount,
+      read_count: 0,
+      replies_count: 0,
     }).eq("id", req.params.id);
 
     const { data: updated } = await db.from("respondo_campaigns").select("*").eq("id", req.params.id).single();
@@ -831,14 +1165,19 @@ app.post("/api/campaigns/:id/send", async (req, res) => {
       ...mapCampaignFromDB(updated),
       waConfigured: !!(WA_TOKEN && WA_PHONE_ID),
       totalTargeted: validLeads.length,
+      skippedOutsideWindow,
+      windowNote: skippedOutsideWindow > 0
+        ? `${skippedOutsideWindow} lead(s) fuera de la ventana de 24h de Meta — necesitan una plantilla aprobada (elegí una en Envíos Masivos).`
+        : undefined,
     });
   } catch (err) { handleError(res, err); }
 });
 
 app.put("/api/campaigns/:id", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(CampaignPatchSchema, req.body);
-    const db = getDB();
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_campaigns").update(mapCampaignToDB(body)).eq("id", req.params.id).select().single();
     if (error) throw error;
     if (!data) return res.status(404).json({ error: "Campaña no encontrada" });
@@ -849,9 +1188,10 @@ app.put("/api/campaigns/:id", async (req, res) => {
 // ---------------------------------------------------------------------------
 // AUTOMATIONS (rules engine)
 // ---------------------------------------------------------------------------
-app.get("/api/automations", async (_req, res) => {
+app.get("/api/automations", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_automations").select("*").order("created_at", { ascending: false });
     if (error) throw error;
     res.json((data || []).map(mapAutomationFromDB));
@@ -860,9 +1200,10 @@ app.get("/api/automations", async (_req, res) => {
 
 app.post("/api/automations", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(AutomationSchema, req.body);
-    const db = getDB();
-    const { data, error } = await db.from("respondo_automations").insert(mapAutomationToDB(body)).select().single();
+    const db = getDBAs(user);
+    const { data, error } = await db.from("respondo_automations").insert({ ...mapAutomationToDB(body), owner_id: user.id }).select().single();
     if (error) throw error;
     res.status(201).json(mapAutomationFromDB(data));
   } catch (err) { handleError(res, err); }
@@ -870,8 +1211,9 @@ app.post("/api/automations", async (req, res) => {
 
 app.put("/api/automations/:id", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(AutomationPatchSchema, req.body);
-    const db = getDB();
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_automations").update(mapAutomationToDB(body)).eq("id", req.params.id).select().single();
     if (error) throw error;
     if (!data) return res.status(404).json({ error: "Automatización no encontrada" });
@@ -881,7 +1223,8 @@ app.put("/api/automations/:id", async (req, res) => {
 
 app.delete("/api/automations/:id", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { error } = await db.from("respondo_automations").delete().eq("id", req.params.id);
     if (error) throw error;
     res.status(204).end();
@@ -906,9 +1249,10 @@ function mapTemplateFromDB(r: any) {
   };
 }
 
-app.get("/api/templates", async (_req, res) => {
+app.get("/api/templates", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_wa_templates").select("*").order("created_at", { ascending: false });
     if (error) throw error;
     res.json((data || []).map(mapTemplateFromDB));
@@ -917,12 +1261,14 @@ app.get("/api/templates", async (_req, res) => {
 
 app.post("/api/templates", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(TemplateSchema, req.body);
-    const db = getDB();
+    const db = getDBAs(user);
     const { data, error } = await db.from("respondo_wa_templates").insert({
       name: body.name, language: body.language || "es_AR",
       category: body.category || "MARKETING", body: body.body,
       status: body.status || "PENDIENTE",
+      owner_id: user.id,
     }).select().single();
     if (error) throw error;
     res.status(201).json(mapTemplateFromDB(data));
@@ -931,8 +1277,9 @@ app.post("/api/templates", async (req, res) => {
 
 app.put("/api/templates/:id", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const body = validateBody(TemplateSchema.partial(), req.body);
-    const db = getDB();
+    const db = getDBAs(user);
     const patch: any = {};
     if (body.name !== undefined) patch.name = body.name;
     if (body.language !== undefined) patch.language = body.language;
@@ -948,7 +1295,8 @@ app.put("/api/templates/:id", async (req, res) => {
 
 app.delete("/api/templates/:id", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { error } = await db.from("respondo_wa_templates").delete().eq("id", req.params.id);
     if (error) throw error;
     res.status(204).end();
@@ -958,9 +1306,10 @@ app.delete("/api/templates/:id", async (req, res) => {
 // ---------------------------------------------------------------------------
 // AUTO FOLLOW-UPS
 // ---------------------------------------------------------------------------
-app.post("/api/followups/run", async (_req, res) => {
+app.post("/api/followups/run", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { data: configRow } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
     const config = configRow ? mapConfigFromDB(configRow) : null;
     const followUpMinutes = config?.autoFollowUpMinutes ?? 30;
@@ -968,18 +1317,20 @@ app.post("/api/followups/run", async (_req, res) => {
 
     // Find leads with no recent interaction, not yet closed
     const { data: stale, error } = await db.from("respondo_leads")
-      .select("id,name,phone,status,conversation_history")
+      .select("id,name,phone,status,ai_paused,conversation_history")
       .neq("status", "Cerrado")
       .lt("last_interaction", cutoff)
       .limit(50);
     if (error) throw error;
 
     let contacted = 0;
-    const followUpMsg = `¡Hola de nuevo! 😊 Por acá te hacemos el seguimiento de tu consulta. ¿Seguís interesado/a o necesitás más información?`;
     for (const lead of (stale || [])) {
       if (!lead.phone) continue;
+      if ((lead as any).ai_paused) continue; // human took over — stay silent
       try {
         const now = new Date().toISOString();
+        // Personalized, AI-crafted follow-up based on the conversation context
+        const followUpMsg = await craftFollowUp(lead, config);
         const history = Array.isArray(lead.conversation_history) ? lead.conversation_history : [];
         history.push({ role: "model", text: followUpMsg, timestamp: now });
         await db.from("respondo_leads").update({
@@ -999,9 +1350,10 @@ app.post("/api/followups/run", async (_req, res) => {
 // ---------------------------------------------------------------------------
 // ANALYTICS (real aggregation from DB)
 // ---------------------------------------------------------------------------
-app.get("/api/analytics", async (_req, res) => {
+app.get("/api/analytics", async (req, res) => {
   try {
-    const db = getDB();
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
     const { data: leads, error } = await db.from("respondo_leads")
       .select("status,total_spent,updated_at,created_at,origin,conversation_history");
     if (error) throw error;
@@ -1070,15 +1422,19 @@ app.get("/api/analytics", async (_req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const body = validateBody(ChatSchema, req.body);
+    // Optional auth: authed users chat against THEIR config and persist to THEIR data;
+    // unauthenticated (demo) chats use the provided/default config and persist nothing.
+    const user = await getUserFromReq(req);
 
-    // Resolve config: request body > DB > default
+    // Resolve config: request body > (authed) user's DB config > default
     let config = body.agentConfig;
-    if (!config) {
-      const db = getDB();
+    if (!config && user) {
+      const db = getDBAs(user);
       const { data } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
-      config = data ? mapConfigFromDB(data) : {
-        businessName: "Zapas Respondo", businessType: "Calzado", catalog: "", tone: "Argentino/Cercano",
-      };
+      if (data) config = mapConfigFromDB(data);
+    }
+    if (!config) {
+      config = { businessName: "Zapas Respondo", businessType: "Calzado", catalog: "", tone: "Argentino/Cercano" };
     }
 
     const { text, actions, engine } = await runChat(body.message, body.history || [], config, body.attachment);
@@ -1091,9 +1447,9 @@ app.post("/api/chat", async (req, res) => {
       { role: "model", text, timestamp: now },
     ];
 
-    // Persist CRM actions to DB
-    if (actions.length > 0) {
-      const db = getDB();
+    // Persist CRM actions to DB (only for authenticated users, into THEIR data)
+    if (actions.length > 0 && user) {
+      const db = getDBAs(user);
       for (const action of actions) {
         try {
           if (action.type === "upsert_lead") {
@@ -1120,6 +1476,7 @@ app.post("/api/chat", async (req, res) => {
                 score: dynamicScore,
                 avatar: makeAvatarUrl(nombre || "?"),
                 conversation_history: conversationSnapshot,
+                owner_id: user.id,
               });
             }
           } else if (action.type === "update_lead_status") {
@@ -1130,12 +1487,21 @@ app.post("/api/chat", async (req, res) => {
               if (nota) patch.notes = nota;
               await db.from("respondo_leads").update(patch).eq("id", lead.id);
             }
+          } else if (action.type === "score_lead") {
+            const { nombre, score } = action.payload;
+            const { data: lead } = await db.from("respondo_leads").select("id").ilike("name", nombre).limit(1).maybeSingle();
+            if (lead) await db.from("respondo_leads").update({ score: Math.max(0, Math.min(100, Math.round(Number(score) || 0))) }).eq("id", lead.id);
+          } else if (action.type === "tag_lead") {
+            const { nombre, categoria } = action.payload;
+            const { data: lead } = await db.from("respondo_leads").select("id").ilike("name", nombre).limit(1).maybeSingle();
+            if (lead && categoria) await db.from("respondo_leads").update({ category: String(categoria) }).eq("id", lead.id);
           }
           // Log event
           await db.from("respondo_chat_events").insert({
             event_type: action.type,
             channel: "chat",
             payload: action.payload,
+            owner_id: user.id,
           });
         } catch (e) {
           logger.warn({ action: action.type, err: (e as Error).message }, "action persist failed");
@@ -1143,17 +1509,194 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    // Track every chat interaction for analytics
-    try {
-      const db = getDB();
-      await db.from("respondo_chat_events").insert({
-        event_type: "chat_message",
-        channel: "chat",
-        payload: { messageLength: body.message?.length ?? 0, hasAttachment: !!body.attachment, actionsCount: actions.length },
-      });
-    } catch { /* non-critical */ }
+    // Track every chat interaction for analytics (authed users only)
+    if (user) {
+      try {
+        const db = getDBAs(user);
+        await db.from("respondo_chat_events").insert({
+          event_type: "chat_message",
+          channel: "chat",
+          payload: { messageLength: body.message?.length ?? 0, hasAttachment: !!body.attachment, actionsCount: actions.length },
+          owner_id: user.id,
+        });
+      } catch { /* non-critical */ }
+    }
 
     res.json({ text, role: "model", actions, engine });
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
+// AI ASSIST — conversation summary + suggested replies (powers the inbox
+// "Resumen" and the suggested-reply chips when a human takes over a chat).
+// Uses the same Gemini → OpenRouter provider chain.
+// ---------------------------------------------------------------------------
+app.post("/api/ai/summary", async (req, res) => {
+  try {
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    const name = String(req.body?.name || "el cliente");
+    if (history.length === 0) return res.json({ summary: "Todavía no hay mensajes para resumir." });
+    const transcript = formatTranscript(history);
+    const system = "Sos un asistente que resume conversaciones de atención al cliente para un equipo de ventas. Escribís en español rioplatense, claro y conciso.";
+    const prompt = `Resumí esta conversación con ${name} en 2-3 oraciones. Enfocate en: qué necesita el cliente, qué se le ofreció, y cuál es el próximo paso pendiente. No uses viñetas, escribí un párrafo corto.\n\nCONVERSACIÓN:\n${transcript}`;
+    const summary = await runLLMText(system, prompt);
+    res.json({ summary });
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/ai/suggest", async (req, res) => {
+  try {
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
+    if (history.length === 0) return res.json({ suggestions: [] });
+    const transcript = formatTranscript(history);
+    const system = "Sos un asesor de ventas experto. Escribís en español rioplatense, cálido y natural.";
+    const prompt = `Basándote en esta conversación, sugerí 3 respuestas breves (1-2 oraciones cada una) que el agente humano podría enviarle AHORA al cliente para avanzar la venta. Devolvé SOLO un array JSON de 3 strings en español, sin texto adicional.\n\nCONVERSACIÓN:\n${transcript}`;
+    const raw = await runLLMText(system, prompt);
+    const suggestions = extractJsonArray(raw).slice(0, 3);
+    res.json({ suggestions });
+  } catch (err) { handleError(res, err); }
+});
+
+// AI INSIGHTS — analyzes the whole lead portfolio (sentiment + actionable
+// highlights + a recommendation). Powers the "Análisis con IA" card in Métricas.
+app.get("/api/ai/insights", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
+    const { data: leadsRaw } = await db.from("respondo_leads")
+      .select("name,status,score,notes,category,origin,conversation_history,last_interaction")
+      .order("last_interaction", { ascending: false })
+      .limit(40);
+    const rows = leadsRaw || [];
+    if (rows.length === 0) {
+      return res.json({ sentiment: { positive: 0, neutral: 0, negative: 0 }, highlights: [], recommendation: "Todavía no hay leads para analizar." });
+    }
+
+    const sample = rows.slice(0, 20);
+    const digest = sample.map((l: any) => {
+      const hist = Array.isArray(l.conversation_history) ? l.conversation_history : [];
+      const lastUser = [...hist].reverse().find((m: any) => m.role === "user");
+      return `- ${l.name} [${l.status}, score ${l.score}${l.category ? ", " + l.category : ""}]: ${String(lastUser?.text || l.notes || "sin mensajes").slice(0, 140)}`;
+    }).join("\n");
+    const statusCounts = rows.reduce((acc: any, l: any) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {});
+
+    const system = "Sos un analista de ventas que interpreta la cartera de leads de un negocio. Respondés SIEMPRE en JSON válido, en español rioplatense.";
+    const prompt = `Analizá esta cartera de ${rows.length} leads y su actividad reciente. Distribución por etapa: ${JSON.stringify(statusCounts)}.
+
+LEADS RECIENTES:
+${digest}
+
+Devolvé SOLO un objeto JSON con esta forma exacta (sin texto extra):
+{
+  "sentiment": { "positive": <int>, "neutral": <int>, "negative": <int> },
+  "highlights": ["<hallazgo accionable 1>", "<hallazgo 2>", "<hallazgo 3>"],
+  "recommendation": "<una acción concreta para vender más, 1-2 oraciones>"
+}
+Los tres números de sentiment deben sumar ${sample.length} (cantidad de leads analizados).`;
+    const raw = await runLLMText(system, prompt);
+    const parsed = extractJsonObject(raw);
+    if (!parsed || !parsed.sentiment) {
+      return res.json({ sentiment: { positive: 0, neutral: 0, negative: 0 }, highlights: [], recommendation: raw.slice(0, 240) });
+    }
+    res.json({
+      sentiment: {
+        positive: Number(parsed.sentiment.positive) || 0,
+        neutral: Number(parsed.sentiment.neutral) || 0,
+        negative: Number(parsed.sentiment.negative) || 0,
+      },
+      highlights: Array.isArray(parsed.highlights) ? parsed.highlights.map((x: any) => String(x)).slice(0, 4) : [],
+      recommendation: String(parsed.recommendation || ""),
+      analyzed: sample.length,
+    });
+  } catch (err) { handleError(res, err); }
+});
+
+// AI CAMPAIGN GENERATOR — writes a ready-to-send broadcast (name + message)
+// from the user's business config, catalog and goal. Powers "Generar con IA".
+app.post("/api/ai/campaign", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const objetivo = String(req.body?.objetivo || "reactivar clientes y vender más").slice(0, 300);
+    const segmento = String(req.body?.segmento || "Todos los contactos").slice(0, 200);
+    const db = getDBAs(user);
+    const { data: cfgRow } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
+    const cfg = cfgRow ? mapConfigFromDB(cfgRow) : { businessName: "Mi Negocio", businessType: "", catalog: "", tone: "Argentino/Cercano" };
+    const catalogText = String(cfg.catalog || "").replace(/\s*\{foto:[^}]+\}/gi, "").slice(0, 2500);
+
+    const system = `Sos un experto en marketing por WhatsApp para negocios de LATAM. Escribís campañas que venden sin sonar spam. Respondés SIEMPRE en JSON válido.`;
+    const prompt = `Negocio: ${cfg.businessName} (${cfg.businessType || "general"}). Tono: ${cfg.tone}.
+Objetivo de la campaña: ${objetivo}
+Segmento: ${segmento}
+${catalogText ? "CATÁLOGO REAL (usalo para ofertas concretas, no inventes):\n" + catalogText : "(sin catálogo — mantené la oferta genérica)"}
+
+Escribí una campaña de difusión por WhatsApp. Reglas: máx 500 caracteres, usá {{nombre}} para personalizar y {{empresa}} para el negocio, un solo emoji o dos, llamado a la acción claro (que respondan el mensaje). Devolvé SOLO este JSON:
+{ "name": "<nombre interno corto de la campaña>", "template": "<mensaje listo para enviar>" }`;
+    const raw = await runLLMText(system, prompt);
+    const parsed = extractJsonObject(raw);
+    if (!parsed?.template) return res.status(502).json({ error: "La IA no devolvió una campaña válida. Probá de nuevo." });
+    res.json({ name: String(parsed.name || "Campaña IA").slice(0, 120), template: String(parsed.template).slice(0, 1000) });
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
+// CATALOG SYNC — pulls real products from the connected store and rewrites
+// config.catalog. Works when the store credentials are present in .env.
+// ---------------------------------------------------------------------------
+app.post("/api/catalog/sync", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
+    const { data: cfgRow } = await db.from("respondo_config").select("*").limit(1).maybeSingle();
+    if (!cfgRow) return res.status(400).json({ error: "Configurá tu negocio primero (Estudio IA)." });
+    const store = String(cfgRow.sync_store || "Ninguna");
+
+    let items: { name: string; price: number | string; stock?: number | null }[] = [];
+
+    if (store === "TiendaNube") {
+      const storeId = process.env.TIENDANUBE_STORE_ID, token = process.env.TIENDANUBE_TOKEN;
+      if (!storeId || !token) return res.status(400).json({ error: "Faltan TIENDANUBE_STORE_ID y TIENDANUBE_TOKEN en el .env" });
+      const r = await fetch(`https://api.tiendanube.com/v1/${storeId}/products?per_page=50`, {
+        headers: { Authentication: `bearer ${token}`, "User-Agent": "Respondo (respondo.app)" },
+      });
+      if (!r.ok) return res.status(502).json({ error: `TiendaNube respondió ${r.status}` });
+      const products: any[] = await r.json();
+      items = products.map((p) => ({
+        name: p.name?.es || Object.values(p.name || {})[0] || "Producto",
+        price: p.variants?.[0]?.price ?? "?",
+        stock: p.variants?.reduce((a: number, v: any) => a + (v.stock ?? 0), 0),
+      }));
+    } else if (store === "Shopify") {
+      const shop = process.env.SHOPIFY_STORE, token = process.env.SHOPIFY_TOKEN;
+      if (!shop || !token) return res.status(400).json({ error: "Faltan SHOPIFY_STORE y SHOPIFY_TOKEN en el .env" });
+      const r = await fetch(`https://${shop}/admin/api/2024-01/products.json?limit=50`, {
+        headers: { "X-Shopify-Access-Token": token },
+      });
+      if (!r.ok) return res.status(502).json({ error: `Shopify respondió ${r.status}` });
+      const data: any = await r.json();
+      items = (data.products || []).map((p: any) => ({
+        name: p.title,
+        price: p.variants?.[0]?.price ?? "?",
+        stock: p.variants?.reduce((a: number, v: any) => a + (v.inventory_quantity ?? 0), 0),
+      }));
+    } else if (store === "WooCommerce") {
+      const url = process.env.WOO_URL, key = process.env.WOO_KEY, secret = process.env.WOO_SECRET;
+      if (!url || !key || !secret) return res.status(400).json({ error: "Faltan WOO_URL, WOO_KEY y WOO_SECRET en el .env" });
+      const r = await fetch(`${url.replace(/\/$/, "")}/wp-json/wc/v3/products?per_page=50&consumer_key=${key}&consumer_secret=${secret}`);
+      if (!r.ok) return res.status(502).json({ error: `WooCommerce respondió ${r.status}` });
+      const products: any[] = await r.json();
+      items = products.map((p) => ({ name: p.name, price: p.price || "?", stock: p.stock_quantity }));
+    } else {
+      return res.status(400).json({ error: `Elegí una tienda en "Sincronizar Stock & Tienda" (actual: ${store}). MercadoLibre todavía no está soportado.` });
+    }
+
+    if (items.length === 0) return res.status(404).json({ error: "La tienda no devolvió productos." });
+
+    const catalog = items
+      .map((i) => `- ${i.name}: $${i.price}${i.stock !== undefined && i.stock !== null ? ` (stock: ${i.stock})` : ""}`)
+      .join("\n");
+    await db.from("respondo_config").update({ catalog }).eq("id", cfgRow.id);
+
+    res.json({ ok: true, store, imported: items.length, catalog });
   } catch (err) { handleError(res, err); }
 });
 
@@ -1228,8 +1771,9 @@ async function processInboundMessage(opts: {
   externalId: string;
   text: string;
   send: (text: string) => Promise<void>;
+  sendImage?: (url: string, caption?: string) => Promise<void>;
 }) {
-  const { channel, externalId, text, send } = opts;
+  const { channel, externalId, text, send, sendImage } = opts;
   const db = getDB();
 
   // Config
@@ -1250,6 +1794,24 @@ async function processInboundMessage(opts: {
   }
 
   const history: any[] = (existingLead?.conversation_history || []).slice(-20);
+
+  // HUMAN HANDOFF: if a human took over this chat, store the inbound message
+  // and notify — the AI stays silent until re-activated from the inbox.
+  if (existingLead?.ai_paused) {
+    const nowPaused = new Date().toISOString();
+    const pausedHistory = [...(existingLead.conversation_history || []), { role: "user", text, timestamp: nowPaused }];
+    await db.from("respondo_leads").update({
+      conversation_history: pausedHistory,
+      last_interaction: nowPaused,
+    }).eq("id", existingLead.id);
+    db.from("respondo_chat_events").insert({
+      event_type: "human_needed", channel,
+      payload: { leadId: existingLead.id, name: existingLead.name, text: text.slice(0, 200) },
+      owner_id: existingLead.owner_id ?? null,
+    }).then(() => {});
+    logger.info({ leadId: existingLead.id, channel }, "AI paused for lead — inbound stored, no auto-reply");
+    return;
+  }
 
   // Run AI
   const { text: aiReply, actions } = await runChat(text, history, config);
@@ -1278,6 +1840,8 @@ async function processInboundMessage(opts: {
       external_id: externalId,
       status: "Contactado",
       origin: channel,
+      // Inbound channel leads belong to the connected business (config owner)
+      owner_id: (configRow as any)?.owner_id ?? null,
       conversation_history: newHistory,
       score,
       notes: `Primera consulta: "${text.substring(0, 100)}"`,
@@ -1285,13 +1849,21 @@ async function processInboundMessage(opts: {
     });
   }
 
-  // Log tool-use actions
+  // Log tool-use actions + apply AI score/tag to the current lead
   for (const action of actions) {
-    if (action.type === "upsert_lead" || action.type === "update_lead_status") {
+    if (["upsert_lead", "update_lead_status", "score_lead", "tag_lead"].includes(action.type)) {
       db.from("respondo_chat_events").insert({
         event_type: action.type, channel, payload: action.payload,
       }).then(() => {});
     }
+    try {
+      if (action.type === "score_lead") {
+        const s = Math.max(0, Math.min(100, Math.round(Number(action.payload.score) || 0)));
+        await db.from("respondo_leads").update({ score: s }).eq("external_id", externalId);
+      } else if (action.type === "tag_lead" && action.payload.categoria) {
+        await db.from("respondo_leads").update({ category: String(action.payload.categoria) }).eq("external_id", externalId);
+      }
+    } catch { /* non-critical */ }
   }
 
   // Reply via the channel-specific sender
@@ -1299,6 +1871,16 @@ async function processInboundMessage(opts: {
     await send(aiReply);
   } catch (e) {
     logger.error({ err: (e as Error).message, channel }, "channel reply failed");
+  }
+
+  // Product photos requested by the AI (enviar_foto tool) go out after the text
+  if (sendImage) {
+    for (const action of actions) {
+      if (action.type === "send_image" && action.payload?.url) {
+        await sendImage(String(action.payload.url), String(action.payload.producto || "")).catch((e) =>
+          logger.warn({ err: (e as Error).message }, "channel image send failed"));
+      }
+    }
   }
 }
 
@@ -1308,6 +1890,9 @@ async function processWhatsAppMessage(phone: string, text: string) {
     channel: "WhatsApp",
     externalId: phone,
     text,
+    sendImage: async (url, caption) => {
+      if (WA_TOKEN && WA_PHONE_ID) await sendWhatsAppImage(phone, url, caption);
+    },
     send: async (reply) => {
       if (WA_TOKEN && WA_PHONE_ID) await sendWhatsAppMessage(phone, reply);
       else logger.warn("WHATSAPP_TOKEN/PHONE_ID not set — reply not sent");
@@ -1337,6 +1922,54 @@ async function sendWhatsAppMessage(to: string, text: string) {
     logger.info({ to }, "WhatsApp reply sent");
   }
 }
+
+// Send an image (product photo) via WhatsApp Cloud API
+async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string) {
+  const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${WA_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "image",
+      image: { link: imageUrl, ...(caption ? { caption } : {}) },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    logger.error({ status: res.status, err }, "WhatsApp image send failed");
+  } else {
+    logger.info({ to }, "WhatsApp image sent");
+  }
+}
+
+// Send a Meta-approved template message (required OUTSIDE the 24h window)
+async function sendWhatsAppTemplate(to: string, templateName: string, langCode = "es_AR", bodyParams: string[] = []) {
+  const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${WA_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "template",
+      template: {
+        name: templateName,
+        language: { code: langCode },
+        ...(bodyParams.length ? { components: [{ type: "body", parameters: bodyParams.map((t) => ({ type: "text", text: t })) }] } : {}),
+      },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    logger.error({ status: res.status, err, templateName }, "WhatsApp template send failed");
+    throw new Error(`Template send failed (${res.status})`);
+  }
+  logger.info({ to, templateName }, "WhatsApp template sent");
+}
+
+// (isInside24hWindow vive en serverHelpers.ts para poder testearlo)
 
 // Send a message via the Messenger Send API (used for both Facebook Messenger
 // and Instagram Direct — they share the same endpoint and token model).
@@ -1477,6 +2110,7 @@ app.post("/webhook/email", async (req, res) => {
 // ---------------------------------------------------------------------------
 app.post("/api/test-webhook", async (req, res) => {
   try {
+    const user = await requireUser(req, res); if (!user) return;
     const { phone } = z.object({ phone: z.string().min(7).max(20) }).parse(req.body);
     if (!WA_TOKEN || !WA_PHONE_ID) {
       return res.json({ ok: false, reason: "WhatsApp no configurado (WHATSAPP_TOKEN o WHATSAPP_PHONE_NUMBER_ID faltante)" });
@@ -1509,28 +2143,41 @@ const startServer = async () => {
   // Auto-run follow-ups every 30 minutes (only when WhatsApp is configured)
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     setInterval(async () => {
+      // Auto follow-ups only fire when a real channel can send them
+      if (!(WA_TOKEN && WA_PHONE_ID)) return;
       try {
         const db = getDB();
-        const { data: configRow } = await db.from("respondo_config").select("auto_follow_up_minutes").limit(1).maybeSingle();
-        const followUpMinutes = configRow?.auto_follow_up_minutes ?? 30;
-        const cutoff = new Date(Date.now() - followUpMinutes * 60 * 1000).toISOString();
-        const { data: stale } = await db.from("respondo_leads")
-          .select("id,name,phone,conversation_history")
-          .neq("status", "Cerrado")
-          .lt("last_interaction", cutoff)
-          .limit(20);
+        // Multi-account: run follow-ups per business (each config row = one account)
+        const { data: configRows } = await db.from("respondo_config").select("*");
         let contacted = 0;
-        const followUpMsg = `¡Hola de nuevo! 😊 ¿Seguís con dudas o querés que te ayude a cerrar tu pedido?`;
-        for (const lead of (stale || [])) {
-          if (!lead.phone) continue;
-          const now = new Date().toISOString();
-          const history = Array.isArray(lead.conversation_history) ? lead.conversation_history : [];
-          history.push({ role: "model", text: followUpMsg, timestamp: now });
-          await db.from("respondo_leads").update({ last_interaction: now, conversation_history: history }).eq("id", lead.id);
-          if (WA_TOKEN && WA_PHONE_ID) {
+        for (const configRow of (configRows || [])) {
+          const cfg = mapConfigFromDB(configRow);
+          const followUpMinutes = cfg?.autoFollowUpMinutes ?? 30;
+          const cutoff = new Date(Date.now() - followUpMinutes * 60 * 1000).toISOString();
+          let staleQuery = db.from("respondo_leads")
+            .select("id,name,phone,status,ai_paused,conversation_history")
+            .neq("status", "Cerrado")
+            .lt("last_interaction", cutoff)
+            .limit(20);
+          staleQuery = (configRow as any).owner_id
+            ? staleQuery.eq("owner_id", (configRow as any).owner_id)
+            : staleQuery.is("owner_id", null);
+          const { data: stale } = await staleQuery;
+          for (const lead of (stale || [])) {
+            if (!lead.phone) continue;
+            if ((lead as any).ai_paused) continue; // human took over — stay silent
+            // Meta rule: free-form messages only inside the 24h service window
+            if (!isInside24hWindow(lead.conversation_history)) continue;
+            const now = new Date().toISOString();
+            // Personalized, AI-crafted follow-up per lead (stage-aware: quoted
+            // leads get an abandoned-cart recovery angle)
+            const followUpMsg = await craftFollowUp(lead, cfg);
+            const history = Array.isArray(lead.conversation_history) ? lead.conversation_history : [];
+            history.push({ role: "model", text: followUpMsg, timestamp: now });
+            await db.from("respondo_leads").update({ last_interaction: now, conversation_history: history }).eq("id", lead.id);
             await sendWhatsAppMessage(lead.phone, followUpMsg).catch(() => {});
+            contacted++;
           }
-          contacted++;
         }
         if (contacted > 0) logger.info({ contacted }, "Auto follow-ups sent");
       } catch (e) {
