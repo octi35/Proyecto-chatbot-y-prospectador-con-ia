@@ -8,6 +8,7 @@ export interface AgentConfig {
   autoFollowUpMinutes?: number;
   syncStore?: "Ninguna" | "TiendaNube" | "Shopify" | "WooCommerce" | "MercadoLibre";
   botPersonaName?: string;     // AI agent's human name, e.g. "Valentina"
+  customInstructions?: string; // Free-form owner instructions steering behavior (highest priority)
   forbiddenTopics?: string;    // Comma-separated topics the AI must never discuss
   workingHoursStart?: number;  // 0-23 hour when bot starts (undefined = 24/7)
   workingHoursEnd?: number;    // 0-23 hour when bot ends (undefined = 24/7)

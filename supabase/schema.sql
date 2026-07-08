@@ -40,6 +40,7 @@ create table if not exists respondo_config (
   auto_follow_up_minutes integer default 15,
   sync_store             text default 'Ninguna',
   bot_persona_name       text,
+  custom_instructions    text,
   forbidden_topics       text,
   working_hours_start    integer,
   working_hours_end      integer,

@@ -14,6 +14,7 @@ import {
   Circle,
   Plus,
   X,
+  Wand2,
 } from "lucide-react";
 import { AgentConfig } from "../types";
 import CatalogEditor from "./CatalogEditor";
@@ -385,6 +386,27 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
             />
             <span className="text-xs text-[#6b7280]">minutos</span>
           </div>
+        </div>
+
+        {/* Custom behavior instructions — free-form "control por prompt" */}
+        <div className="rounded-2xl p-4 bg-[#4f6ef7]/[0.04] border border-[#4f6ef7]/20 space-y-2">
+          <label className="text-[13px] font-semibold text-[#111111] flex items-center gap-1.5">
+            <Wand2 size={14} className="text-[#4f6ef7]" /> Cómo debe comportarse el agente
+          </label>
+          <p className="text-[11.5px] text-[#6b7280] leading-relaxed">
+            Escribí en tus palabras cómo querés que actúe: su personalidad, qué debe hacer o evitar,
+            cómo prospectar, cómo responder consultas, cuándo derivar a un humano. Estas instrucciones
+            tienen <span className="font-semibold text-[#4f6ef7]">máxima prioridad</span> sobre el comportamiento por defecto.
+          </p>
+          <textarea
+            value={config.customInstructions || ""}
+            onChange={(e) => handleFieldChange("customInstructions", e.target.value)}
+            rows={5}
+            maxLength={4000}
+            placeholder={"Ej: Sos Valentina, del equipo de ventas. Siempre saludá por el nombre si lo sabés.\nCalificá cada consulta y priorizá a quien pregunta por precio o pago.\nOfrecé un 10% en la primera compra si dudan.\nSi piden factura A o hablan de mayorista, derivá a un humano.\nNunca prometas plazos de envío que no figuren en el catálogo."}
+            className="w-full bg-white border border-[#e0e7ff] rounded-[12px] p-3 text-[13.5px] text-[#111111] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#eef1fe] focus:border-[#c7d2fe] transition-colors resize-y leading-relaxed"
+          />
+          <p className="text-[9px] text-[#9ca3af]">{(config.customInstructions || "").length}/4000 · Aplica en WhatsApp, Instagram, Facebook, Email y en el simulador.</p>
         </div>
 
         {/* Bot Persona Name */}

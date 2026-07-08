@@ -118,6 +118,7 @@ const AgentConfigSchema = z.object({
   autoFollowUpMinutes: z.number().int().positive().max(10080).optional(),
   syncStore: z.enum(["Ninguna","TiendaNube","Shopify","WooCommerce","MercadoLibre"]).optional(),
   botPersonaName: z.string().max(100).optional(),
+  customInstructions: z.string().max(4000).optional(),
   forbiddenTopics: z.string().max(1000).optional(),
   workingHoursStart: z.number().int().min(0).max(23).optional(),
   workingHoursEnd: z.number().int().min(0).max(23).optional(),
@@ -290,6 +291,7 @@ function mapConfigFromDB(row: any) {
     autoFollowUpMinutes: row.auto_follow_up_minutes,
     syncStore: row.sync_store,
     botPersonaName: row.bot_persona_name ?? undefined,
+    customInstructions: row.custom_instructions ?? undefined,
     forbiddenTopics: row.forbidden_topics ?? undefined,
     workingHoursStart: row.working_hours_start ?? undefined,
     workingHoursEnd: row.working_hours_end ?? undefined,
@@ -309,6 +311,7 @@ function mapConfigToDB(data: any) {
   if (data.autoFollowUpMinutes !== undefined) out.auto_follow_up_minutes = data.autoFollowUpMinutes;
   if (data.syncStore !== undefined) out.sync_store = data.syncStore;
   if (data.botPersonaName !== undefined) out.bot_persona_name = data.botPersonaName || null;
+  if (data.customInstructions !== undefined) out.custom_instructions = data.customInstructions || null;
   if (data.forbiddenTopics !== undefined) out.forbidden_topics = data.forbiddenTopics || null;
   if (data.workingHoursStart !== undefined) out.working_hours_start = data.workingHoursStart;
   if (data.workingHoursEnd !== undefined) out.working_hours_end = data.workingHoursEnd;
@@ -542,7 +545,14 @@ async function runChat(
     ? `\nMODO ESTRICTO ACTIVO — Respondé ÚNICAMENTE con la información del catálogo y los datos del negocio cargados acá arriba. Está PROHIBIDO inventar productos, precios, stock, promociones o datos que no figuren explícitamente. Si te preguntan algo que no está en tu información, decí con amabilidad que no contás con ese dato y ofrecé tomar la consulta o derivar a una persona del equipo. No respondas temas ajenos al negocio.`
     : "";
 
-  const systemInstruction = `Sos ${personaName}, asesor/a de ventas experto/a de "${config.businessName}" (rubro: ${config.businessType || "general"}). Atendés por WhatsApp, Instagram y Facebook.
+  // User-authored behavior control ("cómo debe actuar el agente"). Highest
+  // priority after safety: these instructions from the business owner override
+  // the default playbook wherever they conflict.
+  const customNote = config.customInstructions?.trim()
+    ? `\n\n# INSTRUCCIONES DEL DUEÑO DEL NEGOCIO (MÁXIMA PRIORIDAD)\nEl dueño del negocio definió explícitamente cómo tenés que comportarte. Seguí estas instrucciones al pie de la letra; si algo acá contradice las reglas generales de abajo, ESTAS mandan (salvo las reglas de seguridad y de no inventar datos):\n"""\n${config.customInstructions.trim()}\n"""`
+    : "";
+
+  const systemInstruction = `Sos ${personaName}, asesor/a de ventas experto/a de "${config.businessName}" (rubro: ${config.businessType || "general"}). Atendés por WhatsApp, Instagram, Facebook y Email.${customNote}
 
 # QUIÉN SOS
 Sos una persona real del equipo: cálida, perspicaz y genuinamente útil. Pensás antes de responder, entendés lo que la persona NECESITA (no solo lo que pide), y conversás con naturalidad e inteligencia —como el mejor vendedor del local, no como un bot con respuestas enlatadas. Tenés criterio propio: podés comparar opciones, dar recomendaciones honestas, manejar objeciones con empatía y explicar con claridad cuando hace falta.
