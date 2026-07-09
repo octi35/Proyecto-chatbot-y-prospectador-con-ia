@@ -1,13 +1,14 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
-  Users, TrendingUp, DollarSign, Flame, ArrowUpRight, ArrowRight,
+  Users, TrendingUp, DollarSign, Flame, ArrowUpRight,
   Sparkles, MessageSquare, Calendar as CalendarIcon,
-  UserPlus, Megaphone, Send, BarChart3,
+  UserPlus, Megaphone, Send, BarChart3, Store, Layers, Check, ChevronRight,
 } from "lucide-react";
 import { CRMLead, Campaign, AgentConfig } from "../types";
 import { timeAgo } from "../lib/timeAgo";
-import { Card, Badge, Button, StatCard, SectionTitle, QuickAction, AvatarGroup } from "./ui";
+import { getHealth } from "../lib/api";
+import { Card, Button, StatCard, SectionTitle, QuickAction, AvatarGroup } from "./ui";
 
 interface DashboardHomeProps {
   leads: CRMLead[];
@@ -16,7 +17,23 @@ interface DashboardHomeProps {
   onNavigate: (tab: string) => void;
 }
 
-export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps) {
+export default function DashboardHome({ leads, config, onNavigate }: DashboardHomeProps) {
+  // ---- Guided setup ("Primeros pasos"): learns channel status from /api/health
+  const [channelConnected, setChannelConnected] = useState<boolean | null>(null);
+  useEffect(() => {
+    getHealth()
+      .then((h) => setChannelConnected(!!(h.integrations.whatsapp || h.integrations.instagram || h.integrations.facebook || h.integrations.email)))
+      .catch(() => setChannelConnected(false));
+  }, []);
+  const agentReady = (config.catalog?.trim().length || 0) > 30 && !!config.businessName && config.businessName !== "Mi Negocio";
+  const setupSteps = [
+    { done: agentReady, icon: <Store size={17} />, title: "Entrená a tu agente", desc: "Cargá tu negocio y catálogo para que sepa qué vender", tab: "playground", cta: "Entrenar" },
+    { done: channelConnected === true, icon: <Layers size={17} />, title: "Conectá un canal", desc: "Vinculá WhatsApp, Instagram, Facebook o Email", tab: "integrations", cta: "Conectar" },
+    { done: agentReady, icon: <MessageSquare size={17} />, title: "Probá cómo responde", desc: "Chateá con tu agente antes de ponerlo a vender", tab: "playground", cta: "Probar" },
+  ];
+  const doneCount = setupSteps.filter((s) => s.done).length;
+  const setupComplete = doneCount === setupSteps.length && channelConnected !== null;
+
   const totalLeads = leads.length;
   const closed = leads.filter((l) => l.status === "Cerrado").length;
   const totalSales = leads.reduce((a, l) => a + (l.totalSpent || 0), 0);
@@ -76,6 +93,46 @@ export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps)
 
   return (
     <div className="space-y-10 max-w-[1240px]">
+      {/* Guided setup — shown until the agent is trained and a channel is live */}
+      {!setupComplete && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h3 className="text-[16px] font-semibold text-[#0a0a0a] tracking-tight">Poné tu agente a vender en 3 pasos</h3>
+                <p className="text-[13px] text-[#6b7280] mt-0.5">Completá la configuración para empezar a recibir y cerrar ventas solo.</p>
+              </div>
+              <span className="shrink-0 text-[12px] font-semibold text-[#4f6ef7] bg-[#eef1fe] rounded-full px-3 py-1 tabular-nums">{doneCount}/3</span>
+            </div>
+            {/* progress bar */}
+            <div className="h-1.5 bg-black/[0.05] rounded-full overflow-hidden mb-5">
+              <motion.div className="h-full bg-[#4f6ef7] rounded-full" initial={{ width: 0 }} animate={{ width: `${(doneCount / 3) * 100}%` }} transition={{ type: "spring", stiffness: 200, damping: 26 }} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {setupSteps.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => onNavigate(s.tab)}
+                  className={`text-left rounded-[14px] p-4 border transition-all cursor-pointer group ${
+                    s.done ? "bg-[#f0fdf4] border-[#7dd87d]/40" : "bg-white border-black/[0.08] hover:border-[#4f6ef7]/50 hover:bg-[#fafbff]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className={`w-9 h-9 rounded-[10px] flex items-center justify-center ${s.done ? "bg-[#7dd87d]/20 text-[#2f8f4e]" : "bg-black/[0.04] text-[#6b7280]"}`}>
+                      {s.done ? <Check size={17} /> : s.icon}
+                    </span>
+                    {!s.done && <ChevronRight size={16} className="text-[#d4d4d8] group-hover:text-[#4f6ef7] transition-colors" />}
+                  </div>
+                  <p className={`text-[13.5px] font-semibold ${s.done ? "text-[#2f8f4e]" : "text-[#0a0a0a]"}`}>{s.title}</p>
+                  <p className="text-[12px] text-[#9ca3af] mt-1 leading-snug">{s.desc}</p>
+                  {!s.done && <span className="inline-block mt-2.5 text-[12px] font-medium text-[#4f6ef7]">{s.cta} →</span>}
+                </button>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Metric row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
@@ -91,9 +148,9 @@ export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps)
         {/* Opportunities table (2 cols) */}
         <Card className="lg:col-span-2 p-6">
           <SectionTitle
-            title="Historial de campañas"
-            subtitle="Oportunidades y deals recientes de tu pipeline"
-            action={<button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-[#6b7280] hover:text-[#111111] transition-colors flex items-center gap-1 bg-[#f3f5fb] hover:bg-[#eef1fe] px-3.5 h-9 rounded-full">Ver todo <ArrowUpRight size={13} /></button>}
+            title="Oportunidades destacadas"
+            subtitle="Tus leads con mayor score, listos para cerrar"
+            action={<button onClick={() => onNavigate("crm")} className="text-[13px] font-medium text-[#6b7280] hover:text-[#111111] transition-colors flex items-center gap-1 bg-[#f3f5fb] hover:bg-[#eef1fe] px-3.5 h-9 rounded-full">Ver el CRM <ArrowUpRight size={13} /></button>}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {oppCards.map((l, i) => {
