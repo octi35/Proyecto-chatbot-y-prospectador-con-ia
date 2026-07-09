@@ -1,6 +1,21 @@
 // ---------------------------------------------------------------------------
 // Pure helpers shared by server.ts — extracted so they can be unit-tested.
 // ---------------------------------------------------------------------------
+import crypto from "crypto";
+
+// Verify a Meta webhook signature (X-Hub-Signature-256) against the RAW request
+// body. Meta signs the exact bytes it sent, so we must HMAC the raw buffer, not
+// a re-serialized object. Uses timingSafeEqual to avoid timing attacks and to
+// safely handle length mismatches.
+export function verifyMetaSignature(rawBody: Buffer | string, signatureHeader: string | undefined, secret: string): boolean {
+  if (!secret) return true;               // no secret configured → skip (dev)
+  if (!signatureHeader) return false;     // secret set but no signature → reject
+  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(signatureHeader);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  try { return crypto.timingSafeEqual(a, b); } catch { return false; }
+}
 
 // Turn a conversation history into a readable transcript for prompts.
 export function formatTranscript(history: { role: string; text: string }[]): string {

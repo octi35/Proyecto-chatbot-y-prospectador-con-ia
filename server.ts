@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import helmet from "helmet";
@@ -9,9 +8,43 @@ import cors from "cors";
 import pino from "pino";
 import { z, ZodError } from "zod";
 import { localBotReply } from "./botEngine";
-import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow } from "./serverHelpers";
+import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow, verifyMetaSignature } from "./serverHelpers";
 
 dotenv.config();
+
+// ---------------------------------------------------------------------------
+// RESILIENT FETCH — timeout (fail fast instead of hanging) + retry on transient
+// errors (429 / 5xx / network) with exponential backoff. Used for every
+// outbound HTTP call (LLM providers, Meta, Resend, Mercado Pago).
+// ---------------------------------------------------------------------------
+async function fetchWithTimeout(url: string, opts: RequestInit = {}, timeoutMs = 20_000): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function fetchResilient(url: string, opts: RequestInit = {}, { timeoutMs = 20_000, retries = 2 } = {}): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchWithTimeout(url, opts, timeoutMs);
+      // Retry only on transient upstream failures
+      if ((res.status === 429 || res.status >= 500) && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 400 * 2 ** attempt));
+        continue;
+      }
+      return res;
+    } catch (e) {
+      lastErr = e;
+      if (attempt < retries) { await new Promise((r) => setTimeout(r, 400 * 2 ** attempt)); continue; }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("fetch failed");
+}
 
 // ---------------------------------------------------------------------------
 // HELPERS
@@ -72,7 +105,7 @@ function getAI(): GoogleGenAI {
   if (!_ai) {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY is required");
-    _ai = new GoogleGenAI({ apiKey: key, httpOptions: { headers: { "User-Agent": "aistudio-build" } } });
+    _ai = new GoogleGenAI({ apiKey: key, httpOptions: { headers: { "User-Agent": "aistudio-build" }, timeout: 30_000 } });
   }
   return _ai;
 }
@@ -90,13 +123,13 @@ function getDB() {
 // Mercado Pago: real checkout links when MP_ACCESS_TOKEN is set
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || "";
 async function createMercadoPagoLink(concepto: string, monto: number): Promise<string> {
-  const res = await fetch("https://api.mercadopago.com/checkout/preferences", {
+  const res = await fetchWithTimeout("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
     body: JSON.stringify({
       items: [{ title: concepto || "Compra", quantity: 1, unit_price: monto, currency_id: "ARS" }],
     }),
-  });
+  }, 15_000);
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     throw new Error(`Mercado Pago HTTP ${res.status}: ${detail.slice(0, 150)}`);
@@ -715,7 +748,7 @@ async function runOpenRouter(
     messages.push({ role: "user", content: userText });
   }
 
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const res = await fetchResilient("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -757,7 +790,7 @@ async function runLLMText(systemInstruction: string, prompt: string): Promise<st
   }
   if (process.env.OPENROUTER_API_KEY) {
     const model = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001";
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetchResilient("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -818,9 +851,23 @@ const app = express();
 
 app.use(helmet({
   contentSecurityPolicy: false, // Vite dev needs inline scripts
+  crossOriginEmbedderPolicy: false,
 }));
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "20mb" }));
+
+// CORS: lock to APP_URL in production; permissive in dev (no APP_URL set).
+// Server-to-server callers (Meta webhooks) send no Origin header and are unaffected.
+const APP_URL = process.env.APP_URL || "";
+app.use(cors({ origin: APP_URL ? [APP_URL] : true, credentials: true }));
+
+// Body parsing: capture the RAW bytes (needed for webhook signature checks) and
+// keep the default limit small to reduce DoS surface. Only the chat and webhook
+// routes accept large payloads (base64 attachments / provider events).
+const captureRaw = (req: express.Request, _res: express.Response, buf: Buffer) => { (req as any).rawBody = buf; };
+const jsonLarge = express.json({ limit: "25mb", verify: captureRaw });
+const jsonSmall = express.json({ limit: "1mb", verify: captureRaw });
+app.use("/api/chat", jsonLarge);
+app.use("/webhook", jsonLarge);   // provider events + inbound email HTML
+app.use(jsonSmall);               // everything else stays lean
 
 // Request logger (lightweight)
 app.use((req, _res, next) => {
@@ -865,10 +912,18 @@ function handleError(res: express.Response, err: any) {
   if (err instanceof ZodError) {
     return res.status(400).json({ error: "Datos inválidos", details: err.flatten() });
   }
-  // Supabase/Postgrest errors are plain objects with message/details/hint/code
-  const msg = err?.message || err?.error_description || (err instanceof Error ? err.message : JSON.stringify(err));
+  // Always log full detail server-side…
   logger.error({ message: err?.message, code: err?.code, details: err?.details, hint: err?.hint }, "request error");
-  return res.status(500).json({ error: msg, code: err?.code });
+  // …a hung/aborted upstream call maps to a friendly 504
+  if (err?.name === "AbortError") {
+    return res.status(504).json({ error: "El servicio tardó demasiado en responder. Probá de nuevo." });
+  }
+  // …but only surface a bounded string to the client (never JSON.stringify a raw
+  // error object — that can leak DB schema / internals).
+  const raw = typeof err?.message === "string" ? err.message
+    : typeof err?.error_description === "string" ? err.error_description
+    : "Error interno del servidor";
+  return res.status(500).json({ error: raw.slice(0, 300), code: err?.code });
 }
 
 // ---------------------------------------------------------------------------
@@ -1731,7 +1786,7 @@ app.post("/api/catalog/sync", async (req, res) => {
     if (store === "TiendaNube") {
       const storeId = process.env.TIENDANUBE_STORE_ID, token = process.env.TIENDANUBE_TOKEN;
       if (!storeId || !token) return res.status(400).json({ error: "Faltan TIENDANUBE_STORE_ID y TIENDANUBE_TOKEN en el .env" });
-      const r = await fetch(`https://api.tiendanube.com/v1/${storeId}/products?per_page=50`, {
+      const r = await fetchWithTimeout(`https://api.tiendanube.com/v1/${storeId}/products?per_page=50`, {
         headers: { Authentication: `bearer ${token}`, "User-Agent": "Respondo (respondo.app)" },
       });
       if (!r.ok) return res.status(502).json({ error: `TiendaNube respondió ${r.status}` });
@@ -1744,7 +1799,7 @@ app.post("/api/catalog/sync", async (req, res) => {
     } else if (store === "Shopify") {
       const shop = process.env.SHOPIFY_STORE, token = process.env.SHOPIFY_TOKEN;
       if (!shop || !token) return res.status(400).json({ error: "Faltan SHOPIFY_STORE y SHOPIFY_TOKEN en el .env" });
-      const r = await fetch(`https://${shop}/admin/api/2024-01/products.json?limit=50`, {
+      const r = await fetchWithTimeout(`https://${shop}/admin/api/2024-01/products.json?limit=50`, {
         headers: { "X-Shopify-Access-Token": token },
       });
       if (!r.ok) return res.status(502).json({ error: `Shopify respondió ${r.status}` });
@@ -1757,7 +1812,7 @@ app.post("/api/catalog/sync", async (req, res) => {
     } else if (store === "WooCommerce") {
       const url = process.env.WOO_URL, key = process.env.WOO_KEY, secret = process.env.WOO_SECRET;
       if (!url || !key || !secret) return res.status(400).json({ error: "Faltan WOO_URL, WOO_KEY y WOO_SECRET en el .env" });
-      const r = await fetch(`${url.replace(/\/$/, "")}/wp-json/wc/v3/products?per_page=50&consumer_key=${key}&consumer_secret=${secret}`);
+      const r = await fetchWithTimeout(`${url.replace(/\/$/, "")}/wp-json/wc/v3/products?per_page=50&consumer_key=${key}&consumer_secret=${secret}`);
       if (!r.ok) return res.status(502).json({ error: `WooCommerce respondió ${r.status}` });
       const products: any[] = await r.json();
       items = products.map((p) => ({ name: p.name, price: p.price || "?", stock: p.stock_quantity }));
@@ -1794,12 +1849,11 @@ app.get("/webhook/whatsapp", (req, res) => {
 
 // POST: incoming messages from Meta
 app.post("/webhook/whatsapp", async (req, res) => {
-  // Signature verification (when app secret is configured)
+  // Signature verification against the RAW body (when app secret is configured)
   if (WA_APP_SECRET) {
-    const sig = String(req.headers["x-hub-signature-256"] || "");
-    const rawBody = JSON.stringify(req.body);
-    const expected = "sha256=" + crypto.createHmac("sha256", WA_APP_SECRET).update(rawBody).digest("hex");
-    if (sig !== expected) {
+    const sig = req.headers["x-hub-signature-256"] as string | undefined;
+    const raw = (req as any).rawBody ?? JSON.stringify(req.body);
+    if (!verifyMetaSignature(raw, sig, WA_APP_SECRET)) {
       logger.warn("Invalid WhatsApp signature");
       return res.status(403).json({ error: "Invalid signature" });
     }
@@ -2007,7 +2061,7 @@ const MAX_MEDIA_BYTES = 12 * 1024 * 1024; // 12 MB
 // Fetch any URL and return it as base64 + mime type (used for Messenger/IG media)
 async function fetchUrlAsBase64(url: string, authHeader?: Record<string, string>): Promise<{ data: string; mimeType: string } | null> {
   try {
-    const res = await fetch(url, { headers: { ...(authHeader || {}) } });
+    const res = await fetchWithTimeout(url, { headers: { ...(authHeader || {}) } });
     if (!res.ok) { logger.warn({ status: res.status }, "media fetch failed"); return null; }
     const mimeType = res.headers.get("content-type")?.split(";")[0] || "application/octet-stream";
     const buf = Buffer.from(await res.arrayBuffer());
@@ -2024,7 +2078,7 @@ async function fetchUrlAsBase64(url: string, authHeader?: Record<string, string>
 async function downloadWhatsAppMedia(mediaId: string): Promise<{ data: string; mimeType: string } | null> {
   if (!WA_TOKEN) return null;
   try {
-    const metaRes = await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, {
+    const metaRes = await fetchWithTimeout(`https://graph.facebook.com/v21.0/${mediaId}`, {
       headers: { Authorization: `Bearer ${WA_TOKEN}` },
     });
     if (!metaRes.ok) { logger.warn({ status: metaRes.status }, "WA media meta fetch failed"); return null; }
@@ -2039,7 +2093,7 @@ async function downloadWhatsAppMedia(mediaId: string): Promise<{ data: string; m
 
 async function sendWhatsAppMessage(to: string, text: string) {
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${WA_TOKEN}`,
@@ -2063,7 +2117,7 @@ async function sendWhatsAppMessage(to: string, text: string) {
 // Send an image (product photo) via WhatsApp Cloud API
 async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string) {
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Authorization": `Bearer ${WA_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2084,7 +2138,7 @@ async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string)
 // Send a Meta-approved template message (required OUTSIDE the 24h window)
 async function sendWhatsAppTemplate(to: string, templateName: string, langCode = "es_AR", bodyParams: string[] = []) {
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Authorization": `Bearer ${WA_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2112,7 +2166,7 @@ async function sendWhatsAppTemplate(to: string, templateName: string, langCode =
 // and Instagram Direct — they share the same endpoint and token model).
 async function sendMessengerMessage(recipientId: string, text: string, token: string) {
   const url = `https://graph.facebook.com/v21.0/me/messages?access_token=${token}`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2148,9 +2202,9 @@ app.get("/webhook/messenger", (req, res) => {
 // object="instagram" for Instagram Direct, both with entry[].messaging[].
 app.post("/webhook/messenger", async (req, res) => {
   if (WA_APP_SECRET) {
-    const sig = String(req.headers["x-hub-signature-256"] || "");
-    const expected = "sha256=" + crypto.createHmac("sha256", WA_APP_SECRET).update(JSON.stringify(req.body)).digest("hex");
-    if (sig !== expected) {
+    const sig = req.headers["x-hub-signature-256"] as string | undefined;
+    const raw = (req as any).rawBody ?? JSON.stringify(req.body);
+    if (!verifyMetaSignature(raw, sig, WA_APP_SECRET)) {
       logger.warn("Invalid Messenger signature");
       return res.status(403).json({ error: "Invalid signature" });
     }
@@ -2205,7 +2259,7 @@ async function sendEmail(to: string, subject: string, text: string) {
     logger.warn("RESEND_API_KEY/EMAIL_USER not set — email reply not sent");
     return;
   }
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetchWithTimeout("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2280,7 +2334,15 @@ const startServer = async () => {
     logger.info("Vite dev middleware mounted");
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    // Hashed assets are immutable → cache hard; index.html must revalidate.
+    app.use(express.static(distPath, {
+      maxAge: "1y",
+      etag: true,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith("index.html")) res.setHeader("Cache-Control", "no-cache");
+        else if (/\/assets\//.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      },
+    }));
     app.get("*", (_req, res) => res.sendFile(path.join(distPath, "index.html")));
     logger.info("Serving static assets");
   }
@@ -2336,6 +2398,15 @@ const startServer = async () => {
     logger.info("Auto follow-up scheduler started (30 min interval)");
   }
 };
+
+// Safety nets: a stray rejection or a background error must NOT take the whole
+// server down (webhooks/followups run detached). Log and keep serving.
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason: reason instanceof Error ? reason.message : reason }, "unhandledRejection");
+});
+process.on("uncaughtException", (err) => {
+  logger.error({ err: err.message }, "uncaughtException");
+});
 
 startServer().catch((err) => {
   logger.error({ err }, "Failed to start server");

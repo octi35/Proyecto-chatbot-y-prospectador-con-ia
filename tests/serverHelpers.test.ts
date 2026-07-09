@@ -1,6 +1,34 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow } from "../serverHelpers";
+import crypto from "node:crypto";
+import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow, verifyMetaSignature } from "../serverHelpers";
+
+const sign = (body: string, secret: string) =>
+  "sha256=" + crypto.createHmac("sha256", secret).update(body).digest("hex");
+
+test("verifyMetaSignature acepta una firma válida sobre el body crudo", () => {
+  const body = JSON.stringify({ object: "whatsapp_business_account", entry: [] });
+  assert.equal(verifyMetaSignature(body, sign(body, "s3cr3t"), "s3cr3t"), true);
+});
+
+test("verifyMetaSignature rechaza una firma inválida", () => {
+  const body = '{"a":1}';
+  assert.equal(verifyMetaSignature(body, sign(body, "otra-clave"), "s3cr3t"), false);
+});
+
+test("verifyMetaSignature rechaza si falta el header pero hay secret", () => {
+  assert.equal(verifyMetaSignature("{}", undefined, "s3cr3t"), false);
+});
+
+test("verifyMetaSignature omite la verificación si no hay secret (dev)", () => {
+  assert.equal(verifyMetaSignature("{}", undefined, ""), true);
+});
+
+test("verifyMetaSignature es sensible a cualquier cambio en el body", () => {
+  const secret = "k";
+  const sig = sign('{"monto":100}', secret);
+  assert.equal(verifyMetaSignature('{"monto":999}', sig, secret), false);
+});
 
 test("formatTranscript etiqueta cliente y agente", () => {
   const out = formatTranscript([
