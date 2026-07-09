@@ -70,7 +70,7 @@ export default function WaTemplateManager() {
   const varCount = (body.match(/\{\{\d+\}\}/g) || []).length;
 
   return (
-    <div className="bg-white rounded-[22px] p-6 ds-shadow space-y-5">
+    <div className="bg-white rounded-[16px] p-6 ds-shadow space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-[14px] bg-[#111111] flex items-center justify-center text-white ds-shadow">

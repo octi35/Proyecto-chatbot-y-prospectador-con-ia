@@ -179,7 +179,7 @@ export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps)
         {/* Promo / AI card */}
         <motion.div
           whileHover={{ y: -1 }} transition={{ duration: 0.2 }}
-          className="relative p-6 rounded-[22px] bg-[#111111] overflow-hidden flex flex-col justify-between min-h-[200px]"
+          className="relative p-6 rounded-[16px] bg-[#111111] overflow-hidden flex flex-col justify-between min-h-[200px]"
         >
           <div className="absolute -right-16 -bottom-16 w-48 h-48 bg-[#4f6ef7]/20 rounded-full blur-3xl" />
           <div className="relative">

@@ -89,7 +89,7 @@ export default function AutomationRules() {
   };
 
   return (
-    <div className="bg-white rounded-[22px] p-6 ds-shadow space-y-5">
+    <div className="bg-white rounded-[16px] p-6 ds-shadow space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

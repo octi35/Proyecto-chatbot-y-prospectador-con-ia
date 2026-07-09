@@ -290,7 +290,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-[22px] overflow-hidden ds-shadow max-w-sm mx-auto w-full relative">
+    <div className="flex flex-col h-full bg-white rounded-[16px] overflow-hidden ds-shadow max-w-sm mx-auto w-full relative">
 
       {/* Platform selector */}
       <div className="bg-[#f3f5fb] p-3 border-b border-[#e2e5ee] flex items-center justify-between z-10">

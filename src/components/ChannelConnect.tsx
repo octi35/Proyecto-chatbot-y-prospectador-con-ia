@@ -165,7 +165,7 @@ export default function ChannelConnect() {
           return (
             <div
               key={ch.id}
-              className={`bg-white border rounded-[22px] overflow-hidden transition-all duration-300 ${open ? "border-[#e2e5ee] ds-shadow" : "border-[#f4f4f5] ds-shadow"}`}
+              className={`bg-white border rounded-[16px] overflow-hidden transition-all duration-300 ${open ? "border-[#e2e5ee] ds-shadow" : "border-[#f4f4f5] ds-shadow"}`}
             >
               {/* Card header */}
               <button

@@ -56,7 +56,7 @@ export default function TeamManager() {
   };
 
   return (
-    <div className="bg-white rounded-[22px] p-6 shadow-card space-y-5">
+    <div className="bg-white rounded-[16px] p-6 shadow-card space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-[14px] bg-[#101010] flex items-center justify-center text-white shadow-card">

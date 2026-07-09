@@ -554,7 +554,7 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
   };
 
   return (
-    <div className="bg-white rounded-[22px] overflow-hidden shadow-card flex flex-col h-[calc(100vh-155px)] min-h-[660px]">
+    <div className="bg-white rounded-[16px] overflow-hidden shadow-card flex flex-col h-[calc(100vh-155px)] min-h-[660px]">
 
       {/* CRM Dashboard Tabs */}
       <div className="glass p-4 sm:p-5 border-b border-[#f4f4f5] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">

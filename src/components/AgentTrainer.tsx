@@ -143,7 +143,7 @@ export default function AgentTrainer({ config, onChange }: AgentTrainerProps) {
   };
 
   return (
-    <div className="bg-white rounded-[22px] p-7 sm:p-8 shadow-card space-y-7">
+    <div className="bg-white rounded-[16px] p-7 sm:p-8 shadow-card space-y-7">
       {/* Block title */}
       <div className="flex items-center justify-between border-b border-[#f4f4f5] pb-4">
         <div className="flex items-center space-x-3">
