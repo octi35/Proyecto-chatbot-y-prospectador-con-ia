@@ -18,6 +18,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [engine, setEngine] = useState<"gemini" | "openrouter" | "local" | null>(null);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [showImagePanel, setShowImagePanel] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -106,6 +107,7 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       const actions: AgentAction[] = Array.isArray(data.actions) ? data.actions : [];
+      if (data.engine) setEngine(data.engine);
       setIsLoading(false);
       // Stream the reply with a live typewriter effect (like ChatGPT)
       await typeOutModelMessage(data.text || "", actions.length ? { actions } : undefined);
@@ -326,8 +328,10 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
           <div>
             <h4 className="font-semibold text-sm leading-tight text-[#111111]">{config.businessName}</h4>
             <div className="flex items-center space-x-1">
-              <Sparkles size={10} className="text-[#4f6ef7] animate-pulse" />
-              <span className="text-[10px] text-[#6b7280] font-medium tracking-wide">{botName} · Gemini AI</span>
+              <Sparkles size={10} className={engine === "local" ? "text-[#a16207]" : "text-[#4f6ef7] animate-pulse"} />
+              <span className="text-[10px] text-[#6b7280] font-medium tracking-wide">
+                {botName} · {engine === "gemini" ? "Gemini" : engine === "openrouter" ? "OpenRouter" : engine === "local" ? "Motor local" : "IA"}
+              </span>
             </div>
           </div>
         </div>

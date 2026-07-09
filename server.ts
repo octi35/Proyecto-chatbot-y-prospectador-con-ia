@@ -1076,7 +1076,10 @@ app.get("/api/leads", async (req, res) => {
   try {
     const user = await requireUser(req, res); if (!user) return;
     const db = getDBAs(user);
-    let query = db.from("respondo_leads").select("*").order("created_at", { ascending: false });
+    // Safety cap so a large table never returns an unbounded payload. Override
+    // with ?limit=N (max 5000); the poll uses ?since to fetch only new rows.
+    const limit = Math.min(5000, Math.max(1, Number(req.query.limit) || 2000));
+    let query = db.from("respondo_leads").select("*").order("created_at", { ascending: false }).limit(limit);
     // ?since=ISO8601 — return only leads created/updated after that timestamp
     const since = req.query.since as string | undefined;
     if (since) query = query.gte("updated_at", since);

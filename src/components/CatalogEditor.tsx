@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Trash2, ShoppingBag, LayoutGrid, FileText, ImageIcon } from "lucide-react";
+import { sanitizeCatalog, catalogCleanupDelta } from "../lib/catalog";
 
 interface Product {
   name: string;
@@ -56,6 +57,7 @@ function serialize(products: Product[]): string {
 export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
   const [mode, setMode] = useState<"visual" | "text">("visual");
   const products = useMemo(() => parse(value), [value]);
+  const cleanupCount = useMemo(() => catalogCleanupDelta(value), [value]);
 
   const update = (next: Product[]) => onChange(serialize(next));
 
@@ -92,13 +94,23 @@ export default function CatalogEditor({ value, onChange }: CatalogEditorProps) {
       </div>
 
       {mode === "text" ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={7}
-          className="w-full bg-[#f4f4f5] border border-transparent rounded-xl p-3 text-xs font-mono text-[#3f3f46] focus:outline-none focus:border-[#4f6ef7] transition-colors resize-y leading-relaxed"
-          placeholder="- Producto: $precio (talles, colores, stock). Una línea por producto."
-        />
+        <div className="space-y-2">
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={7}
+            className="w-full bg-[#f4f4f5] border border-transparent rounded-xl p-3 text-xs font-mono text-[#3f3f46] focus:outline-none focus:border-[#4f6ef7] transition-colors resize-y leading-relaxed"
+            placeholder="- Producto: $precio (talles, colores, stock). Una línea por producto."
+          />
+          {cleanupCount > 0 && (
+            <button
+              onClick={() => onChange(sanitizeCatalog(value))}
+              className="text-[11px] font-semibold text-[#4f6ef7] hover:text-[#3b5bdb] transition-colors cursor-pointer"
+            >
+              Limpiar y ordenar · {cleanupCount} línea{cleanupCount !== 1 ? "s" : ""} repetida{cleanupCount !== 1 ? "s" : ""}/vacía{cleanupCount !== 1 ? "s" : ""}
+            </button>
+          )}
+        </div>
       ) : (
         <div className="space-y-2">
           {products.length === 0 && (
