@@ -20,10 +20,10 @@ interface CardProps extends HTMLMotionProps<"div"> {
 export function Card({ interactive, className, children, ...props }: CardProps) {
   return (
     <motion.div
-      whileHover={interactive ? { y: -2 } : undefined}
+      whileHover={interactive ? { y: -1 } : undefined}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className={cx(
-        "bg-white rounded-[22px] shadow-card",
+        "bg-white rounded-[16px] shadow-card",
         interactive && "cursor-pointer hover:shadow-card-hover",
         className
       )}
@@ -55,8 +55,8 @@ export function Button({ variant = "primary", size = "md", className, children, 
       whileTap={{ scale: 0.98 }}
       transition={spring}
       className={cx(
-        "inline-flex items-center justify-center gap-2 font-medium rounded-full transition-all duration-150 cursor-pointer",
-        size === "sm" ? "text-[13px] px-4 h-[34px]" : size === "lg" ? "text-[14px] px-6 h-12" : "text-[13.5px] px-5 h-[42px]",
+        "inline-flex items-center justify-center gap-2 font-medium rounded-[10px] transition-all duration-150 cursor-pointer",
+        size === "sm" ? "text-[13px] px-3.5 h-9" : size === "lg" ? "text-[14px] px-6 h-12" : "text-[13.5px] px-4 h-10",
         BTN[variant],
         className
       )}
@@ -151,12 +151,13 @@ interface StatCardProps {
 }
 export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, hint, tone = "neutral", index = 0 }) => (
   <Card initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, ...spring }} className="p-5">
-    <div className="flex items-start justify-between">
-      <span className={cx("w-11 h-11 rounded-2xl flex items-center justify-center", CHIP[tone])}>{icon}</span>
+    <div className="flex items-center justify-between">
+      <span className="text-[13px] text-[#6b7280] font-medium flex items-center gap-2">
+        <span className="text-[#9ca3af]">{icon}</span>{label}
+      </span>
       {hint}
     </div>
-    <div className="text-[28px] font-semibold tracking-tight text-[#111111] leading-none tabular-nums mt-5">{value}</div>
-    <div className="text-[13px] text-[#6b7280] mt-1.5">{label}</div>
+    <div className="text-[30px] font-semibold tracking-tight text-[#0a0a0a] leading-none tabular-nums mt-4">{value}</div>
   </Card>
 );
 

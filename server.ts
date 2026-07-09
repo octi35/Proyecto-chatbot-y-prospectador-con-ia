@@ -1314,6 +1314,72 @@ app.delete("/api/templates/:id", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// TEAM MEMBERS (equipo / roles) — el dueño gestiona a quién asigna los chats
+// ---------------------------------------------------------------------------
+const TeamMemberSchema = z.object({
+  email: z.string().email(),
+  name: z.string().max(200).optional().default(""),
+  role: z.enum(["admin", "agente"]).optional().default("agente"),
+});
+const TeamMemberPatchSchema = TeamMemberSchema.partial();
+
+function mapTeamFromDB(r: any) {
+  return { id: r.id, email: r.email, name: r.name ?? "", role: r.role ?? "agente", createdAt: r.created_at };
+}
+
+app.get("/api/team", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
+    const { data, error } = await db.from("respondo_team_members").select("*").order("created_at", { ascending: true });
+    if (error) throw error;
+    res.json((data || []).map(mapTeamFromDB));
+  } catch (err) { handleError(res, err); }
+});
+
+app.post("/api/team", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const body = validateBody(TeamMemberSchema, req.body);
+    const db = getDBAs(user);
+    const { data, error } = await db.from("respondo_team_members")
+      .insert({ email: body.email, name: body.name || "", role: body.role || "agente", owner_id: user.id })
+      .select().single();
+    if (error) {
+      if ((error as any).code === "23505") return res.status(409).json({ error: "Ese email ya está en tu equipo" });
+      throw error;
+    }
+    res.status(201).json(mapTeamFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.put("/api/team/:id", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const body = validateBody(TeamMemberPatchSchema, req.body);
+    const db = getDBAs(user);
+    const patch: any = {};
+    if (body.email !== undefined) patch.email = body.email;
+    if (body.name !== undefined) patch.name = body.name;
+    if (body.role !== undefined) patch.role = body.role;
+    const { data, error } = await db.from("respondo_team_members").update(patch).eq("id", req.params.id).select().single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Miembro no encontrado" });
+    res.json(mapTeamFromDB(data));
+  } catch (err) { handleError(res, err); }
+});
+
+app.delete("/api/team/:id", async (req, res) => {
+  try {
+    const user = await requireUser(req, res); if (!user) return;
+    const db = getDBAs(user);
+    const { error } = await db.from("respondo_team_members").delete().eq("id", req.params.id);
+    if (error) throw error;
+    res.status(204).end();
+  } catch (err) { handleError(res, err); }
+});
+
+// ---------------------------------------------------------------------------
 // AUTO FOLLOW-UPS
 // ---------------------------------------------------------------------------
 app.post("/api/followups/run", async (req, res) => {
@@ -1749,23 +1815,36 @@ app.post("/webhook/whatsapp", async (req, res) => {
     for (const change of (entry.changes || [])) {
       const messages: any[] = change?.value?.messages || [];
       for (const msg of messages) {
-        // Only handle text and audio transcripts for now
+        const from = String(msg.from);
         let userText = "";
+        let mediaId = "";
+        let caption = "";
+
         if (msg.type === "text") {
           userText = msg.text?.body || "";
-        } else if (msg.type === "audio") {
-          userText = "[Nota de voz recibida. Responde indicando que podés ayudar por texto mientras procesamos el audio.]";
-        } else {
-          continue; // Skip other types
+        } else if (msg.type === "audio")   { mediaId = msg.audio?.id || ""; }
+        else if (msg.type === "voice")     { mediaId = msg.voice?.id || ""; }
+        else if (msg.type === "image")     { mediaId = msg.image?.id || ""; caption = msg.image?.caption || ""; }
+        else if (msg.type === "document")  { mediaId = msg.document?.id || ""; caption = msg.document?.caption || ""; }
+        else if (msg.type === "sticker")   { mediaId = msg.sticker?.id || ""; }
+        else {
+          continue; // Skip unsupported types (location, contacts, reactions…)
         }
 
-        const from = String(msg.from);
         logger.info({ from, type: msg.type }, "WhatsApp message received");
 
+        // Download media (audio/image/doc) so the AI can actually understand it
+        const handle = async () => {
+          let attachment: { data: string; mimeType: string } | undefined;
+          if (mediaId) {
+            const media = await downloadWhatsAppMedia(mediaId);
+            if (media) attachment = media;
+            else if (!userText) userText = "[El cliente envió un adjunto que no pudimos descargar. Pedile con amabilidad que lo reenvíe o lo describa por texto.]";
+          }
+          await processWhatsAppMessage(from, caption || userText, attachment);
+        };
         // Process in background (don't block the 200 response)
-        processWhatsAppMessage(from, userText).catch((e) =>
-          logger.error({ err: e.message, from }, "WhatsApp processing error")
-        );
+        handle().catch((e) => logger.error({ err: e.message, from }, "WhatsApp processing error"));
       }
     }
   }
@@ -1780,10 +1859,12 @@ async function processInboundMessage(opts: {
   channel: Channel;
   externalId: string;
   text: string;
+  attachment?: { data: string; mimeType: string };
   send: (text: string) => Promise<void>;
   sendImage?: (url: string, caption?: string) => Promise<void>;
 }) {
-  const { channel, externalId, text, send, sendImage } = opts;
+  const { channel, externalId, text, attachment, sendImage } = opts;
+  const { send } = opts;
   const db = getDB();
 
   // Config
@@ -1823,13 +1904,22 @@ async function processInboundMessage(opts: {
     return;
   }
 
-  // Run AI
-  const { text: aiReply, actions } = await runChat(text, history, config);
+  // Run AI (with multimodal attachment when the client sent audio/image/etc.)
+  const { text: aiReply, actions } = await runChat(text, history, config, attachment);
+
+  // What we persist as the client's turn: real text, or a labeled marker for media
+  const persistedUserText = text?.trim()
+    ? text
+    : attachment
+      ? (attachment.mimeType.startsWith("audio") ? "🎤 [Nota de voz]"
+         : attachment.mimeType.startsWith("image") ? "🖼️ [Imagen]"
+         : "📎 [Archivo adjunto]")
+      : text;
 
   const now = new Date().toISOString();
   const newHistory = [
     ...history,
-    { role: "user", text, timestamp: now },
+    { role: "user", text: persistedUserText, timestamp: now },
     { role: "model", text: aiReply, timestamp: now },
   ];
   const userMsgs = newHistory.filter((m: any) => m.role === "user").map((m: any) => m.text).join(" ");
@@ -1895,11 +1985,12 @@ async function processInboundMessage(opts: {
 }
 
 // Thin wrapper kept for the WhatsApp webhook
-async function processWhatsAppMessage(phone: string, text: string) {
+async function processWhatsAppMessage(phone: string, text: string, attachment?: { data: string; mimeType: string }) {
   await processInboundMessage({
     channel: "WhatsApp",
     externalId: phone,
     text,
+    attachment,
     sendImage: async (url, caption) => {
       if (WA_TOKEN && WA_PHONE_ID) await sendWhatsAppImage(phone, url, caption);
     },
@@ -1908,6 +1999,42 @@ async function processWhatsAppMessage(phone: string, text: string) {
       else logger.warn("WHATSAPP_TOKEN/PHONE_ID not set — reply not sent");
     },
   });
+}
+
+// Cap inbound media so a huge file can't blow up memory / the model payload
+const MAX_MEDIA_BYTES = 12 * 1024 * 1024; // 12 MB
+
+// Fetch any URL and return it as base64 + mime type (used for Messenger/IG media)
+async function fetchUrlAsBase64(url: string, authHeader?: Record<string, string>): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url, { headers: { ...(authHeader || {}) } });
+    if (!res.ok) { logger.warn({ status: res.status }, "media fetch failed"); return null; }
+    const mimeType = res.headers.get("content-type")?.split(";")[0] || "application/octet-stream";
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > MAX_MEDIA_BYTES) { logger.warn({ bytes: buf.length }, "media too large; skipping"); return null; }
+    return { data: buf.toString("base64"), mimeType };
+  } catch (e) {
+    logger.warn({ err: (e as Error).message }, "media fetch error");
+    return null;
+  }
+}
+
+// Download a WhatsApp media object (audio/image/document) by its media id.
+// Two-step per Meta Cloud API: GET the media metadata → GET the binary URL.
+async function downloadWhatsAppMedia(mediaId: string): Promise<{ data: string; mimeType: string } | null> {
+  if (!WA_TOKEN) return null;
+  try {
+    const metaRes = await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, {
+      headers: { Authorization: `Bearer ${WA_TOKEN}` },
+    });
+    if (!metaRes.ok) { logger.warn({ status: metaRes.status }, "WA media meta fetch failed"); return null; }
+    const meta: any = await metaRes.json();
+    if (!meta?.url) return null;
+    return await fetchUrlAsBase64(meta.url, { Authorization: `Bearer ${WA_TOKEN}` });
+  } catch (e) {
+    logger.warn({ err: (e as Error).message }, "WA media download error");
+    return null;
+  }
 }
 
 async function sendWhatsAppMessage(to: string, text: string) {
@@ -2040,19 +2167,31 @@ app.post("/webhook/messenger", async (req, res) => {
       // Ignore echoes (our own outgoing messages) and non-message events
       if (event?.message?.is_echo) continue;
       const senderId = event?.sender?.id;
-      const text = event?.message?.text;
-      if (!senderId || !text) continue;
+      const text = event?.message?.text || "";
+      const mediaAttachment = (event?.message?.attachments || []).find(
+        (a: any) => ["image", "audio", "video", "file"].includes(a?.type) && a?.payload?.url
+      );
+      if (!senderId || (!text && !mediaAttachment)) continue;
 
-      logger.info({ senderId, channel }, "Messenger/IG message received");
-      processInboundMessage({
-        channel,
-        externalId: String(senderId),
-        text,
-        send: async (reply) => {
-          if (token) await sendMessengerMessage(String(senderId), reply, token);
-          else logger.warn(`${channel} token not set — reply not sent`);
-        },
-      }).catch((e) => logger.error({ err: e.message, channel }, "Messenger processing error"));
+      logger.info({ senderId, channel, hasMedia: !!mediaAttachment }, "Messenger/IG message received");
+      const run = async () => {
+        let attachment: { data: string; mimeType: string } | undefined;
+        if (mediaAttachment) {
+          const media = await fetchUrlAsBase64(String(mediaAttachment.payload.url));
+          if (media) attachment = media;
+        }
+        await processInboundMessage({
+          channel,
+          externalId: String(senderId),
+          text,
+          attachment,
+          send: async (reply) => {
+            if (token) await sendMessengerMessage(String(senderId), reply, token);
+            else logger.warn(`${channel} token not set — reply not sent`);
+          },
+        });
+      };
+      run().catch((e) => logger.error({ err: e.message, channel }, "Messenger processing error"));
     }
   }
 });

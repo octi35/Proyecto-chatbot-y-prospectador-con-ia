@@ -177,6 +177,22 @@ export const updateTemplate = (id: string, patch: Partial<WaTemplate>) =>
 export const deleteTemplate = (id: string) =>
   request<void>(`/api/templates/${id}`, { method: "DELETE" });
 
+// Team members (equipo / roles)
+export interface TeamMember {
+  id: string;
+  email: string;
+  name: string;
+  role: "admin" | "agente";
+  createdAt?: string;
+}
+export const getTeam = () => request<TeamMember[]>("/api/team");
+export const addTeamMember = (m: { email: string; name?: string; role?: "admin" | "agente" }) =>
+  request<TeamMember>("/api/team", { method: "POST", body: JSON.stringify(m) });
+export const updateTeamMember = (id: string, patch: Partial<Pick<TeamMember, "email" | "name" | "role">>) =>
+  request<TeamMember>(`/api/team/${id}`, { method: "PUT", body: JSON.stringify(patch) });
+export const removeTeamMember = (id: string) =>
+  request<void>(`/api/team/${id}`, { method: "DELETE" });
+
 // AI assist (conversation summary + suggested replies)
 type ConvMsg = { role: "user" | "model"; text: string };
 export const aiSummary = (history: ConvMsg[], name?: string) =>

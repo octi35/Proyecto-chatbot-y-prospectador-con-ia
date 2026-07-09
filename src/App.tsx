@@ -37,6 +37,7 @@ import HelpGuide from "./components/HelpGuide";
 import ChannelConnect from "./components/ChannelConnect";
 import AutomationRules from "./components/AutomationRules";
 import WaTemplateManager from "./components/WaTemplateManager";
+import TeamManager from "./components/TeamManager";
 import DashboardHome from "./components/DashboardHome";
 import Login from "./components/Login";
 import { Toaster, toast } from "./components/ui/toast";
@@ -647,6 +648,7 @@ export default function App() {
               {activeTab === "integrations" && (
                 <motion.div key="integrations" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }} className="space-y-8">
                   <ChannelConnect />
+                  <TeamManager />
                   <AutomationRules />
                   <WaTemplateManager />
                 </motion.div>

@@ -31,7 +31,7 @@ import {
 import { CRMLead, Campaign, AgentConfig } from "../types";
 import { makeAvatarUrl } from "../lib/avatar";
 import { timeAgo } from "../lib/timeAgo";
-import { sendLeadMessage, sendCampaign, runFollowups, aiSummary, aiSuggest, aiCampaign } from "../lib/api";
+import { sendLeadMessage, sendCampaign, runFollowups, aiSummary, aiSuggest, aiCampaign, getTeam, TeamMember } from "../lib/api";
 import { toast } from "./ui/toast";
 
 interface CRMAdminProps {
@@ -50,6 +50,8 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
   // Selection States
   const [activeTab, setActiveTab] = useState<"inbox" | "pipeline" | "broadcast">("inbox");
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(leads[0] || null);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  useEffect(() => { getTeam().then(setTeam).catch(() => setTeam([])); }, []);
   const [checkedLeadIds, setCheckedLeadIds] = useState<Set<string>>(new Set());
   const [isBulkActing, setIsBulkActing] = useState(false);
   const [manualOverrideActive, setManualOverrideActive] = useState<Record<string, boolean>>({});
@@ -891,8 +893,9 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                         <input
                           type="text"
                           key={selectedLead.id}
+                          list="respondo-team-list"
                           defaultValue={selectedLead.assignedTo || ""}
-                          placeholder="Ej: octi@minegocio.com"
+                          placeholder={team.length ? "Elegí del equipo o escribí…" : "Ej: octi@minegocio.com"}
                           onBlur={async (e) => {
                             const val = e.target.value.trim();
                             if (val === (selectedLead.assignedTo || "")) return;
@@ -905,6 +908,14 @@ export default function CRMAdmin({ leads, setLeads, campaigns, setCampaigns, con
                           }}
                           className="w-full bg-[#f3f5fb] rounded-[14px] px-4 h-10 text-[13px] text-[#111111] placeholder:text-[#9ca3af] border-0 outline-none focus:bg-[#eef1fe] focus:ring-2 focus:ring-[#4f6ef7]/25 transition-all"
                         />
+                        <datalist id="respondo-team-list">
+                          {team.map((m) => (
+                            <option key={m.id} value={m.name || m.email}>{m.email} · {m.role === "admin" ? "Administrador" : "Agente"}</option>
+                          ))}
+                        </datalist>
+                        {team.length === 0 && (
+                          <p className="text-[10px] text-[#9ca3af] mt-1">Sumá gente en Integraciones → Equipo para elegir de una lista.</p>
+                        )}
                       </div>
                     )}
 

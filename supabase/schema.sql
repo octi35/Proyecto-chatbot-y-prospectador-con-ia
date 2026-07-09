@@ -146,6 +146,17 @@ create table if not exists respondo_chat_events (
 create index if not exists idx_respondo_chat_events_created on respondo_chat_events (created_at desc);
 create index if not exists idx_respondo_chat_events_channel on respondo_chat_events (channel);
 
+-- ---------------------------------------------------------------------------
+-- TEAM MEMBERS (equipo / roles — asignación de chats)
+-- ---------------------------------------------------------------------------
+create table if not exists respondo_team_members (
+  id         uuid primary key default gen_random_uuid(),
+  email      text not null,
+  name       text default '',
+  role       text default 'agente',   -- 'admin' | 'agente'
+  created_at timestamptz default now()
+);
+
 -- ============================================================================
 -- SEED opcional (descomentar para arrancar con datos de ejemplo en una base
 -- vacía). La app ya trae datos demo en el front si la tabla está vacía.

@@ -38,15 +38,10 @@ export default function DashboardHome({ leads, onNavigate }: DashboardHomeProps)
   const recent = [...leads].sort((a, b) => new Date(b.lastInteraction).getTime() - new Date(a.lastInteraction).getTime()).slice(0, 4);
   const oppCards = [...leads].sort((a, b) => b.score - a.score).slice(0, 6);
 
-  // Colored opportunity-card palette (rotates by index)
-  const OPP_STYLES = [
-    { bg: "bg-[#4f6ef7]", border: "", text: "text-white",      sub: "text-white/70",       btn: "bg-white/20 text-white hover:bg-white/30",       ring: "ring-[#4f6ef7]" },
-    { bg: "bg-[#8fd4f8]", border: "", text: "text-[#0f2b3d]",  sub: "text-[#0f2b3d]/60",   btn: "bg-black/10 text-[#0f2b3d] hover:bg-black/20",   ring: "ring-[#8fd4f8]" },
-    { bg: "bg-[#101010]", border: "", text: "text-white",      sub: "text-white/55",       btn: "bg-white/15 text-white hover:bg-white/25",       ring: "ring-[#101010]" },
-    { bg: "bg-[#ffd84d]", border: "", text: "text-[#3a2f00]",  sub: "text-[#3a2f00]/60",   btn: "bg-black/10 text-[#3a2f00] hover:bg-black/20",   ring: "ring-[#ffd84d]" },
-    { bg: "bg-white", border: "ring-1 ring-[#ececec]", text: "text-[#111111]", sub: "text-[#9ca3af]", btn: "bg-[#f3f5fb] text-[#6b7280] hover:bg-[#eef1fe]", ring: "ring-white" },
-    { bg: "bg-white", border: "ring-1 ring-[#ececec]", text: "text-[#111111]", sub: "text-[#9ca3af]", btn: "bg-[#f3f5fb] text-[#6b7280] hover:bg-[#eef1fe]", ring: "ring-white" },
-  ] as const;
+  // Sober opportunity-card style (monochrome + hairline; one dark accent card)
+  const OPP_NEUTRAL = { bg: "bg-white", border: "border border-black/[0.07]", text: "text-[#0a0a0a]", sub: "text-[#9ca3af]", btn: "bg-black/[0.04] text-[#6b7280] hover:bg-black/[0.08]", ring: "ring-white" } as const;
+  const OPP_DARK = { bg: "bg-[#0a0a0a]", border: "", text: "text-white", sub: "text-white/50", btn: "bg-white/10 text-white hover:bg-white/20", ring: "ring-[#0a0a0a]" } as const;
+  const OPP_STYLES = [OPP_DARK, OPP_NEUTRAL, OPP_NEUTRAL, OPP_NEUTRAL, OPP_NEUTRAL, OPP_NEUTRAL] as const;
 
   const stats = [
     { label: "Prospectos", value: totalLeads.toLocaleString("es-AR"), icon: <Users size={18} />, delta: `+${newToday.length} hoy`, tone: "neutral" as const, up: true },

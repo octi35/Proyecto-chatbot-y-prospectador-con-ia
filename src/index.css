@@ -5,38 +5,38 @@
   --font-sans: "Inter", "SF Pro Display", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
-  /* ---- SaaS premium 2026 (Salesforce / Linear / Stripe) ---- */
-  --color-background: #f7f8fc;  /* canvas — blanco frío */
-  --color-canvas:  #f7f8fc;
+  /* ---- Restrained premium (Linear / Vercel / Stripe caliber) ---- */
+  --color-background: #fbfbfb;  /* canvas — casi blanco */
+  --color-canvas:  #fbfbfb;
   --color-card:    #ffffff;
   --color-surface: #ffffff;
-  --color-sink:    #f3f5fb;      /* inputs / superficies sutiles */
-  --color-sidebar: #232323;      /* rail lateral oscuro */
-  --color-line:    #ececec;      /* hairlines / bordes */
-  --color-ink:     #111111;      /* texto primario */
+  --color-sink:    #f4f4f5;      /* inputs / superficies sutiles */
+  --color-sidebar: #0a0a0a;      /* rail lateral negro real */
+  --color-line:    rgba(0,0,0,0.07); /* hairlines / bordes */
+  --color-ink:     #0a0a0a;      /* texto primario */
   --color-ink-2:   #6b7280;      /* texto secundario */
   --color-ink-3:   #9ca3af;      /* terciario / placeholders */
 
-  /* Único acento (azul índigo), usado con moderación */
+  /* Único acento (índigo), usado con moderación */
   --color-brand:      #4f6ef7;
   --color-brand-soft: #eef1fe;
   --color-accent:      #4f6ef7;
   --color-accent-soft: #eef1fe;
 
-  /* Colores "pop" para tarjetas de datos y avatares */
+  /* Acentos de datos (calmos, nunca saturados) */
   --color-yellow: #ffd84d;
   --color-sky:    #8fd4f8;
   --color-green:  #7dd87d;
-  --color-black:  #101010;
+  --color-black:  #0a0a0a;
 
-  --radius-card:  22px;
-  --radius-input: 14px;
+  --radius-card:  16px;
+  --radius-input: 12px;
 
-  /* Sombras susurradas — profundidad por flotación, no por bordes */
-  --shadow-card:       0 10px 35px rgba(15,23,42,0.05);
-  --shadow-card-hover: 0 18px 45px rgba(15,23,42,0.09);
-  --shadow-float:      0 8px 30px rgba(15,23,42,0.06);
-  --shadow-soft:       0 8px 30px rgba(15,23,42,0.06);
+  /* Sombras susurradas — la profundidad viene del hairline, no del drop shadow */
+  --shadow-card:       0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03);
+  --shadow-card-hover: 0 6px 24px rgba(0,0,0,0.08);
+  --shadow-float:      0 1px 2px rgba(0,0,0,0.04);
+  --shadow-soft:       0 1px 2px rgba(0,0,0,0.04);
   --shadow-hover:      0 18px 45px rgba(15,23,42,0.09);
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -61,19 +61,20 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 ::-webkit-scrollbar-thumb:hover { background: #d3d7e4; }
 
 /* ---- Design-system utilities (mismos nombres, valores nuevos) ---- */
-.shadow-card { box-shadow: var(--shadow-card); }
+/* Cards = hairline + whisper shadow (profundidad sobria, no drop shadow) */
+.shadow-card { border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
 .shadow-card-hover { box-shadow: var(--shadow-card-hover); }
-.shadow-float { box-shadow: var(--shadow-float); }
+.shadow-float { border: 1px solid var(--color-line); box-shadow: var(--shadow-float); }
 
-.ds-card { background: var(--color-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
-.ds-shadow { box-shadow: var(--shadow-card); }
-.ds-shadow-soft { box-shadow: var(--shadow-float); }
+.ds-card { background: var(--color-card); border-radius: var(--radius-card); border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
+.ds-shadow { border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
+.ds-shadow-soft { border: 1px solid var(--color-line); box-shadow: var(--shadow-float); }
 .ds-shadow-hover { box-shadow: var(--shadow-card-hover); }
 .ds-line, .ds-hairline { border-color: var(--color-line); }
 
 /* Legacy aliases → nuevas sombras */
-.shadow-apple-sm { box-shadow: var(--shadow-float); }
-.shadow-apple { box-shadow: var(--shadow-card); }
+.shadow-apple-sm { border: 1px solid var(--color-line); box-shadow: var(--shadow-float); }
+.shadow-apple { border: 1px solid var(--color-line); box-shadow: var(--shadow-card); }
 .shadow-apple-lg { box-shadow: var(--shadow-card-hover); }
 .glass { background: rgba(255,255,255,0.82); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
 
