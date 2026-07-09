@@ -1,4 +1,6 @@
 import express from "express";
+import multer from "multer";
+import { randomUUID } from "node:crypto";
 import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
@@ -44,6 +46,18 @@ async function fetchResilient(url: string, opts: RequestInit = {}, { timeoutMs =
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error("fetch failed");
+}
+
+// Delivery-safe retry for OUTBOUND MESSAGES: only retries when the provider
+// definitively rejected the request (HTTP 429 / 5xx) — never on a timeout,
+// whose delivery status is unknown — so a message is never sent twice.
+async function fetchSend(url: string, opts: RequestInit = {}, { timeoutMs = 15_000, retries = 2 } = {}): Promise<Response> {
+  let res = await fetchWithTimeout(url, opts, timeoutMs);
+  for (let attempt = 0; attempt < retries && (res.status === 429 || res.status >= 500); attempt++) {
+    await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+    res = await fetchWithTimeout(url, opts, timeoutMs);
+  }
+  return res;
 }
 
 // ---------------------------------------------------------------------------
@@ -866,12 +880,24 @@ const captureRaw = (req: express.Request, _res: express.Response, buf: Buffer) =
 const jsonLarge = express.json({ limit: "25mb", verify: captureRaw });
 const jsonSmall = express.json({ limit: "1mb", verify: captureRaw });
 app.use("/api/chat", jsonLarge);
-app.use("/webhook", jsonLarge);   // provider events + inbound email HTML
+app.use("/webhook", jsonLarge);   // provider events + inbound email HTML (JSON)
+// Inbound-email providers (SendGrid/Mailgun/Postmark) post form-urlencoded or
+// multipart/form-data — parse both so those emails aren't silently dropped.
+app.use("/webhook", express.urlencoded({ extended: true, limit: "10mb" }));
+const uploadFields = multer({ limits: { fileSize: 15 * 1024 * 1024 } }).any();
 app.use(jsonSmall);               // everything else stays lean
 
-// Request logger (lightweight)
-app.use((req, _res, next) => {
-  logger.info({ method: req.method, url: req.url }, "req");
+// Request logger with a per-request id + response time (observabilidad).
+// El id vuelve en la cabecera X-Request-Id para correlacionar en producción.
+app.use((req, res, next) => {
+  const id = (req.headers["x-request-id"] as string) || randomUUID();
+  (req as any).id = id;
+  res.setHeader("X-Request-Id", id);
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    logger.info({ id, method: req.method, url: req.url, status: res.statusCode, ms: Math.round(ms) }, "req");
+  });
   next();
 });
 
@@ -2097,7 +2123,7 @@ async function downloadWhatsAppMedia(mediaId: string): Promise<{ data: string; m
 async function sendWhatsAppMessage(to: string, text: string) {
   to = normalizePhone(to);
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
-  const res = await fetchWithTimeout(url, {
+  const res = await fetchSend(url, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${WA_TOKEN}`,
@@ -2122,7 +2148,7 @@ async function sendWhatsAppMessage(to: string, text: string) {
 async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string) {
   to = normalizePhone(to);
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
-  const res = await fetchWithTimeout(url, {
+  const res = await fetchSend(url, {
     method: "POST",
     headers: { "Authorization": `Bearer ${WA_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2172,7 +2198,7 @@ async function sendWhatsAppTemplate(to: string, templateName: string, langCode =
 // and Instagram Direct — they share the same endpoint and token model).
 async function sendMessengerMessage(recipientId: string, text: string, token: string) {
   const url = `https://graph.facebook.com/v21.0/me/messages?access_token=${token}`;
-  const res = await fetchWithTimeout(url, {
+  const res = await fetchSend(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2265,7 +2291,7 @@ async function sendEmail(to: string, subject: string, text: string) {
     logger.warn("RESEND_API_KEY/EMAIL_USER not set — email reply not sent");
     return;
   }
-  const res = await fetchWithTimeout("https://api.resend.com/emails", {
+  const res = await fetchSend("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2286,7 +2312,7 @@ async function sendEmail(to: string, subject: string, text: string) {
 // Inbound email webhook. Compatible with common inbound-parse providers
 // (SendGrid, Mailgun, Resend, Postmark) — we read sender, subject and text
 // from the most common field names.
-app.post("/webhook/email", async (req, res) => {
+app.post("/webhook/email", uploadFields, async (req, res) => {
   res.status(200).json({ status: "received" }); // ack immediately
 
   const b = req.body as any;
@@ -2414,7 +2440,13 @@ process.on("uncaughtException", (err) => {
   logger.error({ err: err.message }, "uncaughtException");
 });
 
-startServer().catch((err) => {
-  logger.error({ err }, "Failed to start server");
-  process.exit(1);
-});
+// Skip the network listen when imported by the test suite (RESPONDO_NO_LISTEN),
+// so integration tests can drive `app` on an ephemeral port without booting Vite.
+if (!process.env.RESPONDO_NO_LISTEN) {
+  startServer().catch((err) => {
+    logger.error({ err }, "Failed to start server");
+    process.exit(1);
+  });
+}
+
+export { app };

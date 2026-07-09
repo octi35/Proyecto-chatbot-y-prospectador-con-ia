@@ -414,6 +414,7 @@ export default function App() {
               <motion.button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
+                aria-label={label}
                 whileTap={{ scale: 0.97 }}
                 className="group relative flex items-center h-11 pl-[22px] pr-4"
               >
@@ -472,7 +473,7 @@ export default function App() {
               )}
             </AnimatePresence>
             {navExpanded && (
-              <button onClick={handleLogout} title="Cerrar sesión" className="relative z-10 text-[#8a8a8a] hover:text-white transition-colors cursor-pointer shrink-0">
+              <button onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión" className="relative z-10 text-[#8a8a8a] hover:text-white transition-colors cursor-pointer shrink-0">
                 <LogOut size={16} />
               </button>
             )}
@@ -513,7 +514,7 @@ export default function App() {
             </div>
 
             {/* Actions */}
-            <button onClick={() => setActiveTab("help")} title="Ayuda" className="hidden sm:flex w-10 h-10 rounded-full hover:bg-[#f3f5fb] items-center justify-center text-[#6b7280] transition-colors cursor-pointer shrink-0">
+            <button onClick={() => setActiveTab("help")} title="Ayuda" aria-label="Ayuda" className="hidden sm:flex w-10 h-10 rounded-full hover:bg-[#f3f5fb] items-center justify-center text-[#6b7280] transition-colors cursor-pointer shrink-0">
               <HelpCircle size={18} />
             </button>
 
@@ -521,7 +522,7 @@ export default function App() {
             <div className="relative shrink-0">
               <button
                 onClick={() => setShowNotifPanel((v) => !v)}
-                title="Notificaciones"
+                title="Notificaciones" aria-label="Notificaciones"
                 className="relative w-10 h-10 rounded-full hover:bg-[#f3f5fb] flex items-center justify-center text-[#6b7280] transition-colors cursor-pointer"
               >
                 <Bell size={18} />
@@ -575,7 +576,7 @@ export default function App() {
               </AnimatePresence>
             </div>
 
-            <button title="Ajustes" className="hidden sm:flex w-10 h-10 rounded-full hover:bg-[#f3f5fb] items-center justify-center text-[#6b7280] transition-colors cursor-pointer shrink-0">
+            <button title="Ajustes" aria-label="Ajustes" className="hidden sm:flex w-10 h-10 rounded-full hover:bg-[#f3f5fb] items-center justify-center text-[#6b7280] transition-colors cursor-pointer shrink-0">
               <Settings size={18} />
             </button>
 

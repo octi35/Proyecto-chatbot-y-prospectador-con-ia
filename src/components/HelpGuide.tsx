@@ -61,7 +61,7 @@ export default function HelpGuide({ onNavigate }: HelpGuideProps) {
       {/* Steps */}
       <div className="grid md:grid-cols-3 gap-5">
         {STEPS.map((s, i) => (
-          <Card key={s.n} interactive index={i} className="p-6 flex flex-col" onClick={() => onNavigate(s.tab)}>
+          <Card key={s.n} interactive className="p-6 flex flex-col" onClick={() => onNavigate(s.tab)}>
             <div className="flex items-center justify-between mb-4">
               <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${
                 s.tone === "accent" ? "bg-[#f5f6ff] text-[#4f6ef7]" : s.tone === "success" ? "bg-[#eafaea] text-[#4caf4c]" : "bg-[#fff7e0] text-[#b8860b]"
