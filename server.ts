@@ -8,7 +8,7 @@ import cors from "cors";
 import pino from "pino";
 import { z, ZodError } from "zod";
 import { localBotReply } from "./botEngine";
-import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow, verifyMetaSignature } from "./serverHelpers";
+import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow, verifyMetaSignature, normalizePhone } from "./serverHelpers";
 
 dotenv.config();
 
@@ -2092,6 +2092,7 @@ async function downloadWhatsAppMedia(mediaId: string): Promise<{ data: string; m
 }
 
 async function sendWhatsAppMessage(to: string, text: string) {
+  to = normalizePhone(to);
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
   const res = await fetchWithTimeout(url, {
     method: "POST",
@@ -2116,6 +2117,7 @@ async function sendWhatsAppMessage(to: string, text: string) {
 
 // Send an image (product photo) via WhatsApp Cloud API
 async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string) {
+  to = normalizePhone(to);
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
   const res = await fetchWithTimeout(url, {
     method: "POST",
@@ -2137,6 +2139,7 @@ async function sendWhatsAppImage(to: string, imageUrl: string, caption?: string)
 
 // Send a Meta-approved template message (required OUTSIDE the 24h window)
 async function sendWhatsAppTemplate(to: string, templateName: string, langCode = "es_AR", bodyParams: string[] = []) {
+  to = normalizePhone(to);
   const url = `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`;
   const res = await fetchWithTimeout(url, {
     method: "POST",

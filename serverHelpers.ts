@@ -50,6 +50,13 @@ export function extractJsonObject(text: string): any | null {
   return null;
 }
 
+// Normalize a phone number for the Meta Cloud API, which expects digits only
+// (country code included, no "+", spaces, dashes or parentheses). Argentine
+// mobiles are commonly written "+54 9 11 1234-5678" → "5491112345678".
+export function normalizePhone(raw: string): string {
+  return String(raw || "").replace(/\D/g, "");
+}
+
 // True if the lead wrote to us within the last 24h (Meta free-form window)
 export function isInside24hWindow(conversationHistory: any[], now: number = Date.now()): boolean {
   const lastUser = [...(conversationHistory || [])].reverse().find((m: any) => m.role === "user" && m.timestamp);

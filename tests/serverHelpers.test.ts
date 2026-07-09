@@ -1,7 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow, verifyMetaSignature } from "../serverHelpers";
+import { formatTranscript, extractJsonArray, extractJsonObject, isInside24hWindow, verifyMetaSignature, normalizePhone } from "../serverHelpers";
+
+test("normalizePhone deja solo dígitos (formato Meta)", () => {
+  assert.equal(normalizePhone("+54 9 11 1234-5678"), "5491112345678");
+  assert.equal(normalizePhone("(011) 4567-8900"), "01145678900");
+  assert.equal(normalizePhone(""), "");
+  assert.equal(normalizePhone(undefined as any), "");
+});
 
 const sign = (body: string, secret: string) =>
   "sha256=" + crypto.createHmac("sha256", secret).update(body).digest("hex");
