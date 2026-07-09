@@ -63,6 +63,7 @@ create table if not exists respondo_leads (
   phone                text default '',
   status               text default 'Nuevo',      -- Nuevo | Contactado | Presupuestado | Cerrado
   origin               text default 'WhatsApp',   -- WhatsApp | Instagram | Facebook | Email
+  external_id          text,                       -- id por canal: phone (WA) / PSID (Messenger/IG)
   last_interaction     timestamptz default now(),
   score                integer default 65,
   notes                text default '',
@@ -82,6 +83,7 @@ create index if not exists idx_respondo_leads_updated  on respondo_leads (update
 create index if not exists idx_respondo_leads_created   on respondo_leads (created_at desc);
 create index if not exists idx_respondo_leads_status    on respondo_leads (status);
 create index if not exists idx_respondo_leads_phone     on respondo_leads (phone);
+create index if not exists idx_respondo_leads_external_origin on respondo_leads (external_id, origin);
 
 -- ---------------------------------------------------------------------------
 -- CAMPAIGNS (difusiones masivas)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
@@ -29,18 +29,21 @@ import {
   authLogout, claimLegacy, getSession,
 } from "./lib/api";
 
-import AgentTrainer from "./components/AgentTrainer";
-import ChatSimulator from "./components/ChatSimulator";
-import CRMAdmin from "./components/CRMAdmin";
-import AnalyticsPanel from "./components/AnalyticsPanel";
-import HelpGuide from "./components/HelpGuide";
-import ChannelConnect from "./components/ChannelConnect";
-import AutomationRules from "./components/AutomationRules";
-import WaTemplateManager from "./components/WaTemplateManager";
-import TeamManager from "./components/TeamManager";
-import DashboardHome from "./components/DashboardHome";
 import Login from "./components/Login";
+import DashboardHome from "./components/DashboardHome";
 import { Toaster, toast } from "./components/ui/toast";
+
+// Code-splitting: cada pestaña se carga bajo demanda. El login y el dashboard
+// (primera vista) quedan en el bundle inicial; el resto son chunks aparte.
+const AgentTrainer = lazy(() => import("./components/AgentTrainer"));
+const ChatSimulator = lazy(() => import("./components/ChatSimulator"));
+const CRMAdmin = lazy(() => import("./components/CRMAdmin"));
+const AnalyticsPanel = lazy(() => import("./components/AnalyticsPanel"));
+const HelpGuide = lazy(() => import("./components/HelpGuide"));
+const ChannelConnect = lazy(() => import("./components/ChannelConnect"));
+const AutomationRules = lazy(() => import("./components/AutomationRules"));
+const WaTemplateManager = lazy(() => import("./components/WaTemplateManager"));
+const TeamManager = lazy(() => import("./components/TeamManager"));
 
 type TabType = "dashboard" | "playground" | "crm" | "analytics" | "integrations" | "help";
 
@@ -600,6 +603,7 @@ export default function App() {
         {/* Scrollable content */}
         <main className="flex-1 overflow-y-auto px-4 md:px-6 pb-8 pt-5">
           <div className="max-w-[1560px] mx-auto w-full">
+            <Suspense fallback={<div className="flex items-center justify-center py-24"><Loader2 size={24} className="text-[#4f6ef7] animate-spin" /></div>}>
             <AnimatePresence mode="wait">
               {activeTab === "dashboard" && (
                 <motion.div key="dashboard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}>
@@ -660,6 +664,7 @@ export default function App() {
                 </motion.div>
               )}
             </AnimatePresence>
+            </Suspense>
 
             <footer className="text-center mt-14 pt-6 text-[11px] text-[#9ca3af] flex items-center justify-center gap-3">
               <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-[#9ca3af]" /> Supabase</span>
