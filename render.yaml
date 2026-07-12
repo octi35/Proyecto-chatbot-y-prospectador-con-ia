@@ -1,0 +1,44 @@
+# Render Blueprint — deploy en 1 click: https://render.com/docs/blueprint-spec
+# En render.com: New → Blueprint → conectá este repo. Render lee este archivo
+# y crea el servicio; después solo pegás tus API keys en Environment.
+services:
+  - type: web
+    name: respondo
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false          # ← pegá tu key en el dashboard de Render
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: APP_URL
+        sync: false          # ← https://<tu-app>.onrender.com (la URL que te da Render)
+      - key: WEBHOOK_VERIFY_TOKEN
+        generateValue: true  # Render genera un token seguro automáticamente
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: FB_PAGE_TOKEN
+        sync: false
+      - key: IG_TOKEN
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MP_ACCESS_TOKEN
+        sync: false

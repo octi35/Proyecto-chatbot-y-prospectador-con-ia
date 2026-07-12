@@ -44,6 +44,7 @@ const ChannelConnect = lazy(() => import("./components/ChannelConnect"));
 const AutomationRules = lazy(() => import("./components/AutomationRules"));
 const WaTemplateManager = lazy(() => import("./components/WaTemplateManager"));
 const TeamManager = lazy(() => import("./components/TeamManager"));
+const WhatsAppQR = lazy(() => import("./components/WhatsAppQR"));
 
 type TabType = "dashboard" | "playground" | "crm" | "analytics" | "integrations" | "help";
 
@@ -653,6 +654,7 @@ export default function App() {
               {activeTab === "integrations" && (
                 <motion.div key="integrations" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }} className="space-y-8">
                   <ChannelConnect />
+                  <WhatsAppQR />
                   <TeamManager />
                   <AutomationRules />
                   <WaTemplateManager />

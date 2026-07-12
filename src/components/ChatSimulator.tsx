@@ -6,6 +6,7 @@ import {
   Trash2, Zap, Square, StopCircle,
 } from "lucide-react";
 import { ChatMessage, AgentConfig, AgentAction } from "../types";
+import { getSession } from "../lib/api";
 
 interface ChatSimulatorProps {
   config: AgentConfig;
@@ -99,11 +100,20 @@ export default function ChatSimulator({ config, onLeadMessageAdded, onAgentActio
     setQuickReplies([]); // Clear while loading
     try {
       const history = historyList.map((m) => ({ role: m.role, text: m.text }));
+      const token = getSession()?.access_token;
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ message: userText, history, agentConfig: config, attachment }),
       });
+      if (res.status === 401) {
+        setIsLoading(false);
+        addMessage("model", "Para chatear con el agente IA necesitás iniciar sesión con tu cuenta. Cerrá sesión y entrá con tu email y contraseña.");
+        return;
+      }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
       const actions: AgentAction[] = Array.isArray(data.actions) ? data.actions : [];

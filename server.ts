@@ -1582,9 +1582,13 @@ app.get("/api/analytics", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const body = validateBody(ChatSchema, req.body);
-    // Optional auth: authed users chat against THEIR config and persist to THEIR data;
-    // unauthenticated (demo) chats use the provided/default config and persist nothing.
     const user = await getUserFromReq(req);
+    // Cost guard: with Supabase configured (production), the AI endpoint requires a
+    // real session — otherwise anyone with the URL could burn the Gemini/OpenRouter
+    // quota. Without Supabase (local dev/demo) it stays open.
+    if (!user && SUPABASE_URL && SUPABASE_ANON_KEY) {
+      return res.status(401).json({ error: "Iniciá sesión para usar el agente IA." });
+    }
 
     // Resolve config: request body > (authed) user's DB config > default
     let config = body.agentConfig;
